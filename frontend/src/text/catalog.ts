@@ -1,0 +1,98 @@
+import { useLocalizedText } from './useText';
+
+const catalogText = {
+  ar: {
+    page: {
+      description: 'إدارة الأقسام والخدمات الأساسية بنفس روح البرنامج السابق وبشكل مناسب للتوسع لاحقًا.',
+      title: 'الخدمات',
+    },
+    departments: {
+      create: 'إضافة قسم',
+      dialogCreate: 'إضافة قسم',
+      dialogEdit: 'تعديل قسم',
+      code: 'كود القسم',
+      name: 'اسم القسم',
+      sectionSubtitle: 'إدارة الأقسام الأساسية التي سترتبط بها الخدمات لاحقًا في بقية النظام.',
+      sectionTitle: 'الأقسام',
+      status: 'الحالة',
+      tableAction: 'إجراء',
+      tableCode: 'الكود',
+      tableName: 'الاسم',
+      tableStatus: 'الحالة',
+    },
+    services: {
+      create: 'إضافة خدمة',
+      dialogCreate: 'إضافة خدمة',
+      dialogEdit: 'تعديل خدمة',
+      duration: 'المدة بالدقائق',
+      durationSuffix: 'دقيقة',
+      durationEmpty: '—',
+      emptyDepartments: 'أضف قسمًا واحدًا على الأقل قبل إنشاء خدمة.',
+      name: 'اسم الخدمة',
+      notes: 'ملاحظات',
+      price: 'السعر الافتراضي',
+      sectionSubtitle: 'كل خدمة ترتبط بقسم واحد وسعر افتراضي أساسي في هذه المرحلة.',
+      sectionTitle: 'الخدمات',
+      smallNote: 'المرحلة الحالية تغطي القائمة الأساسية فقط، بدون حذف أو باقات بعد.',
+      tableAction: 'إجراء',
+      tableDepartment: 'القسم',
+      tableDuration: 'المدة',
+      tableName: 'الخدمة',
+      tablePrice: 'السعر',
+      tableStatus: 'الحالة',
+    },
+    status: {
+      active: 'نشط',
+      inactive: 'موقوف',
+    },
+  },
+  en: {
+    page: {
+      description: 'Manage core departments and services in the same spirit as the previous product, while keeping room for later growth.',
+      title: 'Services',
+    },
+    departments: {
+      create: 'Add department',
+      dialogCreate: 'Create department',
+      dialogEdit: 'Edit department',
+      code: 'Department code',
+      name: 'Department name',
+      sectionSubtitle: 'Manage the core departments that services will use across the rest of the system.',
+      sectionTitle: 'Departments',
+      status: 'Status',
+      tableAction: 'Action',
+      tableCode: 'Code',
+      tableName: 'Name',
+      tableStatus: 'Status',
+    },
+    services: {
+      create: 'Add service',
+      dialogCreate: 'Create service',
+      dialogEdit: 'Edit service',
+      duration: 'Duration (minutes)',
+      durationSuffix: 'min',
+      durationEmpty: '—',
+      emptyDepartments: 'Add at least one department before creating a service.',
+      name: 'Service name',
+      notes: 'Notes',
+      price: 'Default price',
+      sectionSubtitle: 'Each service belongs to one department and has a base default price at this stage.',
+      sectionTitle: 'Services',
+      smallNote: 'This stage covers the core catalog only, without deletion or packages yet.',
+      tableAction: 'Action',
+      tableDepartment: 'Department',
+      tableDuration: 'Duration',
+      tableName: 'Service',
+      tablePrice: 'Price',
+      tableStatus: 'Status',
+    },
+    status: {
+      active: 'Active',
+      inactive: 'Inactive',
+    },
+  },
+} as const;
+
+export function useCatalogText() {
+  return useLocalizedText(catalogText);
+}
