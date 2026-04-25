@@ -19,6 +19,9 @@ const catalogText = {
       tableCode: 'الكود',
       tableName: 'الاسم',
       tableStatus: 'الحالة',
+      isDressDepartment: 'قسم الفساتين؟',
+      dressDepartmentWarning: 'تنبيه: يمكن تحديد قسم واحد فقط كقسم للفساتين. هذا القسم سيتم استخدامه لربط الموديلات والفساتين في بقية النظام.',
+      displayOrder: 'الترتيب',
     },
     services: {
       create: 'إضافة خدمة',
@@ -40,6 +43,7 @@ const catalogText = {
       tableName: 'الخدمة',
       tablePrice: 'السعر',
       tableStatus: 'الحالة',
+      displayOrder: 'الترتيب',
     },
     status: {
       active: 'نشط',
@@ -64,6 +68,9 @@ const catalogText = {
       tableCode: 'Code',
       tableName: 'Name',
       tableStatus: 'Status',
+      isDressDepartment: 'Dress Department?',
+      dressDepartmentWarning: 'Warning: Only one department can be the Dress Department. This department will be used for linking dresses across the system.',
+      displayOrder: 'Display Order',
     },
     services: {
       create: 'Add service',
@@ -85,6 +92,7 @@ const catalogText = {
       tableName: 'Service',
       tablePrice: 'Price',
       tableStatus: 'Status',
+      displayOrder: 'Display Order',
     },
     status: {
       active: 'Active',

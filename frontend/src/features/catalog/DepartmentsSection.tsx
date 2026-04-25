@@ -1,9 +1,12 @@
+import CheckroomIcon from '@mui/icons-material/Checkroom';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import PlaylistAddOutlinedIcon from '@mui/icons-material/PlaylistAddOutlined';
-import { Alert, Button, Chip, Stack, TextField } from '@mui/material';
+import { Alert, Box, Button, Checkbox, Chip, FormControlLabel, Stack, TextField, Tooltip, Typography } from '@mui/material';
 import { useMutation } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 
+import { StableNumericField } from '../../components/inputs/StableNumericField';
 import { AppDialogShell } from '../../components/AppDialogShell';
 import { DestructiveDeleteDialog } from '../../components/DestructiveDeleteDialog';
 import { LifecycleReasonDialog } from '../../components/LifecycleReasonDialog';
@@ -16,7 +19,7 @@ import { useCatalogText } from '../../text/catalog';
 import { archiveDepartment, createDepartment, restoreDepartment, updateDepartment, type DepartmentRecord } from './api';
 
 function emptyForm() {
-  return { code: '', name: '', is_active: true };
+  return { code: '', name: '', is_active: true, display_order: 0 };
 }
 
 export function DepartmentsSection({ departments }: { departments: DepartmentRecord[] }) {
@@ -75,7 +78,12 @@ export function DepartmentsSection({ departments }: { departments: DepartmentRec
   function openEditDialog(department: DepartmentRecord) {
     setError(null);
     setEditingDepartment(department);
-    setForm({ code: department.code, name: department.name, is_active: department.is_active });
+    setForm({ 
+      code: department.code, 
+      name: department.name, 
+      is_active: department.is_active,
+      display_order: department.display_order,
+    });
     setDialogOpen(true);
   }
 
@@ -85,7 +93,7 @@ export function DepartmentsSection({ departments }: { departments: DepartmentRec
       await updateMutation.mutateAsync({ departmentId: editingDepartment.id, payload: form });
       return;
     }
-    await createMutation.mutateAsync({ code: form.code, name: form.name });
+    await createMutation.mutateAsync(form);
   }
 
   function openLifecycleDialog(department: DepartmentRecord, archive: boolean) {
@@ -137,7 +145,22 @@ export function DepartmentsSection({ departments }: { departments: DepartmentRec
           rows={rows}
           columns={[
             { key: 'code', header: catalogText.departments.tableCode, searchValue: (row) => row.code, render: (row) => row.code },
-            { key: 'name', header: catalogText.departments.tableName, searchValue: (row) => row.name, render: (row) => row.name },
+            { 
+              key: 'name', 
+              header: catalogText.departments.tableName, 
+              searchValue: (row) => row.name, 
+              render: (row) => (
+                <Stack direction='row' alignItems='center' spacing={1}>
+                  <Typography variant='body2'>{row.name}</Typography>
+                  {row.is_dress_department && (
+                    <Tooltip title={catalogText.departments.isDressDepartment}>
+                      <CheckroomIcon fontSize='small' color='primary' />
+                    </Tooltip>
+                  )}
+                </Stack>
+              )
+            },
+            { key: 'display_order', header: catalogText.departments.displayOrder, render: (row) => row.display_order },
             {
               key: 'status',
               header: catalogText.departments.tableStatus,
@@ -198,6 +221,12 @@ export function DepartmentsSection({ departments }: { departments: DepartmentRec
         <Stack spacing={2}>
           <TextField label={catalogText.departments.code} value={form.code} onChange={(event) => setForm({ ...form, code: event.target.value })} />
           <TextField label={catalogText.departments.name} value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} />
+          <StableNumericField 
+            label={catalogText.departments.displayOrder} 
+            value={String(form.display_order)} 
+            onValueChange={(value) => setForm({ ...form, display_order: parseInt(value) || 0 })} 
+            allowDecimal={false}
+          />
           {editingDepartment ? (
             <TextField select SelectProps={{ native: true }} label={catalogText.departments.status} value={form.is_active ? 'active' : 'inactive'} onChange={(event) => setForm({ ...form, is_active: event.target.value === 'active' })}>
               <option value='active'>{catalogText.status.active}</option>

@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
@@ -14,7 +14,7 @@ class CatalogRepository:
         stmt = select(Department).where(Department.company_id == company_id)
         if is_active is not None:
             stmt = stmt.where(Department.is_active == is_active)
-        stmt = stmt.order_by(Department.name.asc())
+        stmt = stmt.order_by(Department.display_order.asc(), Department.name.asc())
         return list(self.db.scalars(stmt))
 
     def get_department(self, department_id: str) -> Department | None:
@@ -22,6 +22,10 @@ class CatalogRepository:
 
     def get_department_by_code(self, company_id: str, code: str) -> Department | None:
         stmt = select(Department).where(Department.company_id == company_id, Department.code == code)
+        return self.db.scalars(stmt).first()
+
+    def get_dress_department(self, company_id: str) -> Department | None:
+        stmt = select(Department).where(Department.company_id == company_id, Department.is_dress_department == True)
         return self.db.scalars(stmt).first()
 
     def add_department(self, department: Department) -> Department:
@@ -36,7 +40,7 @@ class CatalogRepository:
         )
         if is_active is not None:
             stmt = stmt.where(ServiceCatalogItem.is_active == is_active)
-        stmt = stmt.order_by(ServiceCatalogItem.name.asc())
+        stmt = stmt.order_by(ServiceCatalogItem.display_order.asc(), ServiceCatalogItem.name.asc())
         return list(self.db.scalars(stmt))
 
     def get_service(self, service_id: str) -> ServiceCatalogItem | None:

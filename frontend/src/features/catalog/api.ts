@@ -1,4 +1,4 @@
-﻿import { apiRequest } from '../../lib/api';
+import { apiRequest } from '../../lib/api';
 
 export type DepartmentRecord = {
   id: string;
@@ -6,6 +6,8 @@ export type DepartmentRecord = {
   code: string;
   name: string;
   is_active: boolean;
+  is_dress_department: boolean;
+  display_order: number;
 };
 
 export type ServiceRecord = {
@@ -18,11 +20,13 @@ export type ServiceRecord = {
   duration_minutes: number | null;
   notes: string | null;
   is_active: boolean;
+  display_order: number;
 };
 
 export type DepartmentPayload = {
   code: string;
   name: string;
+  display_order: number;
 };
 
 export type DepartmentUpdatePayload = DepartmentPayload & {
@@ -35,6 +39,7 @@ export type ServicePayload = {
   default_price: number;
   duration_minutes?: number | null;
   notes?: string | null;
+  display_order: number;
 };
 
 export type ServiceUpdatePayload = ServicePayload & {
@@ -74,6 +79,13 @@ export function restoreDepartment(departmentId: string, reason?: string): Promis
   return apiRequest<DepartmentRecord>(`/api/catalog/departments/${departmentId}/restore`, {
     method: 'POST',
     body: JSON.stringify({ reason: reason ?? null }),
+  });
+}
+
+export function setDressDepartment(departmentId: string): Promise<DepartmentRecord> {
+  return apiRequest<DepartmentRecord>('/api/catalog/operational/dresses-department', {
+    method: 'POST',
+    body: JSON.stringify({ department_id: departmentId }),
   });
 }
 

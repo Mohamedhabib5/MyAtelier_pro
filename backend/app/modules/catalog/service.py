@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from decimal import Decimal, ROUND_HALF_UP
 
@@ -31,6 +31,7 @@ def create_department(db: Session, actor: User, payload: DepartmentCreateRequest
     if repo.get_department_by_code(company.id, code) is not None:
         raise ValidationAppError('كود القسم مستخدم بالفعل')
 
+
     department = Department(
         company_id=company.id,
         created_by_user_id=actor.id,
@@ -39,6 +40,7 @@ def create_department(db: Session, actor: User, payload: DepartmentCreateRequest
         code=code,
         name=_clean(payload.name),
         is_active=True,
+        display_order=payload.display_order,
     )
     repo.add_department(department)
     db.flush()
@@ -65,9 +67,11 @@ def update_department(db: Session, actor: User, department_id: str, payload: Dep
     if existing is not None and existing.id != department.id:
         raise ValidationAppError('كود القسم مستخدم بالفعل')
 
+
     department.code = code
     department.name = _clean(payload.name)
     department.is_active = payload.is_active
+    department.display_order = payload.display_order
     department.updated_by_user_id = actor.id
     department.entity_version += 1
     record_audit(
@@ -81,6 +85,35 @@ def update_department(db: Session, actor: User, department_id: str, payload: Dep
     )
     db.commit()
     db.refresh(department)
+    return _serialize_department(department)
+
+
+def set_dress_department(db: Session, actor: User, department_id: str) -> dict:
+    company = get_company_settings(db)
+    repo = CatalogRepository(db)
+    department = _get_department_for_company(repo, company.id, department_id)
+
+    if not department.is_active:
+        raise ValidationAppError('لا يمكن اختيار قسم غير نشط كقسم للفساتين')
+
+    if not department.is_dress_department:
+        _unmark_dress_departments(db, company.id)
+        department.is_dress_department = True
+        department.updated_by_user_id = actor.id
+        department.entity_version += 1
+        db.flush()
+        record_audit(
+            db,
+            actor_user_id=actor.id,
+            action='department.set_dress_department',
+            target_type='department',
+            target_id=department.id,
+            summary=f'Set department {department.name} as the dresses department',
+            diff={'is_dress_department': True, 'entity_version': department.entity_version},
+        )
+        db.commit()
+        db.refresh(department)
+
     return _serialize_department(department)
 
 
@@ -110,6 +143,7 @@ def create_service(db: Session, actor: User, payload: ServiceCreateRequest) -> d
         duration_minutes=payload.duration_minutes,
         notes=_clean_optional(payload.notes),
         is_active=True,
+        display_order=payload.display_order,
     )
     repo.add_service(service)
     db.flush()
@@ -150,6 +184,7 @@ def update_service(db: Session, actor: User, service_id: str, payload: ServiceUp
     service.duration_minutes = payload.duration_minutes
     service.notes = _clean_optional(payload.notes)
     service.is_active = payload.is_active
+    service.display_order = payload.display_order
     service.updated_by_user_id = actor.id
     service.entity_version += 1
     db.flush()
@@ -198,7 +233,16 @@ def _serialize_department(department: Department) -> dict:
         'code': department.code,
         'name': department.name,
         'is_active': department.is_active,
+        'is_dress_department': department.is_dress_department,
+        'display_order': department.display_order,
     }
+
+def _unmark_dress_departments(db: Session, company_id: str):
+    repo = CatalogRepository(db)
+    current = repo.get_dress_department(company_id)
+    if current:
+        current.is_dress_department = False
+        db.flush()
 
 
 def _serialize_service(service: ServiceCatalogItem) -> dict:
@@ -216,6 +260,7 @@ def _serialize_service(service: ServiceCatalogItem) -> dict:
         'duration_minutes': service.duration_minutes,
         'notes': service.notes,
         'is_active': service.is_active,
+        'display_order': service.display_order,
     }
 
 

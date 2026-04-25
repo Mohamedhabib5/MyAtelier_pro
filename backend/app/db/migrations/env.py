@@ -11,6 +11,7 @@ from app.modules.accounting.models import ChartOfAccount, JournalEntry, JournalE
 from app.modules.bookings.models import Booking, BookingLine
 from app.modules.catalog.models import Department, ServiceCatalogItem
 from app.modules.core_platform.models import AppSetting, AuditLog, BackupRecord
+from app.modules.custody.models import CustodyCase
 from app.modules.customers.models import Customer
 from app.modules.dresses.models import DressResource
 from app.modules.identity.models import Permission, Role, User, role_permissions, user_roles

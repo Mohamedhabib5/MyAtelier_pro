@@ -54,6 +54,15 @@ const settingsText = {
       subtitle: 'ينشئ النظام ملف ZIP جديدًا ويبدأ تنزيله مباشرة.',
       title: 'النسخ الاحتياطية',
     },
+    operationalDepartments: {
+      title: 'الأقسام التشغيلية',
+      subtitle: 'تحديد الأقسام ذات الطبيعة الخاصة في النظام.',
+      dressesDepartment: 'قسم الفساتين',
+      dressesDepartmentSubtitle: 'اختر القسم المسؤول عن الفساتين لتفعيل خصائصها في النظام.',
+      save: 'حفظ الإعدادات التشغيلية',
+      selectDepartment: 'اختر القسم...',
+      success: 'تم تحديث قسم الفساتين بنجاح.',
+    },
   },
   en: {
     page: {
@@ -107,6 +116,15 @@ const settingsText = {
       status: 'Status',
       subtitle: 'The system creates a new ZIP file and starts downloading it immediately.',
       title: 'Backups',
+    },
+    operationalDepartments: {
+      title: 'Operational Departments',
+      subtitle: 'Define departments with special characteristics in the system.',
+      dressesDepartment: 'Dresses Department',
+      dressesDepartmentSubtitle: 'Select the department responsible for dresses to enable its features.',
+      save: 'Save Operational Settings',
+      selectDepartment: 'Select Department...',
+      success: 'Dresses department updated successfully.',
     },
   },
 } as const;
