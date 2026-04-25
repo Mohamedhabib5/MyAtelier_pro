@@ -42,15 +42,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     { to: '/dashboard', label: navigationText.dashboard, icon: <DashboardOutlinedIcon /> },
     { to: '/bookings', label: navigationText.pages.bookings, icon: <EventAvailableOutlinedIcon /> },
     { to: '/customers', label: navigationText.pages.customers, icon: <GroupsOutlinedIcon /> },
-    { to: '/services', label: navigationText.pages.services, icon: <SpaOutlinedIcon /> },
     { to: '/dresses', label: navigationText.pages.dresses, icon: <CheckroomOutlinedIcon /> },
     { to: '/payments', label: navigationText.pages.payments, icon: <PaymentsOutlinedIcon /> },
     { to: '/custody', label: custodyNavLabel, icon: <Inventory2OutlinedIcon /> },
     { to: '/reports', label: navigationText.pages.reports, icon: <AssessmentOutlinedIcon /> },
-    { to: '/exports', label: navigationText.pages.exports, icon: <FileDownloadOutlinedIcon /> },
     { to: '/accounting', label: navigationText.pages.accounting, icon: <AccountBalanceOutlinedIcon /> },
     ...(isAdmin ? [{ to: '/audit', label: navigationText.pages.audit, icon: <PolicyOutlinedIcon /> }] : []),
-    { to: '/users', label: usersLabel, icon: <AccountCircleOutlinedIcon /> },
     { to: '/settings', label: navigationText.pages.settings, icon: <SettingsOutlinedIcon /> },
   ];
 
