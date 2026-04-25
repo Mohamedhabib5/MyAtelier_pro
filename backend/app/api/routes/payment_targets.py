@@ -15,7 +15,7 @@ router = APIRouter(prefix='/payment-targets', tags=['payment-targets'])
 @router.get('/search', response_model=list[PaymentTargetSearchResult])
 def search_payment_targets_route(
     request: Request,
-    q: str = Query(min_length=2),
+    q: str = Query(default=''),
     db: Session = Depends(get_db),
     _: User = Depends(require_payments_view),
 ) -> list[PaymentTargetSearchResult]:

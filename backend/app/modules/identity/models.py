@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String, Table, UniqueConstraint
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String, Table, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -54,3 +54,12 @@ class Permission(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     description: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     roles = relationship("Role", secondary=role_permissions, back_populates="permissions", lazy="selectin")
+
+
+class UserGridPreference(Base, UUIDPrimaryKeyMixin, TimestampMixin):
+    __tablename__ = "user_grid_preferences"
+    __table_args__ = (UniqueConstraint("user_id", "table_key", name="uq_user_grid_preferences_user_table"),)
+
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    table_key: Mapped[str] = mapped_column(String(120), nullable=False)
+    state_json: Mapped[str] = mapped_column(Text, nullable=False)

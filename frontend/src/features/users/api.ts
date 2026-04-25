@@ -28,6 +28,25 @@ export type SelfUpdateUserPayload = {
   preferred_language?: LanguageCode;
 };
 
+export type GridPreferenceState = {
+  columnState?: Array<{
+    colId: string;
+    hide?: boolean | null;
+    width?: number;
+    pinned?: 'left' | 'right' | null;
+    sort?: 'asc' | 'desc' | null;
+    sortIndex?: number | null;
+  }>;
+  filterModel?: Record<string, unknown>;
+  pageSize: number;
+};
+
+type GridPreferenceResponse = {
+  table_key: string;
+  state: GridPreferenceState;
+  updated_at: string | null;
+};
+
 export function listUsers(): Promise<UserRecord[]> {
   return apiRequest<UserRecord[]>('/api/users', { method: 'GET' });
 }
@@ -55,4 +74,22 @@ export function updateMyUser(payload: SelfUpdateUserPayload): Promise<UserRecord
     method: 'PATCH',
     body: JSON.stringify(payload),
   });
+}
+
+export type GridPreferenceEnvelope = {
+  state: GridPreferenceState;
+  updatedAt: string | null;
+};
+
+export async function getMyGridPreference(tableKey: string): Promise<GridPreferenceEnvelope> {
+  const response = await apiRequest<GridPreferenceResponse>(`/api/users/me/grid-preferences/${encodeURIComponent(tableKey)}`, { method: 'GET' });
+  return { state: response.state, updatedAt: response.updated_at };
+}
+
+export async function setMyGridPreference(tableKey: string, state: GridPreferenceState): Promise<GridPreferenceEnvelope> {
+  const response = await apiRequest<GridPreferenceResponse>(`/api/users/me/grid-preferences/${encodeURIComponent(tableKey)}`, {
+    method: 'PUT',
+    body: JSON.stringify({ state }),
+  });
+  return { state: response.state, updatedAt: response.updated_at };
 }

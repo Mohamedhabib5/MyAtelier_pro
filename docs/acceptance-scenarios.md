@@ -1,9 +1,10 @@
-﻿# Acceptance Scenarios
+# Acceptance Scenarios
 
 ## Cross-cutting rules
 - Every checkpoint must remain small, reviewable, and understandable to a non-programmer owner.
 - Every checkpoint must update the relevant docs before it is considered complete.
 - Every checkpoint must include focused validation and a brief security review note.
+- Every write workflow must be auditable from the backend; future destructive actions must also be explainable to non-programmer operators.
 
 ## Implemented acceptance scenarios
 - First run on an empty database creates the default `admin / admin123` user exactly once.
@@ -11,17 +12,89 @@
 - Settings can update company details and create downloadable backup files.
 - Accounting supports chart seeding, journal create/list/detail, posting, reversal, and trial balance read views.
 - Customers can be created and updated by both `admin` and `user`.
+- Customer responses now expose tracked metadata (`created_by_user_id`, `updated_by_user_id`, `entity_version`) and updates increment `entity_version`.
 - Departments and services can be created and updated by both `admin` and `user`.
+- Department and service responses now expose tracked metadata (`created_by_user_id`, `updated_by_user_id`, `entity_version`) and service updates increment `entity_version`.
 - Dress resources can be created and updated by both `admin` and `user`.
+- Dress responses now expose tracked metadata (`created_by_user_id`, `updated_by_user_id`, `entity_version`) and updates increment `entity_version`.
 - Bookings can be created and updated by both `admin` and `user` before completion.
+- Booking responses now expose tracked metadata (`created_by_user_id`, `updated_by_user_id`, `entity_version`) for both booking headers and booking lines, and saved booking edits increment versions.
 - The same dress cannot be booked twice on the same date.
 - Booking completion now creates a posted revenue-recognition journal entry.
 - Completed bookings are locked after revenue recognition.
+- Revenue recognition for a completed booking line can now be reversed through a guarded backend action.
+- Revenue recognition now supports tax-aware posting by splitting net revenue and output tax.
 - Payments support deposit, payment, and refund while enforcing remaining-balance validation.
+- Payment document responses now expose tracked metadata (`created_by_user_id`, `updated_by_user_id`, `entity_version`) for both documents and allocation lines, and saved edits increment document versions.
 - Every new payment now auto-posts a linked journal entry.
 - Updating a payment reverses the old linked journal and posts a replacement journal.
 - Payments can be voided safely with a reason instead of being deleted.
 - Voiding a payment reverses its linked journal entry and removes the payment from financial totals.
+- Settings now expose a shared destructive-reason catalog endpoint to support consistent archive/void/delete reason selection across workflows.
+- Payment void now accepts and validates a structured `reason_code` (with fallback default), and invalid codes are blocked server-side.
+- Settings now expose period-lock foundation endpoints so authorized users can read and update `locked_through` closing-date control.
+- Period-lock changes are audited with before/after lock-date evidence under `period_lock.updated`.
+- Corrective hard delete, payment update/void, and booking revenue-reversal actions are now blocked when action date falls inside the locked period.
+- Locked actions can now proceed only through explicit override (`override_lock=true`) with mandatory `override_reason` and `period_lock.manage` permission.
+- Every successful override now creates a dedicated audit event (`period_lock.override_used`) with lock date, action date, action key, and reason.
+- Authorized users can now review override exceptions through `/api/settings/period-lock/exceptions`.
+- Settings UI now includes period-lock date management and an exceptions table for override review.
+- Corrective hard-delete and payment-void dialogs now provide optional override inputs for approved close-date exceptions.
+- Booking revenue-reversal UI now supports override retry when blocked by period lock.
+- Booking revenue-reversal override now uses an explicit dialog workflow (reason-first) instead of browser prompt/confirm.
+- Payment update now supports period-lock override retry from the frontend when a close-date lock blocks correction.
+- Custody foundation endpoint now supports authenticated list/create/detail workflows under `/api/custody`.
+- Custody create actions are audited (`custody.case_created`) with case number, status, and type metadata.
+- Frontend shell now includes a custody page with a basic create form and custody-case list.
+- Custody cases now support guarded workflow transitions via `/api/custody/{case_id}/actions`.
+- Invalid custody transitions are blocked server-side with explicit validation errors.
+- Custody workflow transitions (`handover`, `customer_return`, `laundry_send`, `laundry_receive`, `settlement`) now generate dedicated audit events.
+- Custody creation now requires explicit `custody_date`, and every custody action now requires explicit `action_date`.
+- Custody compensation can now be collected through `/api/custody/{case_id}/compensation` with amount/date validation and dual permission guard (`custody.manage` + `payments.manage`).
+- Collecting custody compensation now creates a linked payment document (`document_kind=custody_compensation`) and auto-posted accounting journal entry.
+- Custody case response now exposes compensation evidence fields (`compensation_amount`, `compensation_collected_on`, `compensation_payment_document_id`) and duplicate compensation collection is blocked.
+- Custody list now uses one unified table with status views (`open`, `settled`, `all`) and operational fields (customer, booking number, dress, notes, deposit, compensation, custody date).
+- Finance dashboard now visualizes daily income, department income, and top services with chart-style bars while keeping numeric list values visible.
+- Dashboard chart values remain aligned with existing backend metrics payloads (`daily_income`, `department_income`, `top_services`) without backend source-of-truth changes.
+- Admin users can now query audit events through `/api/audit/events` with server-side filters for actor/action/entity/date/branch and free-text search.
+- Non-admin users are denied access to audit explorer endpoint due to missing `audit.view`.
+- Frontend now includes an audit explorer page and navigation entry (admin context) to inspect filtered audit history in a table view.
+- Admin users can now query destructive-only actions through `/api/audit/destructive-actions` and filter them server-side.
+- Audit explorer UI now supports toggling between all actions and destructive-only actions.
+- Backend guardrail tests now enforce that customer lifecycle write workflows (`create`, `update`, `archive`, `restore`) always leave audit records with matching request-id context.
+- Backend guardrail tests now enforce that payment void workflow always leaves `payment_document.voided` audit evidence including structured reason-code payload.
+- Background run-due export schedules now create standardized `automation.job_run` audit records with `job_key=exports.run_due_schedules`.
+- Backup stale-check runs now create standardized `automation.job_run` audit records with `job_key=ops.backup_stale_check`.
+- Automation/scheduler scripts now pass `trigger_source=automation`, and this source is persisted in audit payload evidence.
+- Every registered write route now has an explicit audit-policy inventory entry, and guardrail tests fail if a new mutation route is introduced without onboarding.
+- Session language changes now create `auth.session_language_changed` audit records with request-context and before/after language evidence.
+- Active-branch switching now creates `branch.active_switched` audit records with previous/next branch evidence.
+- Destructive delete, lifecycle reason, period-lock override, and payment-void dialogs now render in full-screen mode on small viewports with mobile-friendly stacked actions.
+- Custody action and compensation controls now provide full-width mobile action buttons and responsive field grouping for easier phone usage.
+- Focused Playwright smoke now passes for login foundation and lifecycle archive/restore critical path on the current UI behavior.
+- Lifecycle smoke coverage now reflects the current dialog/API archive-restore flow instead of legacy browser prompt assumptions.
+- Authenticated users can now save and load AG Grid preferences per table through backend user-scoped API endpoints.
+- Grid preference updates now produce audit events (`user.grid_preferences_updated`) and are governed by write-route inventory policy.
+- Frontend AG Grid screens now load server-stored user preferences with local cache fallback for continuity.
+- Grid preference hydration now resolves local/server conflicts using explicit newer-wins behavior based on local saved timestamp and backend `updated_at`.
+- Grid preferences now persist correctly for the same user after logout/login cycle in backend validation coverage.
+- Bookings exports (`/api/exports/bookings.csv|xlsx`) now honor the same table filters used by the bookings heavy table (status/date/search/sort).
+- Payments exports (`/api/exports/payments.csv|xlsx`) now honor the same table filters used by the payments heavy table (status/document kind/date/search/sort).
+- Bookings and payments grid XLSX export actions now include the active table filters/sort in the generated backend export URL.
+- Payments export alias endpoint (`/api/exports/payment-documents.csv`) now preserves the same filter behavior as `/api/exports/payments.csv`.
+- Booking-lines exports now preserve booking-table filter behavior (`status`, date range, search, sort).
+- Payment-allocation exports now preserve payment-table filter behavior (`status`, `document_kind`, date range, search, sort).
+- Export center now includes filter inputs for bookings/payments export actions so users can trigger filtered current-view exports from one screen.
+- Frontend E2E coverage now verifies that export-center bookings and payment-allocation CSV actions include active filter query parameters in outgoing export requests.
+- Export center now supports custody dataset download in both CSV and XLSX formats.
+- Destructive actions now include an authenticated preview endpoint that computes impact and blockers for `customer`, `department`, `service`, and `dress` before any hard-delete execution path.
+- Destructive preview attempts are audited with eligibility result, selected reason code, and impact counters.
+- Destructive delete execution now exists as an authenticated backend action and succeeds only when server-side impact checks confirm eligibility.
+- Destructive delete attempts are permission-gated and audited with reason metadata and impact summary.
+- Hard-deleted entities now leave tombstone-style audit evidence (`before snapshot`) so the deleted business state remains reviewable after row removal.
+- Dresses screen now supports corrective delete through a guided flow that requires reason selection and backend impact preview before confirming delete.
+- Customers and catalog screens (departments/services) now support the same corrective-delete guided flow with backend eligibility preview before delete confirmation.
+- Corrective-delete dialog now shows impact counters from backend preview (for example related bookings/payments counts) before the final confirmation step.
 - The finance dashboard shows KPI totals and summary breakdowns to both `admin` and `user`.
 - The reports page shows broader read-only operational summaries to both `admin` and `user`.
 - The authenticated session now stores an active branch.
@@ -35,15 +108,6 @@
 - `user` cannot access export schedule management actions.
 - Backend startup now boots and shuts down through `lifespan` without deprecated startup events.
 - Frontend pages now load lazily and still build successfully for production.
-
-## Still deferred
-- unattended background execution of export schedules
-- email, WhatsApp, or other delivery channels for export schedules
-- automatic reversal for booking revenue recognition
-- server-generated PDF exports
-- delete flows for business documents beyond payment voiding
-- customer or mobile portals
-
 - Bookings can now be created and updated as one document with multiple service lines.
 - Quick customer creation is available from inside the booking editor flow.
 - Suggested price is auto-filled per booking line and can be edited into the agreed actual price.
@@ -60,3 +124,80 @@
 - Booking date validation now returns Arabic messages such as `التاريخ مطلوب`.
 - Booking dress behavior now depends on `department.code`, so text corruption in display labels cannot break the rule.
 - The text-integrity source check now blocks `???`, replacement characters, mojibake patterns, and leftover English date-validation strings.
+- Production startup now rejects unsafe defaults such as weak secret keys and default admin password.
+- Login success, login failure, logout, and permission-denied backend events now create audit records with request-context metadata.
+- Production startup now rejects localhost or wildcard CORS origins and wildcard trusted hosts.
+- `SESSION_SAME_SITE` values are validated and `SameSite=None` now requires secure cookies.
+- Deployment docs now include runnable edge templates for HTTPS redirect and reverse-proxy forwarding.
+- Deployment runbook now includes verification for secure cookies and host/protocol forwarding through edge.
+- Post-deploy operations now define backup retention windows and restore drill cadence.
+- Restore drill evidence now has a dedicated log document for recurring operational checks.
+- Operations baseline now defines initial alert severities and incident signal priorities.
+- Authenticated settings users can now read operations metrics snapshot from `/api/settings/ops/metrics`.
+- Authenticated settings users can now run `/api/settings/ops/alerts/test` with dry-run mode and audited trace.
+- Production config now rejects non-HTTPS values for `OPS_ALERT_WEBHOOK_URL`.
+- Authenticated settings users can now run `/api/settings/ops/alerts/run-backup-check` for stale-backup evaluation.
+- Automated backup-check runs are now audited with action key `ops.backup_stale_check_run`.
+- Operations can schedule stale-backup checks using `infra/scripts/run-backup-stale-alert-check.ps1`.
+- Operations can now register/unregister a Windows scheduled task using dedicated scripts in `infra/scripts/`.
+- Windows scheduler wiring now has a step-by-step runbook with validation and rollback steps.
+- Operations can now register/unregister Linux Cron stale-check jobs using dedicated scripts in `infra/scripts/`.
+- Linux scheduler wiring now has a step-by-step runbook with validation and rollback steps.
+- Operations can now deploy stale-backup checks as a Kubernetes CronJob using `infra/k8s/backup-stale-alert-cronjob.example.yaml`.
+- Kubernetes scheduler wiring now has apply/validate/remove runbook coverage.
+- Export managers can now run due schedules in batch via `/api/exports/schedules/run-due`.
+- Background export batch runs now support `dry_run` preview and execution limit controls.
+- Unattended batch execution runners are now available for Windows and Linux.
+- Due export batch runs now support optional webhook delivery handoff.
+- Delivery dry-run mode now validates channel flow without external send.
+- Production config now rejects non-HTTPS values for `EXPORT_DELIVERY_WEBHOOK_URL`.
+- Nightly failure notifier payload contract is now documented with explicit schema fields and receiver-side idempotency guidance.
+- Nightly notifier rollout now has a manual verification checklist covering success-no-send and failure-send behavior.
+- Nightly failure reports can now be ingested by backend via `/api/settings/ops/nightly/failure-report` using `X-Nightly-Token` guard.
+- Latest nightly failure snapshot is now available to authorized settings users via `/api/settings/ops/nightly/latest`.
+- Nightly ingest now records audit evidence under `ops.nightly_failure_reported`.
+- Settings page now shows a read-only nightly status panel that renders latest run metadata and failed-stage results when available.
+- Settings users can open the reported nightly run directly from the panel via stored `run_url`.
+- Nightly GitHub notifier can now post directly to MyAtelier ingest endpoint when `NIGHTLY_FAILURE_INGEST_URL` and `NIGHTLY_FAILURE_INGEST_TOKEN` are configured.
+- Nightly notification summary now exposes whether ingest URL/token secrets are configured for faster operations triage.
+- Audit explorer now includes a dedicated nightly-ops preset (`/api/audit/nightly-ops`) that returns only `ops.nightly_failure_reported` and `automation.job_run` actions.
+- Operators can now switch audit view mode to `Nightly ops` from the same explorer page without manually typing action keys.
+- Audit explorer now includes quick date shortcuts (`today`, `last 24h`, `last 7d`) for faster incident triage.
+- Quick date shortcuts apply in all audit explorer modes, including nightly-ops mode.
+- Operators can now export filtered nightly-ops audit rows to CSV via `/api/audit/nightly-ops.csv` from the same explorer workflow.
+- Nightly-ops CSV now includes export-note rows that document export timestamp, exported-row count, and active filter summary.
+- Audit explorer nightly mode now shows an on-screen export summary (matching rows + active filters) before CSV download.
+- Nightly-ops CSV download now writes `audit.nightly_ops_exported` evidence with actor and export context (rows + filters + limit).
+- Nightly-ops explorer now shows a compact latest-export summary so operators can quickly verify recent export activity (who/when/what) without rebuilding filters manually.
+- Nightly-ops CSV export now supports optional operator reason capture and persists it to `audit.nightly_ops_exported.reason_text`.
+- Export managers can now download server-generated finance PDF via `/api/exports/finance.pdf`.
+- Export managers can now download server-generated reports PDF via `/api/exports/reports.pdf`.
+- Users can now search, filter by status/date, sort, and paginate the bookings list without loading the full booking table into the browser first.
+- Users can now search, filter by status/kind/date, sort, and paginate the payment documents list without loading the full payments table into the browser first.
+- Users can hide/show and reorder visible columns on bookings and payments screens while keeping the existing document editor flows intact.
+- Core list screens now render through one AG Grid Community layer with consistent search, column resize, column move, pinning, visibility control, CSV export, and RTL-aware layout behavior.
+- Booking and payment editor line tables now also render through AG Grid while preserving existing save workflows, quick customer creation, allocation editing, and server-side business validation.
+- Smaller operational tables such as customers, catalog, users, settings, export schedules, accounting summaries, and upcoming bookings now share the same grid behavior through the common frontend wrapper.
+- Customers can now be archived and restored through explicit backend actions, and customer list API filtering supports `status=all|active|inactive`.
+- Departments and services can now be archived/restored through explicit backend actions, and catalog list APIs support `status=all|active|inactive`.
+- Dresses can now be archived/restored through explicit backend actions, and dresses list API supports `status=all|active|inactive`.
+- Customers, catalog, and dresses frontend screens now expose archive/restore actions directly in table workflows, with active/inactive filtering controls aligned to backend list contracts.
+
+## Planned next-wave acceptance scenarios
+- Every authenticated create, update, archive, restore, corrective delete, void, reverse, post, completion, export download, backup action, and privileged auth event creates an audit record with actor, time, request context, and action key.
+- Every tracked entity shows who created it, who last updated it, when those actions happened, and an unlimited revision timeline through incrementing entity versions and audit events.
+- Login success, login failure, logout, permission-denied, and period-lock override events are all auditable.
+- Customers, departments, services, and dresses can be marked inactive / archived and later restored instead of being removed from history.
+- Eligible operational mistakes can be corrected with hard delete only when the backend policy allows it, while the audit trail keeps a full tombstone snapshot of the deleted record.
+- Posted or financially effective records are corrected through `void` or `reverse`, not by hard deletion from the main UI.
+- Closing-date / period-lock rules can block late edits, and approved overrides appear in an exceptions report.
+- Dress custody can be created and progressed through handover, customer return, laundry, settlement, and compensation workflows.
+- Custody compensation integrates with payments and accounting without silently mutating prior financial history.
+- Users can open drill-down views that connect customers, dresses, bookings, payments, custody, and audit history from the main operational screens.
+- The finance dashboard regains visual chart parity for daily income, department income, and top services while preserving the existing backend totals.
+- Audit managers can search, filter, and export audit history and destructive-action reports.
+
+## Still deferred after the planned roadmap
+- customer or public-facing portals
+- WhatsApp or broader outbound messaging workflows
+- large cross-branch BI or observability expansion beyond the current operational baseline

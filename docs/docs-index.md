@@ -6,8 +6,23 @@
 - `current-checkpoint.md`: exact state of the latest implemented checkpoint.
 - `milestones.md`: checkpoint history and recommended next slice.
 - `decision-log.md`: important decisions that future Codex sessions must keep.
+- `audit-trail-and-data-lifecycle-roadmap.md`: planned QuickBooks-style audit, archive, delete, void, and custody roadmap after `Checkpoint 8O`.
 - `security-baseline.md`: security rules that apply to all implementation slices.
 - `acceptance-scenarios.md`: current acceptance expectations for implemented slices.
+- `production-readiness-checklist.md`: minimum env, cookie, CORS, and host checks before production deployment.
+- `operational-readiness-checklist-final.md`: final go-live signoff checklist after roadmap closeout.
+- `deployment-edge-hardening.md`: edge proxy, TLS forwarding, and deployment verification runbook.
+- `post-deploy-operations-baseline.md`: backup retention, restore drill cadence, and monitoring-alert baseline.
+- `restore-drill-log.md`: monthly restore drill evidence log.
+- `alerting-stack-baseline.md`: authenticated ops metrics and webhook alert-test baseline.
+- `windows-task-scheduler-wiring.md`: concrete Windows Task Scheduler wiring for stale-backup checks.
+- `linux-cron-wiring.md`: concrete Linux Cron wiring for stale-backup checks.
+- `kubernetes-cronjob-wiring.md`: concrete Kubernetes CronJob wiring for stale-backup checks.
+- `export-schedules-background-execution.md`: unattended batch execution baseline for due export schedules.
+- `export-delivery-webhook.md`: delivery webhook baseline for due export schedule batch runs.
+- `server-generated-pdf-exports.md`: backend-generated PDF exports for finance and reports.
+- `booking-revenue-reversal.md`: guarded workflow for reversing booking-line recognized revenue.
+- `tax-aware-revenue-recognition.md`: tax-aware split for booking-line revenue recognition journals.
 - `customers-rules.md`: customer-module scope, validation, and security rules.
 - `services-and-departments-rules.md`: catalog-module scope, validation, and security rules.
 - `dress-resources-rules.md`: dresses-module scope, validation, and security rules.
@@ -21,6 +36,16 @@
 - `accounting-rules.md`: accounting foundation, trial balance, and posting assumptions.
 - `export-rules.md`: export-center scope, CSV behavior, printable views, saved schedules, and export security rules.
 - `arabic-text-integrity.md`: root cause, glossary choices, guardrails, and validation for Arabic text recovery.
+- `roadmap-9l-closeout.md`: closeout evidence for 9L validation steps and runtime notes.
+- `final-handoff-summary-2026-04-02.md`: final roadmap completion summary and recommended next checkpoint candidates.
+- `user-grid-preferences.md`: backend-persisted AG Grid preferences per user and integration details.
+- `guardrail-release-gate.md`: CI guardrail workflow, pass/fail release-gate criteria, and operator response steps.
+- `branch-protection-guardrails.md`: GitHub branch-protection rollout steps and required check names for guardrail gates.
+- `ci-gate-runbook.md`: CI gate timing benchmarks, common failure patterns, and troubleshooting flow.
+- `nightly-full-regression.md`: optional nightly CI workflow scope, job order, and included backend/E2E packs.
+- `nightly-failure-notifier-contract.md`: notifier webhook payload contract (`v1`) and manual rollout verification checklist.
+- `execution-status-table.md`: owner-facing execution board (`Done / In Progress / Next`) including custody handover/return delivery status and timing.
+- `next-phase-execution-plan-2026-04-03.md`: التنفيذ الرسمي للمرحلة القادمة (10O phase 2 + تدقيق audit + بوابة مراجعة نهائية إلزامية).
 
 ## Handoff docs
 - `session-handoff-2026-03-14.md`: early scaffold and planning handoff.
@@ -46,6 +71,20 @@
 - `session-handoff-2026-03-16-checkpoint-6f.md`: booking revenue-recognition handoff.
 - `session-handoff-2026-03-17-checkpoint-7c.md`: backup-restore verification handoff.
 - `session-handoff-2026-03-17-checkpoint-7d.md`: Arabic text integrity handoff.
+- `session-handoff-2026-03-21-checkpoint-8a.md`: production-readiness guardrails handoff.
+- `session-handoff-2026-03-21-checkpoint-8b.md`: deployment-edge hardening handoff.
+- `session-handoff-2026-03-21-checkpoint-8c.md`: post-deploy operations baseline handoff.
+- `session-handoff-2026-03-21-checkpoint-8d.md`: alerting-stack implementation baseline handoff.
+- `session-handoff-2026-03-21-checkpoint-8e.md`: automated stale-backup alert-check handoff.
+- `session-handoff-2026-03-21-checkpoint-8f.md`: Windows scheduler wiring handoff.
+- `session-handoff-2026-03-21-checkpoint-8g.md`: Linux Cron wiring handoff.
+- `session-handoff-2026-03-21-checkpoint-8h.md`: Kubernetes CronJob wiring handoff.
+- `session-handoff-2026-03-21-checkpoint-8i.md`: export schedules background execution handoff.
+- `session-handoff-2026-03-21-checkpoint-8j.md`: export delivery channel expansion handoff.
+- `session-handoff-2026-03-21-checkpoint-8k.md`: server-generated PDF exports handoff.
+- `session-handoff-2026-03-22-checkpoint-8l.md`: booking revenue-recognition reversal handoff.
+- `session-handoff-2026-03-22-checkpoint-8m.md`: tax-aware revenue-recognition handoff.
+- `session-handoff-2026-03-21-checkpoint-8j.md`: export delivery channel expansion handoff.
 
 ## Rule for future docs
 - Each new checkpoint must update the docs above if the current system behavior changes.

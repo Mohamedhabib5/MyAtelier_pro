@@ -9,7 +9,8 @@
 - completion creates a posted journal entry immediately
 - collected amounts debit `2100 عربون العملاء`
 - remaining amounts debit `1200 ذمم العملاء`
-- the full quoted price credits `4100 إيرادات الخدمات`
+- net service amount credits `4100 إيرادات الخدمات`
+- tax amount credits `2200 ضريبة المخرجات` when line tax is greater than zero
 - completed bookings expose the linked revenue journal number in the booking response and UI
 - completed bookings are locked after revenue recognition in this slice
 
@@ -33,7 +34,5 @@
 - the linked journal entry and booking completion action are both audited
 
 ## Deferred after this slice
-- reversal of booking completion revenue
 - invoice document workflow
-- tax-aware revenue recognition
 - write-off handling for bad debts

@@ -2,17 +2,23 @@ import ApartmentOutlinedIcon from '@mui/icons-material/ApartmentOutlined';
 import DownloadOutlinedIcon from '@mui/icons-material/DownloadOutlined';
 import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
 import StorefrontOutlinedIcon from '@mui/icons-material/StorefrontOutlined';
-import { Alert, Box, Button, Chip, Grid, Link, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, Chip, Grid, Link, Stack, TextField, Typography } from '@mui/material';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 
+import { AppDataTable } from '../components/data-table/AppDataTable';
 import { SectionCard } from '../components/SectionCard';
+import { useLanguage } from '../features/language/LanguageProvider';
+import { NightlyStatusSection } from '../features/settings/NightlyStatusSection';
+import { PaymentMethodsSection } from '../features/settings/PaymentMethodsSection';
+import { PeriodLockSection } from '../features/settings/PeriodLockSection';
 import { createBackup, createBranch, getActiveBranch, getBackupDownloadUrl, getCompany, listBackups, updateCompany } from '../features/settings/api';
 import { queryClient } from '../lib/queryClient';
 import { EMPTY_VALUE } from '../text/common';
 import { useSettingsText } from '../text/settings';
 
 export function SettingsPage() {
+  const { language } = useLanguage();
   const settingsText = useSettingsText();
   const [name, setName] = useState('');
   const [legalName, setLegalName] = useState('');
@@ -72,6 +78,30 @@ export function SettingsPage() {
       setMessage(null);
     },
   });
+  const tableLabels =
+    language === 'ar'
+      ? {
+          search: 'بحث',
+          searchPlaceholder: 'ابحث باسم الملف أو الحالة',
+          filters: 'الفلاتر',
+          columns: 'الأعمدة',
+          export: 'تصدير',
+          reset: 'إعادة الضبط',
+          noRows: 'لا توجد نسخ احتياطية مطابقة',
+          rowsPerPage: 'عدد الصفوف',
+          close: 'إغلاق',
+        }
+      : {
+          search: 'Search',
+          searchPlaceholder: 'Search by filename or status',
+          filters: 'Filters',
+          columns: 'Columns',
+          export: 'Export',
+          reset: 'Reset',
+          noRows: 'No matching backups',
+          rowsPerPage: 'Rows per page',
+          close: 'Close',
+        };
 
   return (
     <Stack spacing={3}>
@@ -154,32 +184,61 @@ export function SettingsPage() {
           <Button variant='contained' startIcon={<DownloadOutlinedIcon />} onClick={() => void backupMutation.mutateAsync()}>
             {settingsText.backups.create}
           </Button>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>{settingsText.backups.filename}</TableCell>
-                <TableCell>{settingsText.backups.status}</TableCell>
-                <TableCell>{settingsText.backups.size}</TableCell>
-                <TableCell>{settingsText.backups.download}</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {(backupsQuery.data ?? []).map((backup) => (
-                <TableRow key={backup.id}>
-                  <TableCell>{backup.filename}</TableCell>
-                  <TableCell>{backup.status}</TableCell>
-                  <TableCell>{backup.size_bytes}</TableCell>
-                  <TableCell>
-                    <Link href={getBackupDownloadUrl(backup.id)} underline='hover'>
-                      {settingsText.backups.download}
-                    </Link>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <AppDataTable
+            tableKey='settings-backups'
+            rows={backupsQuery.data ?? []}
+            columns={[
+              { key: 'filename', header: settingsText.backups.filename, searchValue: (row) => row.filename, render: (row) => row.filename },
+              { key: 'status', header: settingsText.backups.status, searchValue: (row) => row.status, render: (row) => row.status },
+              { key: 'size_bytes', header: settingsText.backups.size, sortValue: (row) => row.size_bytes, render: (row) => row.size_bytes },
+              {
+                key: 'download',
+                header: settingsText.backups.download,
+                render: (row) => (
+                  <Link href={getBackupDownloadUrl(row.id)} underline='hover'>
+                    {settingsText.backups.download}
+                  </Link>
+                ),
+              },
+            ]}
+            searchLabel={tableLabels.search}
+            searchPlaceholder={tableLabels.searchPlaceholder}
+            resetColumnsLabel={tableLabels.reset}
+            noRowsLabel={tableLabels.noRows}
+            filtersLabel={tableLabels.filters}
+            columnsLabel={tableLabels.columns}
+            exportLabel={tableLabels.export}
+            rowsPerPageLabel={tableLabels.rowsPerPage}
+            closeLabel={tableLabels.close}
+            searchFields={[(row) => row.filename, (row) => row.status]}
+          />
         </Stack>
       </SectionCard>
+
+      <PaymentMethodsSection
+        language={language}
+        onError={(nextError) => {
+          setError(nextError);
+          if (nextError) setMessage(null);
+        }}
+        onSuccess={(nextMessage) => {
+          setMessage(nextMessage);
+          setError(null);
+        }}
+      />
+
+      <PeriodLockSection
+        language={language}
+        onError={(nextError) => {
+          setError(nextError);
+          if (nextError) setMessage(null);
+        }}
+        onSuccess={(nextMessage) => {
+          setMessage(nextMessage);
+          setError(null);
+        }}
+      />
+      <NightlyStatusSection language={language} />
     </Stack>
   );
 }

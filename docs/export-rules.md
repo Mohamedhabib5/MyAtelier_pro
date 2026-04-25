@@ -18,12 +18,18 @@
 - customers export is company-wide
 - bookings export is scoped to the active branch by default and can also run against a validated branch id
 - payments export is scoped to the active branch by default and can also run against a validated branch id
+- bookings and payments exports now accept the same table filters used by heavy-grid endpoints (`search`, status, date range, sort fields, and sort direction)
+- `/api/exports/payment-documents.csv|xlsx` remains an alias for payments exports and must keep filter parity with `/api/exports/payments.csv|xlsx`
+- `/api/exports/booking-lines.csv|xlsx` now accepts the same booking-table filters and applies them before expanding booking document lines
+- `/api/exports/payment-allocations.csv|xlsx` now accepts the same payment-table filters and applies them before expanding payment allocations
+- export-center UI now offers booking/payment filter inputs and should pass them to related summary + detail export links in the same action group
 - payments export includes linked journal entry number and status when present
 - CSV files are emitted as UTF-8 with BOM for better Excel compatibility
 - printable views open in a separate tab and rely on the browser print dialog
 - printable views can be saved manually as PDF from the browser
 - saved schedules store export type, cadence, branch scope, next run date, active state, and last run timestamp
 - run-now returns a safe URL that reuses the existing authenticated export and print endpoints
+- bookings/payments grid XLSX actions should always include active filters in their URL so operators export what they are currently reviewing
 
 ## Security rules
 - all export routes require an authenticated session

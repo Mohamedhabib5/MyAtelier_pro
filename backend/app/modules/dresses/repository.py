@@ -10,8 +10,11 @@ class DressesRepository:
     def __init__(self, db: Session):
         self.db = db
 
-    def list_dresses(self, company_id: str) -> list[DressResource]:
-        stmt = select(DressResource).where(DressResource.company_id == company_id).order_by(DressResource.code.asc())
+    def list_dresses(self, company_id: str, *, is_active: bool | None = None) -> list[DressResource]:
+        stmt = select(DressResource).where(DressResource.company_id == company_id)
+        if is_active is not None:
+            stmt = stmt.where(DressResource.is_active == is_active)
+        stmt = stmt.order_by(DressResource.code.asc())
         return list(self.db.scalars(stmt))
 
     def get_dress(self, dress_id: str) -> DressResource | None:

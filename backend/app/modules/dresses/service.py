@@ -13,12 +13,12 @@ from app.modules.dresses.schemas import DressCreateRequest, DressUpdateRequest
 from app.modules.identity.models import User
 from app.modules.organization.service import get_company_settings
 
-VALID_STATUSES = {'available', 'reserved', 'maintenance'}
+VALID_STATUSES = {'available', 'reserved', 'with_customer', 'maintenance'}
 
 
-def list_dresses(db: Session) -> list[dict]:
+def list_dresses(db: Session, *, is_active: bool | None = None) -> list[dict]:
     company = get_company_settings(db)
-    rows = DressesRepository(db).list_dresses(company.id)
+    rows = DressesRepository(db).list_dresses(company.id, is_active=is_active)
     return [_serialize_dress(row) for row in rows]
 
 
@@ -31,6 +31,9 @@ def create_dress(db: Session, actor: User, payload: DressCreateRequest) -> dict:
 
     dress = DressResource(
         company_id=company.id,
+        created_by_user_id=actor.id,
+        updated_by_user_id=actor.id,
+        entity_version=1,
         code=code,
         dress_type=_clean(payload.dress_type),
         purchase_date=_parse_date(payload.purchase_date),
@@ -48,7 +51,7 @@ def create_dress(db: Session, actor: User, payload: DressCreateRequest) -> dict:
         target_type='dress',
         target_id=dress.id,
         summary=f'Created dress {dress.code}',
-        diff={'status': dress.status},
+        diff={'status': dress.status, 'entity_version': dress.entity_version},
     )
     db.commit()
     db.refresh(dress)
@@ -56,11 +59,9 @@ def create_dress(db: Session, actor: User, payload: DressCreateRequest) -> dict:
 
 
 def update_dress(db: Session, actor: User, dress_id: str, payload: DressUpdateRequest) -> dict:
-    company = get_company_settings(db)
     repo = DressesRepository(db)
-    dress = repo.get_dress(dress_id)
-    if dress is None or dress.company_id != company.id:
-        raise NotFoundError('لم يتم العثور على الفستان')
+    dress = _get_company_dress_or_404(db, repo, dress_id)
+    company = get_company_settings(db)
 
     code = _clean(payload.code).upper()
     existing = repo.get_dress_by_code(company.id, code)
@@ -74,6 +75,8 @@ def update_dress(db: Session, actor: User, dress_id: str, payload: DressUpdateRe
     dress.description = _clean(payload.description)
     dress.image_path = _clean_optional(payload.image_path)
     dress.is_active = payload.is_active
+    dress.updated_by_user_id = actor.id
+    dress.entity_version += 1
     record_audit(
         db,
         actor_user_id=actor.id,
@@ -81,7 +84,53 @@ def update_dress(db: Session, actor: User, dress_id: str, payload: DressUpdateRe
         target_type='dress',
         target_id=dress.id,
         summary=f'Updated dress {dress.code}',
-        diff={'status': dress.status, 'is_active': dress.is_active},
+        diff={'status': dress.status, 'is_active': dress.is_active, 'entity_version': dress.entity_version},
+    )
+    db.commit()
+    db.refresh(dress)
+    return _serialize_dress(dress)
+
+
+def archive_dress(db: Session, actor: User, dress_id: str, reason: str | None = None) -> dict:
+    repo = DressesRepository(db)
+    dress = _get_company_dress_or_404(db, repo, dress_id)
+    if not dress.is_active:
+        raise ValidationAppError("الفستان مؤرشف بالفعل")
+    dress.is_active = False
+    dress.updated_by_user_id = actor.id
+    dress.entity_version += 1
+    normalized_reason = _clean_optional(reason)
+    record_audit(
+        db,
+        actor_user_id=actor.id,
+        action="dress.archived",
+        target_type="dress",
+        target_id=dress.id,
+        summary=f"Archived dress {dress.code}",
+        diff={"is_active": dress.is_active, "reason": normalized_reason, "entity_version": dress.entity_version},
+    )
+    db.commit()
+    db.refresh(dress)
+    return _serialize_dress(dress)
+
+
+def restore_dress(db: Session, actor: User, dress_id: str, reason: str | None = None) -> dict:
+    repo = DressesRepository(db)
+    dress = _get_company_dress_or_404(db, repo, dress_id)
+    if dress.is_active:
+        raise ValidationAppError("الفستان نشط بالفعل")
+    dress.is_active = True
+    dress.updated_by_user_id = actor.id
+    dress.entity_version += 1
+    normalized_reason = _clean_optional(reason)
+    record_audit(
+        db,
+        actor_user_id=actor.id,
+        action="dress.restored",
+        target_type="dress",
+        target_id=dress.id,
+        summary=f"Restored dress {dress.code}",
+        diff={"is_active": dress.is_active, "reason": normalized_reason, "entity_version": dress.entity_version},
     )
     db.commit()
     db.refresh(dress)
@@ -92,6 +141,9 @@ def _serialize_dress(dress: DressResource) -> dict:
     return {
         'id': dress.id,
         'company_id': dress.company_id,
+        'created_by_user_id': dress.created_by_user_id,
+        'updated_by_user_id': dress.updated_by_user_id,
+        'entity_version': dress.entity_version,
         'code': dress.code,
         'dress_type': dress.dress_type,
         'purchase_date': dress.purchase_date.isoformat() if dress.purchase_date else None,
@@ -131,3 +183,11 @@ def _parse_date(value: str | None) -> date | None:
         return date.fromisoformat(text)
     except ValueError as exc:
         raise ValidationAppError('تاريخ الشراء غير صالح') from exc
+
+
+def _get_company_dress_or_404(db: Session, repo: DressesRepository, dress_id: str) -> DressResource:
+    company = get_company_settings(db)
+    dress = repo.get_dress(dress_id)
+    if dress is None or dress.company_id != company.id:
+        raise NotFoundError('لم يتم العثور على الفستان')
+    return dress

@@ -12,8 +12,10 @@ const navigationText = {
     navTitle: 'التنقل',
     pages: {
       accounting: 'المحاسبة',
+      audit: 'سجل التدقيق',
       bookings: 'الحجوزات',
       customers: 'العملاء',
+      custody: 'الحيازة',
       dresses: 'الفساتين',
       exports: 'التصدير',
       payments: 'المدفوعات',
@@ -33,8 +35,10 @@ const navigationText = {
     navTitle: 'Navigation',
     pages: {
       accounting: 'Accounting',
+      audit: 'Audit',
       bookings: 'Bookings',
       customers: 'Customers',
+      custody: 'Custody',
       dresses: 'Dresses',
       exports: 'Exports',
       payments: 'Payments',

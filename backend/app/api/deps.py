@@ -126,3 +126,28 @@ def require_payments_view(current_user: User = Depends(get_current_user)) -> Use
 def require_payments_manage(current_user: User = Depends(get_current_user)) -> User:
     ensure_permission(current_user, "payments.manage")
     return current_user
+
+
+def require_audit_view(current_user: User = Depends(get_current_user)) -> User:
+    ensure_permission(current_user, "audit.view")
+    return current_user
+
+
+def require_destructive_manage(current_user: User = Depends(get_current_user)) -> User:
+    ensure_permission(current_user, "destructive.manage")
+    return current_user
+
+
+def require_period_lock_manage(current_user: User = Depends(get_current_user)) -> User:
+    ensure_permission(current_user, "period_lock.manage")
+    return current_user
+
+
+def require_custody_view(current_user: User = Depends(get_current_user)) -> User:
+    ensure_permission(current_user, "custody.view")
+    return current_user
+
+
+def require_custody_manage(current_user: User = Depends(get_current_user)) -> User:
+    ensure_permission(current_user, "custody.manage")
+    return current_user

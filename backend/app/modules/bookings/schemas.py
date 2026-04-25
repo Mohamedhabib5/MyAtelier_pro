@@ -8,6 +8,9 @@ class BookingLineResponse(BaseModel):
 
     id: str
     booking_id: str
+    created_by_user_id: str | None
+    updated_by_user_id: str | None
+    entity_version: int
     line_number: int
     department_id: str
     department_name: str
@@ -18,6 +21,8 @@ class BookingLineResponse(BaseModel):
     service_date: str
     suggested_price: float
     line_price: float
+    tax_rate_percent: float
+    tax_amount: float
     paid_total: float
     remaining_amount: float
     payment_state: str
@@ -36,6 +41,9 @@ class BookingSummaryResponse(BaseModel):
     id: str
     company_id: str
     branch_id: str
+    created_by_user_id: str | None
+    updated_by_user_id: str | None
+    entity_version: int
     branch_name: str
     booking_number: str
     customer_id: str
@@ -55,6 +63,13 @@ class BookingDocumentResponse(BookingSummaryResponse):
     lines: list[BookingLineResponse]
 
 
+class BookingSummaryPageResponse(BaseModel):
+    items: list[BookingSummaryResponse]
+    total: int
+    page: int
+    page_size: int
+
+
 class BookingLineInput(BaseModel):
     id: str | None = None
     department_id: str
@@ -70,6 +85,7 @@ class BookingLineInput(BaseModel):
 
 class BookingDocumentCreateRequest(BaseModel):
     customer_id: str
+    initial_payment_method_id: str | None = None
     booking_date: str | None = None
     notes: str | None = None
     lines: list[BookingLineInput] = Field(min_length=1)

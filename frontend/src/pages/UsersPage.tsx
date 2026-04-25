@@ -1,74 +1,24 @@
-import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import PersonAddOutlinedIcon from '@mui/icons-material/PersonAddOutlined';
-import { Alert, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Grid, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, Stack, Typography } from '@mui/material';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 
-import { SectionCard } from '../components/SectionCard';
 import { useAuth } from '../features/auth/AuthProvider';
+import { useLanguage } from '../features/language/LanguageProvider';
+import { UserAdminDialog } from '../features/users/UserAdminDialog';
+import { UsersAdminSection } from '../features/users/UsersAdminSection';
+import { UsersProfileSection } from '../features/users/UsersProfileSection';
 import { createUser, getMyUser, listUsers, updateMyUser, updateUser, type UserRecord } from '../features/users/api';
 import { userIsAdmin } from '../lib/auth';
 import { type LanguageCode } from '../lib/language';
 import { queryClient } from '../lib/queryClient';
 import { useCommonText } from '../text/common';
 import { useNavigationText } from '../text/navigation';
-import { useUsersText, userRoleLabel } from '../text/users';
-
-function languageLabel(currentLanguage: LanguageCode, value: LanguageCode) {
-  if (currentLanguage === 'ar') {
-    return value === 'ar' ? 'العربية' : 'الإنجليزية';
-  }
-  return value === 'ar' ? 'Arabic' : 'English';
-}
-
-function UserFormFields({
-  username,
-  setUsername,
-  fullName,
-  setFullName,
-  password,
-  setPassword,
-  role,
-  setRole,
-  disableUsername,
-  hideRole,
-  usersText,
-}: {
-  username: string;
-  setUsername: (value: string) => void;
-  fullName: string;
-  setFullName: (value: string) => void;
-  password: string;
-  setPassword: (value: string) => void;
-  role: string;
-  setRole: (value: string) => void;
-  disableUsername?: boolean;
-  hideRole?: boolean;
-  usersText: ReturnType<typeof useUsersText>;
-}) {
-  return (
-    <Stack spacing={2}>
-      {!hideRole ? (
-        <TextField select SelectProps={{ native: true }} label={usersText.fields.role} value={role} onChange={(event) => setRole(event.target.value)}>
-          <option value='user'>{usersText.roles.user}</option>
-          <option value='admin'>{usersText.roles.admin}</option>
-        </TextField>
-      ) : null}
-      <TextField label={usersText.fields.username} value={username} onChange={(event) => setUsername(event.target.value)} disabled={disableUsername} />
-      <TextField label={usersText.fields.fullName} value={fullName} onChange={(event) => setFullName(event.target.value)} />
-      <TextField
-        label={hideRole ? usersText.fields.newPassword : usersText.fields.password}
-        type='password'
-        helperText={hideRole || disableUsername ? usersText.fields.passwordHint : undefined}
-        value={password}
-        onChange={(event) => setPassword(event.target.value)}
-      />
-    </Stack>
-  );
-}
+import { useUsersText } from '../text/users';
 
 export function UsersPage() {
   const { user } = useAuth();
+  const { language } = useLanguage();
   const commonText = useCommonText();
   const usersText = useUsersText();
   const navigationText = useNavigationText();
@@ -191,104 +141,45 @@ export function UsersPage() {
       {error ? <Alert severity='error'>{error}</Alert> : null}
 
       {isAdmin ? (
-        <SectionCard title={usersText.admin.listTitle} subtitle={usersText.admin.listSubtitle}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>{usersText.fields.username}</TableCell>
-                <TableCell>{usersText.fields.fullName}</TableCell>
-                <TableCell>{usersText.fields.role}</TableCell>
-                <TableCell>{commonText.status}</TableCell>
-                <TableCell>{commonText.actions}</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {rows.map((row) => (
-                <TableRow key={row.id}>
-                  <TableCell>{row.username}</TableCell>
-                  <TableCell>{row.full_name}</TableCell>
-                  <TableCell>
-                    {row.role_names.map((roleName) => (
-                      <Chip key={roleName} label={userRoleLabel(currentLanguage, roleName)} size='small' sx={{ ml: 1 }} />
-                    ))}
-                  </TableCell>
-                  <TableCell>{row.is_active ? usersText.status.active : usersText.status.inactive}</TableCell>
-                  <TableCell>
-                    <Button startIcon={<EditOutlinedIcon />} onClick={() => openEditDialog(row)}>
-                      {commonText.edit}
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </SectionCard>
+        <UsersAdminSection rows={rows} language={language} currentLanguage={currentLanguage} usersText={usersText} commonText={commonText} onEditUser={openEditDialog} />
       ) : (
-        <Grid container spacing={3}>
-          <Grid size={{ xs: 12, md: 7 }}>
-            <SectionCard title={usersText.profile.title} subtitle={usersText.profile.subtitle}>
-              <Stack spacing={2}>
-                <TextField label={usersText.fields.username} value={selfInitial.username} disabled />
-                <TextField label={usersText.fields.fullName} value={fullName || selfInitial.fullName} onChange={(event) => setFullName(event.target.value)} />
-                <TextField
-                  select
-                  SelectProps={{ native: true }}
-                  label={usersText.fields.preferredLanguage}
-                  value={preferredLanguage}
-                  onChange={(event) => setPreferredLanguage(event.target.value as LanguageCode)}
-                >
-                  <option value='ar'>{languageLabel(currentLanguage, 'ar')}</option>
-                  <option value='en'>{languageLabel(currentLanguage, 'en')}</option>
-                </TextField>
-                <TextField
-                  label={usersText.fields.newPassword}
-                  type='password'
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  helperText={usersText.fields.passwordHint}
-                />
-                <Button
-                  variant='contained'
-                  onClick={() =>
-                    void selfUpdateMutation.mutateAsync({
-                      full_name: fullName || selfInitial.fullName,
-                      password: password || undefined,
-                      preferred_language: preferredLanguage,
-                    })
-                  }
-                >
-                  {commonText.saveChanges}
-                </Button>
-              </Stack>
-            </SectionCard>
-          </Grid>
-        </Grid>
+        <UsersProfileSection
+          selfInitial={selfInitial}
+          currentLanguage={currentLanguage}
+          fullName={fullName}
+          password={password}
+          preferredLanguage={preferredLanguage}
+          setFullName={setFullName}
+          setPassword={setPassword}
+          setPreferredLanguage={setPreferredLanguage}
+          usersText={usersText}
+          commonText={commonText}
+          onSave={() =>
+            void selfUpdateMutation.mutateAsync({
+              full_name: fullName || selfInitial.fullName,
+              password: password || undefined,
+              preferred_language: preferredLanguage,
+            })
+          }
+        />
       )}
 
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} fullWidth maxWidth='sm'>
-        <DialogTitle>{dialogTitle}</DialogTitle>
-        <DialogContent>
-          <Box sx={{ pt: 1 }}>
-            <UserFormFields
-              username={username}
-              setUsername={setUsername}
-              fullName={fullName}
-              setFullName={setFullName}
-              password={password}
-              setPassword={setPassword}
-              role={role}
-              setRole={setRole}
-              usersText={usersText}
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDialogOpen(false)}>{commonText.cancel}</Button>
-          <Button variant='contained' onClick={() => void saveAdminDialog()}>
-            {commonText.save}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <UserAdminDialog
+        open={dialogOpen}
+        title={dialogTitle}
+        username={username}
+        setUsername={setUsername}
+        fullName={fullName}
+        setFullName={setFullName}
+        password={password}
+        setPassword={setPassword}
+        role={role}
+        setRole={setRole}
+        usersText={usersText}
+        commonText={commonText}
+        onClose={() => setDialogOpen(false)}
+        onSave={() => void saveAdminDialog()}
+      />
     </Stack>
   );
 }

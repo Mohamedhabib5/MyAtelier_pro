@@ -5,36 +5,200 @@
 - The owner is not a programmer, so the repository must remain understandable as a sequence of small checkpoints.
 
 ## Current checkpoint
-- The current repository state is `Checkpoint 7D`.
-- `Checkpoint 7D` is the Arabic text integrity and encoding-guardrail slice.
-- It restores critical Arabic wording, translates remaining user-facing backend validation messages, and adds source-level guardrails so corrupted text does not silently return.
+- The current repository state has moved beyond `Checkpoint 8O` to the audit/data-lifecycle roadmap (`Checkpoint 9A` and `Checkpoint 9B` completed slices, `Checkpoint 9C` and `Checkpoint 9D` completed, and `Checkpoint 9E` in active incremental delivery).
+- The latest implemented slice is `Checkpoint 10O (phase 1)` for optional nightly-export reason capture and audit persistence.
+- The repository now includes tracked-entity coverage, archive/restore foundations across main master data, and shared corrective-delete building blocks (reason catalog + preview + guarded execution + tombstone evidence + frontend parity + impact clarity polish).
 
-## Included in Checkpoint 7D
-- everything that was already included in `Checkpoint 7C`
-- small Arabic text modules for critical flows such as auth, bookings, payments, and users
-- restored Arabic wording in the booking and payment redesign flows
-- Arabic translations for remaining user-facing backend messages in accounting, backup download, and export schedules
-- booking dress behavior now depends on stable `department.code` rules instead of display text
-- a source-level text-integrity check for `???`, replacement characters, mojibake patterns, and leftover English date-validation messages
-- focused backend and Playwright validation for Arabic text integrity
-- focused docs updates for the root cause and guardrails
+## Included in current state
+- everything that was already included in `Checkpoint 8O`
+- `Checkpoint 9A` audit foundation with request/session context and audited auth events
+- `Checkpoint 9B` tracked-entity rollout (`created_by`, `updated_by`, `entity_version`) across mutable core modules
+- payments module refactor into smaller helpers to keep service files under the file-size discipline
+- `Checkpoint 9C (phase 1)` customer archive/restore business actions with backend status filtering (`all|active|inactive`)
+- `Checkpoint 9C (phase 2)` department/service/dress archive/restore actions with the same status-filter contract
+- `Checkpoint 9C (phase 3)` table-level frontend archive/restore actions and active/inactive filters aligned with backend lifecycle endpoints
+- `Checkpoint 9D (phase 1)` destructive reason catalog endpoint (`/api/settings/destructive-reasons`) and payment-void reason-code validation/audit tagging
+- `Checkpoint 9D (phase 2)` destructive impact preview endpoint (`/api/settings/destructive-preview`) for `customer|department|service|dress` with blocker detection and preview audit events
+- `Checkpoint 9D (phase 3)` destructive delete execution endpoint (`/api/settings/destructive-delete`) with eligibility re-check, permission guard, and delete audit events
+- `Checkpoint 9D (phase 4)` tombstone-style `before snapshot` capture in `destructive.deleted` audit diff payload, including delete timestamp and reason metadata
+- `Checkpoint 9D (phase 5a)` dresses frontend corrective-delete dialog that requires reason selection, impact preview, and explicit delete confirmation
+- `Checkpoint 9D (phase 5b)` customers + catalog (departments/services) frontend corrective-delete flow with the same guarded sequence and backend-driven eligibility
+- `Checkpoint 9D (phase 5c)` dialog-level impact summary display and file-size-discipline cleanup while preserving the same backend policy controls
+- `Checkpoint 9E (phase 1)` period-lock settings API foundation (`GET/PUT /api/settings/period-lock`) with dedicated `period_lock.manage` permission for lock updates
+- `Checkpoint 9E (phase 1)` server-side period-lock enforcement for corrective hard delete, payment update/void corrections, and booking revenue-reversal action paths
+- `Checkpoint 9E (phase 2)` explicit override path (`override_lock` + required `override_reason`) for locked actions, gated by `period_lock.manage`
+- `Checkpoint 9E (phase 2)` audited period-lock override events (`period_lock.override_used`) and exception-report endpoint (`GET /api/settings/period-lock/exceptions`)
+- `Checkpoint 9E (phase 3)` settings UI section for period-lock date management and period-lock exceptions table
+- `Checkpoint 9E (phase 3)` frontend override inputs wired into corrective hard-delete and payment-void dialogs, plus booking reverse-revenue override retry flow
+- `Checkpoint 9E (phase 4)` dedicated override dialog for booking revenue reversal (replacing prompt/confirm fallback)
+- `Checkpoint 9E (phase 4)` payment-update override retry flow from frontend when period lock blocks the correction
+- `Checkpoint 9E (phase 4)` payments page refactor into smaller focused components to maintain file-size discipline
+- `Checkpoint 9F (phase 1)` custody backend module (`/api/custody`) with list/create/detail workflows, permission guards, and custody create audit event
+- `Checkpoint 9F (phase 1)` custody permissions (`custody.view`, `custody.manage`) seeded and available to default roles
+- `Checkpoint 9F (phase 1)` frontend custody page foundation with create form, cases list table, and shell navigation entry
+- `Checkpoint 9G (phase 1)` custody action endpoint (`POST /api/custody/{case_id}/actions`) for `handover`, `customer_return`, `laundry_send`, `laundry_receive`, and `settlement`
+- `Checkpoint 9G (phase 1)` server-side transition guardrails and audit events per custody action with previous/next status evidence
+- `Checkpoint 9G (phase 1)` frontend custody action section to apply workflow transitions from the custody page
+- `Checkpoint 9G (phase 2)` custody compensation endpoint (`POST /api/custody/{case_id}/compensation`) with amount/date/note inputs and permission guard (`custody.manage` + `payments.manage`)
+- `Checkpoint 9G (phase 2)` custody compensation now creates a linked `payment_document` (`document_kind=custody_compensation`) and auto-posts accounting entry
+- `Checkpoint 9G (phase 2)` custody case now stores compensation evidence (`compensation_amount`, `compensation_collected_on`, `compensation_payment_document_id`) with audit trail
+- `Checkpoint 10P (phase 1)` custody creation now requires explicit `custody_date` and every custody action now requires explicit `action_date`
+- `Checkpoint 10P (phase 1)` custody list now uses one unified table with status views (`open`, `settled`, `all`) and operational columns (customer, booking, dress, notes, deposit, compensation, custody date)
+- `Checkpoint 10P (phase 1)` custody timeline/drilldown/report UI sections and their backend read endpoints were removed to keep the workflow focused on a single operational table
+- `Checkpoint 9I (phase 1)` finance dashboard now includes visual bar charts for daily income, department income, and top services while preserving existing backend totals contracts
+- `Checkpoint 9J (phase 1)` new audit explorer endpoint (`GET /api/audit/events`) with filters for actor, action, target type/id, branch, date range, and free search
+- `Checkpoint 9J (phase 1)` frontend audit explorer page with filter panel and audit events table
+- `Checkpoint 9J (phase 2)` destructive-actions report endpoint (`GET /api/audit/destructive-actions`) with server-side filtering and audit-view permission guard
+- `Checkpoint 9J (phase 2)` audit explorer UI now supports destructive-only mode toggle
+- `Checkpoint 9J (phase 2)` custody exports added (`/api/exports/custody.csv` and `/api/exports/custody.xlsx`) with frontend export-center actions
+- `Checkpoint 9K (phase 1)` backend audit-coverage guardrail tests now enforce audit evidence for customer lifecycle writes (`created`, `updated`, `archived`, `restored`) with request-id linkage
+- `Checkpoint 9K (phase 1)` backend audit-coverage guardrail tests now enforce audit evidence for payment void workflow (including structured reason-code payload evidence)
+- `Checkpoint 9K (phase 2)` unified background-job audit action (`automation.job_run`) with `job_key` + `trigger_source` evidence for automation/manual execution source
+- `Checkpoint 9K (phase 2)` run-due export schedules and backup stale-check workflows now write standardized automation audit records
+- `Checkpoint 9K (phase 2)` scheduler scripts now submit `trigger_source=automation` to keep automation evidence explicit in audit trail
+- `Checkpoint 9K (phase 3)` centralized write-route audit policy inventory now tracks every registered mutation route with explicit expected audit action keys
+- `Checkpoint 9K (phase 3)` guardrail tests now fail when a new write route is added without audit-policy onboarding
+- `Checkpoint 9K (phase 3)` session-language change and active-branch switch workflows are now audited (`auth.session_language_changed`, `branch.active_switched`)
+- `Checkpoint 9L (phase 1)` destructive, lifecycle, period-lock override, and payment-void dialogs now switch to full-screen behavior on small screens for safer mobile correction workflows
+- `Checkpoint 9L (phase 1)` custody action/compensation controls now use mobile-friendly full-width action buttons and compact responsive field grouping
+- `Checkpoint 9L (phase 2)` targeted Playwright smoke execution now passes for foundation login and lifecycle archive/restore flow on the current codebase
+- `Checkpoint 9L (phase 2)` lifecycle smoke scenario was aligned with current dialog-driven/archive API behavior to remove legacy prompt-based assumptions
+- `Checkpoint 9L (phase 2)` local E2E runbook was validated through temporary local backend/frontend bootstrapping and deterministic shutdown cleanup
+- final handoff package published (`final-handoff-summary-2026-04-02.md` + `operational-readiness-checklist-final.md`)
+- `Checkpoint 10A (phase 1)` user-scoped grid preference API implemented (`GET/PUT /api/users/me/grid-preferences/{table_key}`) with backend persistence and audit event (`user.grid_preferences_updated`)
+- `Checkpoint 10A (phase 1)` frontend AG Grid preferences hook now loads/saves server preferences for authenticated users with local cache fallback
+- `Checkpoint 10A (phase 1)` write-route audit policy updated for new preference update endpoint
+- `Checkpoint 10A (phase 2)` preference hydration now uses explicit newer-wins strategy between local cache timestamp and backend `updated_at`
+- `Checkpoint 10A (phase 2)` hook migration safety added for legacy local preference format and conflict-safe re-sync behavior
+- `Checkpoint 10A (phase 2)` persistence coverage expanded with logout/login backend test and dedicated Playwright grid-preferences persistence scenario
+- `Checkpoint 10B (phase 1)` bookings export endpoints (`/api/exports/bookings.csv|xlsx`) now accept the same table filters (`search`, `status`, date range, and sorting) as `/api/bookings/table`
+- `Checkpoint 10B (phase 1)` payments export endpoints (`/api/exports/payments.csv|xlsx`) now accept the same table filters (`search`, `status`, `document_kind`, date range, and sorting) as `/api/payments/table`
+- `Checkpoint 10B (phase 1)` backend export regression coverage now verifies booking and payment CSV exports honor table-style status/date filters
+- `Checkpoint 10B (phase 2)` bookings and payments AG Grid XLSX export actions now append the same active table filters/sort to backend export URLs for user-facing parity
+- `Checkpoint 10B (phase 2)` frontend export URL helpers now support reusable filter query composition for bookings and payments exports
+- `Checkpoint 10B (phase 2)` backend export regression coverage now includes payment export alias parity (`/api/exports/payment-documents.csv`) and booking sort-direction behavior
+- `Checkpoint 10B (phase 3)` booking-lines exports (`/api/exports/booking-lines.csv|xlsx`) now support the same booking table filters (`search`, `status`, date range, sorting)
+- `Checkpoint 10B (phase 3)` payment-allocation exports (`/api/exports/payment-allocations.csv|xlsx`) now support the same payment table filters (`search`, `status`, `document_kind`, date range, sorting)
+- `Checkpoint 10B (phase 3)` export regression coverage now verifies filtered booking-line and payment-allocation CSV behavior
+- `Checkpoint 10B (phase 3)` exports service was split with dedicated row-collector module to keep file-size discipline for future Codex maintenance
+- `Checkpoint 10C (phase 1)` export-center page now provides filter-aware controls for bookings and payments datasets so operators can export the current filtered view directly from one place
+- `Checkpoint 10C (phase 1)` export URL helpers now support the same filter payload contract for booking-lines and payment-allocation links in addition to bookings/payments
+- `Checkpoint 10C (phase 1)` export-center guidance now explicitly highlights current-view export behavior to reduce accidental unfiltered downloads
+- `Checkpoint 10C (phase 2)` Playwright E2E coverage now includes export-center filter-aware link assertions for bookings and payment-allocation CSV actions
+- `Checkpoint 10C (phase 2)` E2E scenario validates query-string parity for `search/status/date/document_kind` on export requests triggered from Export Center controls
+- `Checkpoint 10D (phase 1)` bookings heavy-table rendering moved into dedicated component (`BookingsTableSection`) to reduce page-level complexity
+- `Checkpoint 10D (phase 1)` booking editor dialog and page header were extracted into focused components (`BookingEditorDialog`, `BookingsPageHeader`, `BookingRevenueOverrideDialog`)
+- `Checkpoint 10D (phase 1)` frontend build validated after refactor with unchanged booking workflow behavior
+- `Checkpoint 10D (phase 2)` booking page mutation/action orchestration moved into dedicated hook (`useBookingActions`) to reduce page-level logic density
+- `Checkpoint 10D (phase 2)` `BookingsPage.tsx` now meets the preferred file-size target (`181` lines), with behavior preserved through modular components and shared hook wiring
+- `Checkpoint 10D (phase 3)` payment page mutation/action orchestration moved into dedicated hook (`usePaymentActions`) with behavior-preserving create/update/void/override flow
+- `Checkpoint 10D (phase 3)` payments page structure now uses focused components (`PaymentsPageHeader`, `PaymentTargetSearchSection`, `PaymentUpdateOverrideDialog`) to reduce page-level coupling
+- `Checkpoint 10D (phase 3)` `PaymentsPage.tsx` now meets the preferred file-size target (`227` lines)
+- `Checkpoint 10E (phase 1)` focused Playwright validation now passes for refactored bookings/payments runtime flows (`booking-payment-redesign.spec.ts`, `bookings-dialog.spec.ts`) with `2 passed`
+- `Checkpoint 10E (phase 1)` backend route-size audit confirms no route module currently exceeds the architecture target (`<=250` lines)
+- `Checkpoint 10E (phase 2)` exports module size-hardening started: shared rendering/audit helpers moved to `exports/rendering.py`
+- `Checkpoint 10E (phase 2)` customers/custody export actions moved to `exports/master_data_exports.py` while keeping route-facing service API stable
+- `Checkpoint 10E (phase 2)` `exports/service.py` now meets target size (`247` lines) after modular split
+- `Checkpoint 10E (phase 2)` custody-compensation payment flow extracted to `payments/custody_compensation.py`; `payments/service.py` now at `229` lines
+- `Checkpoint 10E (phase 2)` booking access/sequence helpers extracted to `bookings/document_access.py` and booking read queries moved to `bookings/query_service.py`
+- `Checkpoint 10E (phase 2)` `bookings/service.py` now meets target size (`230` lines); no backend module file currently exceeds `250` lines
+- `Checkpoint 10F (phase 1)` module-boundary guardrail tests added in `backend/tests/test_module_boundary_guardrails.py`
+- `Checkpoint 10F (phase 1)` guardrails now enforce size limits on core service entrypoints and block API routes from importing helper modules directly
+- `Checkpoint 10F (phase 1)` export detail flows moved to `exports/detail_exports.py`; `exports/service.py` reduced to `128` lines while preserving route-facing import surface
+- `Checkpoint 10F (phase 2)` guardrail marker profile (`pytest -m guardrail`) is now configured in backend pytest settings and documented as a fast CI guardrail command
+- `Checkpoint 10F (phase 2)` frontend page-size guardrail coverage added for operational heavy pages (`Bookings`, `Payments`, `Exports`, `Custody`, `Settings`)
+- `Checkpoint 10F (phase 2)` guardrail suite now spans architecture inventory, audit evidence, module boundaries, text integrity, and frontend page-size checks
+- `Checkpoint 10F (phase 3)` `UsersPage` split into focused users-feature components (`UsersAdminSection`, `UsersProfileSection`, `UserAdminDialog`, `UserFormFields`) with unchanged user-management behavior
+- `Checkpoint 10F (phase 3)` `frontend/src/pages/UsersPage.tsx` now meets preferred file-size target (`168` lines)
+- `Checkpoint 10F (phase 3)` frontend page-size guardrails now include `UsersPage.tsx` under the `pytest -m guardrail` suite
+- `Checkpoint 10G (phase 1)` CI guardrail workflow added at `.github/workflows/guardrails.yml` to run `python -m pytest -m guardrail` on push/PR
+- `Checkpoint 10G (phase 1)` release-gate rules documented in `docs/guardrail-release-gate.md` (pass/fail criteria and operator response)
+- `Checkpoint 10G (phase 1)` docs index and README now reference the guardrail workflow and release-gate policy
+- `Checkpoint 10G (phase 2)` CI workflow now runs two ordered lightweight gates: `guardrails` first, then `frontend-build` (depends on guardrail success)
+- `Checkpoint 10G (phase 2)` release-gate doc now includes combined pass/fail criteria for both backend guardrails and frontend production build
+- `Checkpoint 10G (phase 2)` README guardrail section now documents both local gate commands (`pytest -m guardrail` and `npm run build`)
+- `Checkpoint 10H (phase 1)` CI runtime optimized with backend dependency cache (`setup-python` pip cache) and workflow concurrency cancellation for older runs on the same ref
+- `Checkpoint 10H (phase 1)` branch-protection rollout guide added (`docs/branch-protection-guardrails.md`) with required checks: `guardrails`, `frontend-build`
+- `Checkpoint 10H (phase 1)` release-gate docs now link directly to branch-protection rollout instructions for enforceable merge governance
+- `Checkpoint 10H (phase 2)` CI gate runbook added (`docs/ci-gate-runbook.md`) with expected timing benchmarks and deterministic troubleshooting flow
+- `Checkpoint 10H (phase 2)` release-gate and README docs now reference CI runbook for operator support during flaky or failing gate runs
+- `Checkpoint 10H (phase 2)` local validation confirms both gates pass (`pytest -m guardrail` + `npm run build`)
+- `Checkpoint 10I (phase 1)` optional nightly workflow added (`.github/workflows/nightly-full-regression.yml`) for broader regression coverage outside PR gate path
+- `Checkpoint 10I (phase 1)` nightly job order now enforces `backend-focused-tests` -> `frontend-build` -> `e2e-smoke`
+- `Checkpoint 10I (phase 1)` nightly scope documented in `docs/nightly-full-regression.md` and referenced by release-gate docs as non-required branch-protection checks
+- `Checkpoint 10I (phase 2)` nightly workflow now uploads job artifacts (`backend/frontend logs`, `e2e runtime logs`, and `playwright report`) with `14`-day retention
+- `Checkpoint 10I (phase 2)` nightly workflow now writes failure summaries to `GITHUB_STEP_SUMMARY` with artifact pointers and local reproduction commands
+- `Checkpoint 10I (phase 2)` CI runbook and release-gate docs now include nightly troubleshooting and artifact inspection flow
+- `Checkpoint 10J (phase 1)` optional nightly failure notifier stage added (`notify-nightly-failure`) with summary-only webhook payload
+- `Checkpoint 10J (phase 1)` notifier is gated by secret presence (`NIGHTLY_FAILURE_WEBHOOK_URL`); missing secret does not fail workflow
+- `Checkpoint 10J (phase 1)` nightly docs and runbook now include notifier configuration and triage notes
+- `Checkpoint 10J (phase 2)` notifier payload contract finalized in `docs/nightly-failure-notifier-contract.md` with stable field-level schema documentation
+- `Checkpoint 10J (phase 2)` manual rollout verification checklist added for safe production enablement and receiver-side validation
+- `Checkpoint 10J (phase 2)` nightly docs index and CI/nightly runbook now point to one notifier contract source-of-truth
+- `Checkpoint 10K (phase 1)` backend endpoint added for nightly failure ingest (`POST /api/settings/ops/nightly/failure-report`) with required `X-Nightly-Token`
+- `Checkpoint 10K (phase 1)` backend endpoint added for latest nightly status snapshot (`GET /api/settings/ops/nightly/latest`) under `settings.manage` permission
+- `Checkpoint 10K (phase 1)` nightly ingest writes audit evidence (`ops.nightly_failure_reported`) and is onboarded in write-route audit policy guardrails
+- `Checkpoint 10K (phase 1)` focused backend validation passes for token guard, ingest success, latest snapshot read, and audit evidence write
+- `Checkpoint 10K (phase 2)` settings page now includes read-only nightly status panel (availability, run metadata, stage results, and run URL link)
+- `Checkpoint 10K (phase 2)` panel consumes `/api/settings/ops/nightly/latest` via dedicated settings API client contract
+- `Checkpoint 10K (phase 2)` frontend build validation passes with no behavior changes to existing settings workflows
+- `Checkpoint 10K (phase 3)` nightly workflow notifier now supports optional direct ingest into MyAtelier backend using `NIGHTLY_FAILURE_INGEST_URL` + `NIGHTLY_FAILURE_INGEST_TOKEN`
+- `Checkpoint 10K (phase 3)` notifier summary now reports ingest secret presence (`URL` and `token`) for faster triage
+- `Checkpoint 10K (phase 3)` nightly notifier contract now includes token rotation and rollback steps for safer operations handoff
+- `Checkpoint 10L (phase 1)` backend audit endpoint added (`GET /api/audit/nightly-ops`) to list nightly failure and automation follow-up actions together
+- `Checkpoint 10L (phase 1)` frontend audit explorer now includes `Nightly ops` mode toggle alongside existing all/destructive modes
+- `Checkpoint 10L (phase 1)` focused backend explorer tests and frontend production build passed with unchanged existing flows
+- `Checkpoint 10L (phase 2)` audit explorer now provides quick date shortcuts (`today`, `last 24h`, `last 7d`) for faster operator filtering
+- `Checkpoint 10L (phase 2)` quick ranges are mode-agnostic and work with `all`, `destructive`, and `nightly_ops` modes
+- `Checkpoint 10L (phase 2)` frontend build validation passed; file-size discipline for `AuditExplorerPage` remains within target
+- `Checkpoint 10M (phase 1)` backend export endpoint added for nightly-ops audit rows (`GET /api/audit/nightly-ops.csv`) with filter-aware query support
+- `Checkpoint 10M (phase 1)` audit explorer now exposes `Export nightly CSV` action when nightly-ops mode is active
+- `Checkpoint 10M (phase 1)` backend explorer test coverage expanded to validate CSV export response and payload content
+- `Checkpoint 10M (phase 2)` nightly CSV now includes export note rows (`exported_at`, `exported_rows`, `active_filters`) for administrative handoff clarity
+- `Checkpoint 10M (phase 2)` nightly CSV response now exposes summary headers (`X-Exported-Rows`, `X-Active-Filters`) for integration/debug traceability
+- `Checkpoint 10M (phase 2)` audit explorer nightly mode now shows pre-export summary (matching row count + active filters) beside export action
+- `Checkpoint 10N (phase 1)` nightly CSV export now creates dedicated audit event (`audit.nightly_ops_exported`) for each download action
+- `Checkpoint 10N (phase 1)` export audit event stores filter summary, exported row count, and requested limit in audit diff payload
+- `Checkpoint 10N (phase 1)` backend tests now assert export-audit evidence exists after CSV download
+- `Checkpoint 10N (phase 2)` nightly-ops preset now includes export-audit actions in returned dataset (`audit.nightly_ops_exported`)
+- `Checkpoint 10N (phase 2)` audit explorer now displays a compact latest-export summary panel (recent export actor/time/summary) in nightly mode
+- `Checkpoint 10N (phase 2)` frontend build and backend audit-explorer tests pass with no regression in existing audit modes
+- `Checkpoint 10O (phase 1)` nightly CSV export now accepts optional `export_reason` query value and stores it in audit `reason_text`
+- `Checkpoint 10O (phase 1)` export flow now supports lightweight reason capture from frontend before download
+- `Checkpoint 10O (phase 1)` backend tests validate reason persistence in `audit.nightly_ops_exported` records
+- focused backend regression tests for payments, bookings, customers, and audit foundations
 
 ## Explicitly not included yet
+- export parity hardening for additional heavy datasets beyond bookings/payments
+- product-wide audit-trail expansion and QuickBooks-style archive/delete/void policy rollout
+- closing-date / period-lock workflow and exception reporting
+- dress custody workflow and custody exports
 - end-user restore screen or restore button in the app
-- unattended background execution for saved export schedules
-- automatic reversal of booking revenue recognition
-- tax-aware revenue recognition rules
-- cross-branch comparison analytics
 - customer-facing or mobile experiences
-- final production environment checklist and deployment hardening
+- cross-branch comparison analytics
+- managed certificate automation and rotation workflows
+- advanced WAF/rate-limiting policies and incident runbooks
+- external observability stack integration (Prometheus/OpenTelemetry/Grafana)
 
 ## Security review note
-- text integrity is now guarded by automated source checks instead of visual review alone
-- booking dress behavior no longer depends on fragile Arabic display names
-- translated backend validation messages do not change any authorization or workflow enforcement
+- production startup still fails early on insecure env defaults from `Checkpoint 8A`
+- edge templates now require HTTPS redirect, forwarded protocol, and strict security headers
+- deployment checks explicitly confirm secure cookie behavior through the edge path
+- restore drills remain operational-only and avoid destructive in-app restore actions
+- operations metrics and alert test endpoints are still protected behind backend auth and permission checks
+- automated backup-check endpoint remains permission-guarded and fully auditable
+- scheduler wiring guidance now recommends dedicated low-privilege Windows service account
+- scheduler wiring guidance now recommends dedicated low-privilege Linux service account
+- Kubernetes runbook now enforces replacing placeholder secrets before deployment
+- export schedule batch execution remains behind `exports.manage` backend authorization
+- delivery webhook URL is validated in production and delivery remains optional
+- PDF endpoints remain protected by backend `exports.view` authorization
+- booking revenue reversal remains a guarded backend business action under bookings permissions
+- reversal workflow blocks when receivables collections are still active after completion
+- tax recognition stays server-side; tax amounts are derived and posted in backend accounting workflow
+- AG Grid preference persistence remains local-storage based and is not yet enforced server-side per user
 - reports, exports, and backup downloads still rely on backend authorization rather than frontend state
 
 ## Rule for next work
 - The next Codex session should again select one small slice only.
-- The best next slice is a short `production-readiness review` covering env values, cookies, CORS, secrets, and deployment notes.
-- After that, only optional advanced workflows should remain.
+- The best next slice is `Checkpoint 10O (phase 2)`: replace browser prompt with inline reason input in nightly mode while keeping optional behavior and audit capture.

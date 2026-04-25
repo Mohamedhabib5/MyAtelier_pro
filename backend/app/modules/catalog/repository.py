@@ -10,8 +10,11 @@ class CatalogRepository:
     def __init__(self, db: Session):
         self.db = db
 
-    def list_departments(self, company_id: str) -> list[Department]:
-        stmt = select(Department).where(Department.company_id == company_id).order_by(Department.name.asc())
+    def list_departments(self, company_id: str, *, is_active: bool | None = None) -> list[Department]:
+        stmt = select(Department).where(Department.company_id == company_id)
+        if is_active is not None:
+            stmt = stmt.where(Department.is_active == is_active)
+        stmt = stmt.order_by(Department.name.asc())
         return list(self.db.scalars(stmt))
 
     def get_department(self, department_id: str) -> Department | None:
@@ -25,13 +28,15 @@ class CatalogRepository:
         self.db.add(department)
         return department
 
-    def list_services(self, company_id: str) -> list[ServiceCatalogItem]:
+    def list_services(self, company_id: str, *, is_active: bool | None = None) -> list[ServiceCatalogItem]:
         stmt = (
             select(ServiceCatalogItem)
             .options(joinedload(ServiceCatalogItem.department))
             .where(ServiceCatalogItem.company_id == company_id)
-            .order_by(ServiceCatalogItem.name.asc())
         )
+        if is_active is not None:
+            stmt = stmt.where(ServiceCatalogItem.is_active == is_active)
+        stmt = stmt.order_by(ServiceCatalogItem.name.asc())
         return list(self.db.scalars(stmt))
 
     def get_service(self, service_id: str) -> ServiceCatalogItem | None:

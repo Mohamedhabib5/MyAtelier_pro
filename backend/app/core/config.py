@@ -3,6 +3,9 @@ from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+INSECURE_SECRET_KEYS = {"change-me", "change-me-before-production", "test-secret"}
+VALID_SAMESITE_VALUES = {"lax", "strict", "none"}
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -32,6 +35,10 @@ class Settings(BaseSettings):
     session_same_site: str = "lax"
     session_https_only: bool = False
     session_max_age_seconds: int = 43200
+    ops_backup_stale_threshold_hours: int = 30
+    ops_alert_webhook_url: str = ""
+    nightly_failure_ingest_token: str = ""
+    export_delivery_webhook_url: str = ""
 
     def resolved_storage_root(self) -> Path:
         return Path(self.storage_root).resolve()
@@ -54,6 +61,49 @@ class Settings(BaseSettings):
 
     def effective_session_https_only(self) -> bool:
         return self.session_https_only or self.is_production()
+
+    def normalized_session_same_site(self) -> str:
+        return self.session_same_site.strip().lower()
+
+    def validate_runtime_settings(self) -> None:
+        same_site = self.normalized_session_same_site()
+        if same_site not in VALID_SAMESITE_VALUES:
+            raise ValueError("SESSION_SAME_SITE must be one of: lax, strict, none.")
+
+        if same_site == "none" and not self.effective_session_https_only():
+            raise ValueError("SESSION_SAME_SITE=none requires SESSION_HTTPS_ONLY=true.")
+
+        if not self.is_production():
+            return
+
+        if self.app_debug:
+            raise ValueError("APP_DEBUG must be false in production.")
+
+        if self.app_secret_key.strip() in INSECURE_SECRET_KEYS or len(self.app_secret_key.strip()) < 32:
+            raise ValueError("APP_SECRET_KEY is not safe for production. Use a long random value (32+ chars).")
+
+        if self.default_admin_password.strip() == "admin123":
+            raise ValueError("DEFAULT_ADMIN_PASSWORD must be changed before production.")
+
+        cors_origins = self.cors_origins()
+        if not cors_origins:
+            raise ValueError("APP_FRONTEND_ORIGINS must not be empty in production.")
+        if "*" in cors_origins:
+            raise ValueError("APP_FRONTEND_ORIGINS must not contain '*' in production.")
+        if any(origin.startswith("http://localhost") or origin.startswith("http://127.0.0.1") for origin in cors_origins):
+            raise ValueError("APP_FRONTEND_ORIGINS must not use localhost origins in production.")
+
+        trusted_hosts = self.trusted_hosts()
+        if not trusted_hosts:
+            raise ValueError("ALLOWED_HOSTS must not be empty in production.")
+        if "*" in trusted_hosts:
+            raise ValueError("ALLOWED_HOSTS must not contain '*' in production.")
+        if self.ops_alert_webhook_url.strip() and not self.ops_alert_webhook_url.strip().startswith("https://"):
+            raise ValueError("OPS_ALERT_WEBHOOK_URL must use https in production.")
+        if self.nightly_failure_ingest_token.strip() and len(self.nightly_failure_ingest_token.strip()) < 16:
+            raise ValueError("NIGHTLY_FAILURE_INGEST_TOKEN must be at least 16 characters in production.")
+        if self.export_delivery_webhook_url.strip() and not self.export_delivery_webhook_url.strip().startswith("https://"):
+            raise ValueError("EXPORT_DELIVERY_WEBHOOK_URL must use https in production.")
 
 
 @lru_cache(maxsize=1)

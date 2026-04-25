@@ -1,9 +1,28 @@
 <!doctype html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="rtl" translate="no">
   <head>
     <meta charset="UTF-8" />
+    <meta name="google" content="notranslate" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>MyAtelier Pro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+      :root {
+        --glass-bg: rgba(255, 255, 255, 0.7);
+        --glass-border: rgba(255, 255, 255, 0.3);
+      }
+      body {
+        margin: 0;
+        overflow-x: hidden;
+        background-color: #f8fafc;
+        transition: background-color 0.3s ease;
+      }
+      * {
+        transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>

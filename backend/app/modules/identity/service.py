@@ -1,5 +1,6 @@
 ﻿from __future__ import annotations
 
+import json
 from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
@@ -11,71 +12,9 @@ from app.core.security import DEFAULT_ADMIN_SEEDED_KEY, hash_password, norm_text
 from app.modules.core_platform.repository import CorePlatformRepository
 from app.modules.core_platform.service import record_audit
 from app.modules.identity.models import Permission, Role, User
+from app.modules.identity.permission_map import DEFAULT_PERMISSIONS, ROLE_PERMISSION_MAP
 from app.modules.identity.repository import IdentityRepository
-from app.modules.identity.schemas import AdminUpdateUserRequest, CreateUserRequest, SelfUpdateUserRequest
-
-DEFAULT_PERMISSIONS = {
-    "users.manage": "Manage all users and roles",
-    "users.self_manage": "Manage own profile",
-    "settings.manage": "Manage settings and backups",
-    "finance.view": "View finance dashboard metrics",
-    "reports.view": "View broader operational reports",
-    "exports.view": "Download and open exports",
-    "exports.manage": "Manage saved export schedules",
-    "accounting.view": "View accounting foundation data",
-    "accounting.manage": "Create, post, and reverse journal entries",
-    "customers.view": "View customers list and details",
-    "customers.manage": "Create and update customers",
-    "catalog.view": "View departments and services catalog",
-    "catalog.manage": "Create and update departments and services",
-    "dresses.view": "View dress resources",
-    "dresses.manage": "Create and update dress resources",
-    "bookings.view": "View bookings",
-    "bookings.manage": "Create and update bookings",
-    "payments.view": "View payments",
-    "payments.manage": "Create and update payments",
-}
-
-ROLE_PERMISSION_MAP = {
-    RoleKey.ADMIN.value: [
-        "users.manage",
-        "users.self_manage",
-        "settings.manage",
-        "finance.view",
-        "reports.view",
-        "exports.view",
-        "exports.manage",
-        "accounting.view",
-        "accounting.manage",
-        "customers.view",
-        "customers.manage",
-        "catalog.view",
-        "catalog.manage",
-        "dresses.view",
-        "dresses.manage",
-        "bookings.view",
-        "bookings.manage",
-        "payments.view",
-        "payments.manage",
-    ],
-    RoleKey.USER.value: [
-        "users.self_manage",
-        "settings.manage",
-        "finance.view",
-        "reports.view",
-        "accounting.view",
-        "customers.view",
-        "customers.manage",
-        "catalog.view",
-        "catalog.manage",
-        "dresses.view",
-        "dresses.manage",
-        "bookings.view",
-        "bookings.manage",
-        "payments.view",
-        "payments.manage",
-    ],
-}
+from app.modules.identity.schemas import AdminUpdateUserRequest, CreateUserRequest, SelfUpdateUserRequest, UserGridPreferenceState
 
 
 def serialize_user(user: User) -> dict:
@@ -255,3 +194,56 @@ def _resolve_roles(repo: IdentityRepository, role_names: list[str] | None) -> li
         resolved.append(role)
         seen.add(normalized)
     return resolved
+
+
+def get_user_grid_preference(db: Session, actor: User, table_key: str) -> dict:
+    normalized_key = _normalize_table_key(table_key)
+    row = IdentityRepository(db).get_user_grid_preference(actor.id, normalized_key)
+    if row is None:
+        state = UserGridPreferenceState().model_dump()
+        updated_at = None
+    else:
+        state = _parse_grid_state(row.state_json)
+        updated_at = row.updated_at
+    return {"table_key": normalized_key, "state": state, "updated_at": updated_at}
+
+
+def set_user_grid_preference(db: Session, actor: User, table_key: str, state: UserGridPreferenceState) -> dict:
+    normalized_key = _normalize_table_key(table_key)
+    payload = state.model_dump()
+    row = IdentityRepository(db).upsert_user_grid_preference(
+        user_id=actor.id,
+        table_key=normalized_key,
+        state_json=json.dumps(payload, ensure_ascii=False),
+    )
+    record_audit(
+        db,
+        actor_user_id=actor.id,
+        action="user.grid_preferences_updated",
+        target_type="user",
+        target_id=actor.id,
+        summary=f"Updated grid preferences for {actor.username}",
+        diff={"table_key": normalized_key, "page_size": payload.get("pageSize")},
+    )
+    db.commit()
+    db.refresh(row)
+    return {"table_key": normalized_key, "state": payload, "updated_at": row.updated_at}
+
+
+def _normalize_table_key(value: str) -> str:
+    normalized = norm_text(value)
+    if not normalized:
+        raise ValidationAppError("اسم الجدول مطلوب")
+    if len(normalized) > 120:
+        raise ValidationAppError("اسم الجدول طويل جدًا")
+    return normalized
+
+
+def _parse_grid_state(raw_value: str) -> dict:
+    try:
+        parsed = json.loads(raw_value)
+    except json.JSONDecodeError:
+        return UserGridPreferenceState().model_dump()
+    if not isinstance(parsed, dict):
+        return UserGridPreferenceState().model_dump()
+    return UserGridPreferenceState.model_validate(parsed).model_dump()

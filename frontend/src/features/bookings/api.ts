@@ -48,6 +48,24 @@ export type BookingDocumentRecord = BookingSummaryRecord & {
   lines: BookingLineRecord[];
 };
 
+export type BookingTablePage = {
+  items: BookingSummaryRecord[];
+  total: number;
+  page: number;
+  page_size: number;
+};
+
+export type BookingTableQuery = {
+  search?: string;
+  status?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  page?: number;
+  pageSize?: number;
+  sortBy?: string;
+  sortDir?: 'asc' | 'desc';
+};
+
 export type BookingLinePayload = {
   id?: string | null;
   department_id: string;
@@ -63,6 +81,7 @@ export type BookingLinePayload = {
 
 export type BookingDocumentPayload = {
   customer_id: string;
+  initial_payment_method_id?: string | null;
   booking_date?: string | null;
   notes?: string | null;
   lines: BookingLinePayload[];
@@ -70,6 +89,20 @@ export type BookingDocumentPayload = {
 
 export function listBookings(): Promise<BookingSummaryRecord[]> {
   return apiRequest<BookingSummaryRecord[]>('/api/bookings', { method: 'GET' });
+}
+
+export function listBookingsPage(query: BookingTableQuery): Promise<BookingTablePage> {
+  const params = new URLSearchParams();
+  if (query.search?.trim()) params.set('search', query.search.trim());
+  if (query.status?.trim()) params.set('status', query.status.trim());
+  if (query.dateFrom) params.set('date_from', query.dateFrom);
+  if (query.dateTo) params.set('date_to', query.dateTo);
+  if (query.page) params.set('page', String(query.page));
+  if (query.pageSize) params.set('page_size', String(query.pageSize));
+  if (query.sortBy) params.set('sort_by', query.sortBy);
+  if (query.sortDir) params.set('sort_dir', query.sortDir);
+  const suffix = params.toString() ? `?${params.toString()}` : '';
+  return apiRequest<BookingTablePage>(`/api/bookings/table${suffix}`, { method: 'GET' });
 }
 
 export function getBooking(bookingId: string): Promise<BookingDocumentRecord> {
@@ -90,4 +123,16 @@ export function completeBookingLine(bookingId: string, lineId: string): Promise<
 
 export function cancelBookingLine(bookingId: string, lineId: string): Promise<BookingDocumentRecord> {
   return apiRequest<BookingDocumentRecord>(`/api/bookings/${bookingId}/lines/${lineId}/cancel`, { method: 'POST' });
+}
+
+export function reverseBookingLineRevenue(
+  bookingId: string,
+  lineId: string,
+  options?: { overrideLock?: boolean; overrideReason?: string | null },
+): Promise<BookingDocumentRecord> {
+  const params = new URLSearchParams();
+  if (options?.overrideLock) params.set('override_lock', 'true');
+  if (options?.overrideReason?.trim()) params.set('override_reason', options.overrideReason.trim());
+  const suffix = params.toString() ? `?${params.toString()}` : '';
+  return apiRequest<BookingDocumentRecord>(`/api/bookings/${bookingId}/lines/${lineId}/reverse-revenue${suffix}`, { method: 'POST' });
 }

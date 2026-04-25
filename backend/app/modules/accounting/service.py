@@ -16,6 +16,7 @@ DEFAULT_CHART_TEMPLATE = [
     {"code": "1100", "name": "البنك", "account_type": AccountTypeKey.ASSET.value},
     {"code": "1200", "name": "ذمم العملاء", "account_type": AccountTypeKey.ASSET.value},
     {"code": "2100", "name": "عربون العملاء", "account_type": AccountTypeKey.LIABILITY.value},
+    {"code": "2200", "name": "ضريبة المخرجات", "account_type": AccountTypeKey.LIABILITY.value},
     {"code": "3100", "name": "حقوق الملكية", "account_type": AccountTypeKey.EQUITY.value},
     {"code": "4100", "name": "إيرادات الخدمات", "account_type": AccountTypeKey.REVENUE.value},
     {"code": "5100", "name": "مصروفات تشغيلية", "account_type": AccountTypeKey.EXPENSE.value},

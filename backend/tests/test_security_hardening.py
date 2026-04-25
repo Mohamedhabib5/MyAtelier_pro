@@ -17,6 +17,7 @@ def test_protected_routes_require_authentication(app_client: TestClient) -> None
         "/api/users/me",
         "/api/settings/company",
         "/api/settings/backups",
+        "/api/payment-methods",
     ]
     for route in routes:
         response = app_client.get(route)
@@ -106,16 +107,108 @@ def test_production_login_cookie_is_secure(tmp_path: Path, monkeypatch: pytest.M
     storage_root = tmp_path / "storage"
     env_overrides = {
         "APP_ENV": "production",
+        "APP_DEBUG": "false",
+        "APP_SECRET_KEY": "super-secure-production-secret-key-12345",
+        "DEFAULT_ADMIN_PASSWORD": "secure-admin-password-123",
+        "APP_FRONTEND_ORIGINS": "https://atelier.example.com",
+        "ALLOWED_HOSTS": "api.atelier.example.com,testserver",
         "SESSION_HTTPS_ONLY": "true",
     }
 
     with build_test_client(db_path, storage_root, monkeypatch, env_overrides=env_overrides) as client:
-        response = client.post("/api/auth/login", json={"username": "admin", "password": "admin123"})
+        response = client.post("/api/auth/login", json={"username": "admin", "password": "secure-admin-password-123"})
         assert response.status_code == 200
         set_cookie_header = response.headers["set-cookie"].lower()
         assert "httponly" in set_cookie_header
         assert "secure" in set_cookie_header
         assert "samesite=lax" in set_cookie_header
+
+
+def test_production_rejects_default_secret_key(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    db_path = tmp_path / "prod-default-secret.db"
+    storage_root = tmp_path / "storage"
+    env_overrides = {
+        "APP_ENV": "production",
+        "APP_DEBUG": "false",
+        "APP_SECRET_KEY": "change-me",
+        "DEFAULT_ADMIN_PASSWORD": "secure-admin-password-123",
+        "APP_FRONTEND_ORIGINS": "https://atelier.example.com",
+        "ALLOWED_HOSTS": "api.atelier.example.com",
+        "SESSION_HTTPS_ONLY": "true",
+    }
+
+    with pytest.raises(ValueError, match="APP_SECRET_KEY"):
+        with build_test_client(db_path, storage_root, monkeypatch, env_overrides=env_overrides):
+            pass
+
+
+def test_production_rejects_localhost_cors_origin(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    db_path = tmp_path / "prod-localhost-origin.db"
+    storage_root = tmp_path / "storage"
+    env_overrides = {
+        "APP_ENV": "production",
+        "APP_DEBUG": "false",
+        "APP_SECRET_KEY": "super-secure-production-secret-key-12345",
+        "DEFAULT_ADMIN_PASSWORD": "secure-admin-password-123",
+        "APP_FRONTEND_ORIGINS": "http://localhost:5173",
+        "ALLOWED_HOSTS": "api.atelier.example.com",
+        "SESSION_HTTPS_ONLY": "true",
+    }
+
+    with pytest.raises(ValueError, match="APP_FRONTEND_ORIGINS"):
+        with build_test_client(db_path, storage_root, monkeypatch, env_overrides=env_overrides):
+            pass
+
+
+def test_samesite_none_requires_secure_cookie(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    db_path = tmp_path / "samesite-none.db"
+    storage_root = tmp_path / "storage"
+    env_overrides = {
+        "SESSION_SAME_SITE": "none",
+        "SESSION_HTTPS_ONLY": "false",
+    }
+
+    with pytest.raises(ValueError, match="SESSION_SAME_SITE=none"):
+        with build_test_client(db_path, storage_root, monkeypatch, env_overrides=env_overrides):
+            pass
+
+
+def test_production_rejects_non_https_alert_webhook(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    db_path = tmp_path / "prod-webhook-http.db"
+    storage_root = tmp_path / "storage"
+    env_overrides = {
+        "APP_ENV": "production",
+        "APP_DEBUG": "false",
+        "APP_SECRET_KEY": "super-secure-production-secret-key-12345",
+        "DEFAULT_ADMIN_PASSWORD": "secure-admin-password-123",
+        "APP_FRONTEND_ORIGINS": "https://atelier.example.com",
+        "ALLOWED_HOSTS": "api.atelier.example.com",
+        "SESSION_HTTPS_ONLY": "true",
+        "OPS_ALERT_WEBHOOK_URL": "http://alerts.example.com/hook",
+    }
+
+    with pytest.raises(ValueError, match="OPS_ALERT_WEBHOOK_URL"):
+        with build_test_client(db_path, storage_root, monkeypatch, env_overrides=env_overrides):
+            pass
+
+
+def test_production_rejects_non_https_export_delivery_webhook(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    db_path = tmp_path / "prod-export-delivery-http.db"
+    storage_root = tmp_path / "storage"
+    env_overrides = {
+        "APP_ENV": "production",
+        "APP_DEBUG": "false",
+        "APP_SECRET_KEY": "super-secure-production-secret-key-12345",
+        "DEFAULT_ADMIN_PASSWORD": "secure-admin-password-123",
+        "APP_FRONTEND_ORIGINS": "https://atelier.example.com",
+        "ALLOWED_HOSTS": "api.atelier.example.com",
+        "SESSION_HTTPS_ONLY": "true",
+        "EXPORT_DELIVERY_WEBHOOK_URL": "http://delivery.example.com/hook",
+    }
+
+    with pytest.raises(ValueError, match="EXPORT_DELIVERY_WEBHOOK_URL"):
+        with build_test_client(db_path, storage_root, monkeypatch, env_overrides=env_overrides):
+            pass
 
 
 def test_auth_endpoints_disable_caching(app_client: TestClient) -> None:

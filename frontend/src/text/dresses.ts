@@ -36,6 +36,7 @@ const dressesText = {
       inactive: 'موقوف',
       maintenance: 'صيانة',
       reserved: 'محجوز',
+      with_customer: 'مع العميل',
     },
   },
   en: {
@@ -72,6 +73,7 @@ const dressesText = {
       inactive: 'Inactive',
       maintenance: 'Maintenance',
       reserved: 'Reserved',
+      with_customer: 'With customer',
     },
   },
 } as const;

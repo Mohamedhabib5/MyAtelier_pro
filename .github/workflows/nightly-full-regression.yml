@@ -1,0 +1,327 @@
+name: Nightly Full Regression
+
+on:
+  schedule:
+    # Daily at 01:00 UTC
+    - cron: "0 1 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: nightly-full-regression-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend-focused-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    defaults:
+      run:
+        shell: bash
+        working-directory: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: "pip"
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install backend dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run focused backend regression pack
+        run: |
+          set -euo pipefail
+          python -m pytest \
+            tests/test_bookings.py \
+            tests/test_booking_revenue_recognition.py \
+            tests/test_payments.py \
+            tests/test_payment_void.py \
+            tests/test_exports.py \
+            tests/test_custody.py | tee backend-focused-tests.log
+
+      - name: Upload backend regression logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-backend-focused-tests-logs
+          path: backend/backend-focused-tests.log
+          retention-days: 14
+
+      - name: Backend failure summary
+        if: failure()
+        run: |
+          {
+            echo "## Nightly backend-focused-tests failed"
+            echo ""
+            echo "- Check artifact: \`nightly-backend-focused-tests-logs\`"
+            echo "- Local reproduction:"
+            echo "  - \`cd backend && python -m pytest tests/test_bookings.py tests/test_booking_revenue_recognition.py tests/test_payments.py tests/test_payment_void.py tests/test_exports.py tests/test_custody.py\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  frontend-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    needs: backend-focused-tests
+    defaults:
+      run:
+        shell: bash
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: |
+          set -euo pipefail
+          npm run build | tee frontend-build.log
+
+      - name: Upload frontend build logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-frontend-build-logs
+          path: frontend/frontend-build.log
+          retention-days: 14
+
+      - name: Frontend build failure summary
+        if: failure()
+        run: |
+          {
+            echo "## Nightly frontend-build failed"
+            echo ""
+            echo "- Check artifact: \`nightly-frontend-build-logs\`"
+            echo "- Local reproduction:"
+            echo "  - \`cd frontend && npm run build\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  e2e-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    needs: frontend-build
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: "pip"
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Prepare SQLite runtime database
+        working-directory: backend
+        run: |
+          python - <<'PY'
+          from app.db.base import Base
+          from app.db.session import build_engine
+          from app.modules.organization import models as _org_models
+          from app.modules.identity import models as _identity_models
+          from app.modules.core_platform import models as _core_models
+          from app.modules.accounting import models as _accounting_models
+          from app.modules.customers import models as _customers_models
+          from app.modules.catalog import models as _catalog_models
+          from app.modules.dresses import models as _dresses_models
+          from app.modules.bookings import models as _bookings_models
+          from app.modules.payments import models as _payments_models
+          from app.modules.exports import models as _exports_models
+          from app.modules.custody import models as _custody_models
+
+          engine = build_engine('sqlite:///e2e-runtime.db')
+          Base.metadata.create_all(engine)
+          print('SQLite runtime DB prepared')
+          PY
+
+      - name: Run E2E smoke pack
+        env:
+          DATABASE_URL: sqlite:///${{ github.workspace }}/backend/e2e-runtime.db
+          APP_FRONTEND_ORIGINS: http://127.0.0.1:5173,http://localhost:5173
+          PLAYWRIGHT_BASE_URL: http://127.0.0.1:5173
+          PLAYWRIGHT_FRONTEND_ORIGIN: http://127.0.0.1:5173
+        run: |
+          set -euo pipefail
+          trap 'jobs -p | xargs -r kill' EXIT
+
+          cd backend
+          python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 > ../backend-e2e.log 2>&1 &
+          cd ..
+
+          cd frontend
+          npm run dev -- --host 127.0.0.1 --port 5173 > ../frontend-e2e.log 2>&1 &
+          cd ..
+
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:8000/api/health >/dev/null 2>&1; then
+              break
+            fi
+            sleep 2
+          done
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:5173/login >/dev/null 2>&1; then
+              break
+            fi
+            sleep 2
+          done
+
+          cd frontend
+          npx playwright test --reporter=line tests/e2e/smoke.spec.ts tests/e2e/lifecycle-archive-restore.spec.ts
+
+      - name: Upload E2E logs and runtime files
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-e2e-runtime-logs
+          path: |
+            backend-e2e.log
+            frontend-e2e.log
+            backend/e2e-runtime.db
+          retention-days: 14
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-e2e-playwright-report
+          path: |
+            frontend/playwright-report
+            frontend/test-results
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: E2E failure summary
+        if: failure()
+        run: |
+          {
+            echo "## Nightly e2e-smoke failed"
+            echo ""
+            echo "- Check artifacts:"
+            echo "  - \`nightly-e2e-runtime-logs\`"
+            echo "  - \`nightly-e2e-playwright-report\`"
+            echo "- Local reproduction:"
+            echo "  - Start backend/frontend locally"
+            echo "  - \`cd frontend && npx playwright test --reporter=line tests/e2e/smoke.spec.ts tests/e2e/lifecycle-archive-restore.spec.ts\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  notify-nightly-failure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs:
+      - backend-focused-tests
+      - frontend-build
+      - e2e-smoke
+    if: always()
+    steps:
+      - name: Build notification payload
+        id: payload
+        env:
+          BACKEND_RESULT: ${{ needs.backend-focused-tests.result }}
+          FRONTEND_RESULT: ${{ needs.frontend-build.result }}
+          E2E_RESULT: ${{ needs.e2e-smoke.result }}
+        run: |
+          set -euo pipefail
+          NOW_UTC="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+          if [[ "$BACKEND_RESULT" != "failure" && "$FRONTEND_RESULT" != "failure" && "$E2E_RESULT" != "failure" ]]; then
+            echo "should_notify=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "should_notify=true" >> "$GITHUB_OUTPUT"
+          cat > payload.json <<EOF
+          {
+            "event": "nightly_full_regression_failed",
+            "repository": "${{ github.repository }}",
+            "ref": "${{ github.ref }}",
+            "run_id": "${{ github.run_id }}",
+            "run_attempt": "${{ github.run_attempt }}",
+            "run_url": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+            "results": {
+              "backend_focused_tests": "$BACKEND_RESULT",
+              "frontend_build": "$FRONTEND_RESULT",
+              "e2e_smoke": "$E2E_RESULT"
+            },
+            "failed_at_utc": "$NOW_UTC"
+          }
+          EOF
+
+      - name: Send failure webhook (optional)
+        if: steps.payload.outputs.should_notify == 'true' && secrets.NIGHTLY_FAILURE_WEBHOOK_URL != ''
+        env:
+          NIGHTLY_FAILURE_WEBHOOK_URL: ${{ secrets.NIGHTLY_FAILURE_WEBHOOK_URL }}
+        run: |
+          set -euo pipefail
+          curl --fail --show-error --silent \
+            -X POST \
+            -H "Content-Type: application/json" \
+            --data @payload.json \
+            "$NIGHTLY_FAILURE_WEBHOOK_URL"
+
+      - name: Send MyAtelier nightly ingest (optional)
+        if: steps.payload.outputs.should_notify == 'true' && secrets.NIGHTLY_FAILURE_INGEST_URL != '' && secrets.NIGHTLY_FAILURE_INGEST_TOKEN != ''
+        env:
+          NIGHTLY_FAILURE_INGEST_URL: ${{ secrets.NIGHTLY_FAILURE_INGEST_URL }}
+          NIGHTLY_FAILURE_INGEST_TOKEN: ${{ secrets.NIGHTLY_FAILURE_INGEST_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl --fail --show-error --silent \
+            -X POST \
+            -H "Content-Type: application/json" \
+            -H "X-Nightly-Token: $NIGHTLY_FAILURE_INGEST_TOKEN" \
+            --data @payload.json \
+            "$NIGHTLY_FAILURE_INGEST_URL"
+
+      - name: Notification summary
+        if: always()
+        env:
+          BACKEND_RESULT: ${{ needs.backend-focused-tests.result }}
+          FRONTEND_RESULT: ${{ needs.frontend-build.result }}
+          E2E_RESULT: ${{ needs.e2e-smoke.result }}
+        run: |
+          {
+            echo "## Nightly notification stage"
+            echo ""
+            echo "- backend-focused-tests: \`$BACKEND_RESULT\`"
+            echo "- frontend-build: \`$FRONTEND_RESULT\`"
+            echo "- e2e-smoke: \`$E2E_RESULT\`"
+            echo "- webhook secret configured: \`${{ secrets.NIGHTLY_FAILURE_WEBHOOK_URL != '' }}\`"
+            echo "- ingest URL configured: \`${{ secrets.NIGHTLY_FAILURE_INGEST_URL != '' }}\`"
+            echo "- ingest token configured: \`${{ secrets.NIGHTLY_FAILURE_INGEST_TOKEN != '' }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"

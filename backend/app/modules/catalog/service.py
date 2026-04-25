@@ -15,6 +15,7 @@ from app.modules.organization.service import get_company_settings
 
 
 PRICE_QUANT = Decimal('0.01')
+RATE_QUANT = Decimal('0.01')
 
 
 def list_departments(db: Session) -> list[dict]:
@@ -30,10 +31,26 @@ def create_department(db: Session, actor: User, payload: DepartmentCreateRequest
     if repo.get_department_by_code(company.id, code) is not None:
         raise ValidationAppError('كود القسم مستخدم بالفعل')
 
-    department = Department(company_id=company.id, code=code, name=_clean(payload.name), is_active=True)
+    department = Department(
+        company_id=company.id,
+        created_by_user_id=actor.id,
+        updated_by_user_id=actor.id,
+        entity_version=1,
+        code=code,
+        name=_clean(payload.name),
+        is_active=True,
+    )
     repo.add_department(department)
     db.flush()
-    record_audit(db, actor_user_id=actor.id, action='department.created', target_type='department', target_id=department.id, summary=f'Created department {department.name}', diff={'code': department.code})
+    record_audit(
+        db,
+        actor_user_id=actor.id,
+        action='department.created',
+        target_type='department',
+        target_id=department.id,
+        summary=f'Created department {department.name}',
+        diff={'code': department.code, 'entity_version': department.entity_version},
+    )
     db.commit()
     db.refresh(department)
     return _serialize_department(department)
@@ -51,7 +68,17 @@ def update_department(db: Session, actor: User, department_id: str, payload: Dep
     department.code = code
     department.name = _clean(payload.name)
     department.is_active = payload.is_active
-    record_audit(db, actor_user_id=actor.id, action='department.updated', target_type='department', target_id=department.id, summary=f'Updated department {department.name}', diff={'code': department.code, 'is_active': department.is_active})
+    department.updated_by_user_id = actor.id
+    department.entity_version += 1
+    record_audit(
+        db,
+        actor_user_id=actor.id,
+        action='department.updated',
+        target_type='department',
+        target_id=department.id,
+        summary=f'Updated department {department.name}',
+        diff={'code': department.code, 'is_active': department.is_active, 'entity_version': department.entity_version},
+    )
     db.commit()
     db.refresh(department)
     return _serialize_department(department)
@@ -73,9 +100,13 @@ def create_service(db: Session, actor: User, payload: ServiceCreateRequest) -> d
 
     service = ServiceCatalogItem(
         company_id=company.id,
+        created_by_user_id=actor.id,
+        updated_by_user_id=actor.id,
+        entity_version=1,
         department_id=department.id,
         name=name,
         default_price=_clean_price(payload.default_price),
+        tax_rate_percent=_clean_tax_rate(payload.tax_rate_percent),
         duration_minutes=payload.duration_minutes,
         notes=_clean_optional(payload.notes),
         is_active=True,
@@ -83,7 +114,20 @@ def create_service(db: Session, actor: User, payload: ServiceCreateRequest) -> d
     repo.add_service(service)
     db.flush()
     db.refresh(service)
-    record_audit(db, actor_user_id=actor.id, action='service.created', target_type='service', target_id=service.id, summary=f'Created service {service.name}', diff={'department_id': service.department_id, 'default_price': float(service.default_price)})
+    record_audit(
+        db,
+        actor_user_id=actor.id,
+        action='service.created',
+        target_type='service',
+        target_id=service.id,
+        summary=f'Created service {service.name}',
+        diff={
+            'department_id': service.department_id,
+            'default_price': float(service.default_price),
+            'tax_rate_percent': float(service.tax_rate_percent),
+            'entity_version': service.entity_version,
+        },
+    )
     db.commit()
     db.refresh(service)
     return _serialize_service(service)
@@ -102,12 +146,29 @@ def update_service(db: Session, actor: User, service_id: str, payload: ServiceUp
     service.department_id = department.id
     service.name = name
     service.default_price = _clean_price(payload.default_price)
+    service.tax_rate_percent = _clean_tax_rate(payload.tax_rate_percent)
     service.duration_minutes = payload.duration_minutes
     service.notes = _clean_optional(payload.notes)
     service.is_active = payload.is_active
+    service.updated_by_user_id = actor.id
+    service.entity_version += 1
     db.flush()
     db.refresh(service)
-    record_audit(db, actor_user_id=actor.id, action='service.updated', target_type='service', target_id=service.id, summary=f'Updated service {service.name}', diff={'department_id': service.department_id, 'default_price': float(service.default_price), 'is_active': service.is_active})
+    record_audit(
+        db,
+        actor_user_id=actor.id,
+        action='service.updated',
+        target_type='service',
+        target_id=service.id,
+        summary=f'Updated service {service.name}',
+        diff={
+            'department_id': service.department_id,
+            'default_price': float(service.default_price),
+            'tax_rate_percent': float(service.tax_rate_percent),
+            'is_active': service.is_active,
+            'entity_version': service.entity_version,
+        },
+    )
     db.commit()
     db.refresh(service)
     return _serialize_service(service)
@@ -128,17 +189,30 @@ def _get_service_for_company(repo: CatalogRepository, company_id: str, service_i
 
 
 def _serialize_department(department: Department) -> dict:
-    return {'id': department.id, 'company_id': department.company_id, 'code': department.code, 'name': department.name, 'is_active': department.is_active}
+    return {
+        'id': department.id,
+        'company_id': department.company_id,
+        'created_by_user_id': department.created_by_user_id,
+        'updated_by_user_id': department.updated_by_user_id,
+        'entity_version': department.entity_version,
+        'code': department.code,
+        'name': department.name,
+        'is_active': department.is_active,
+    }
 
 
 def _serialize_service(service: ServiceCatalogItem) -> dict:
     return {
         'id': service.id,
         'company_id': service.company_id,
+        'created_by_user_id': service.created_by_user_id,
+        'updated_by_user_id': service.updated_by_user_id,
+        'entity_version': service.entity_version,
         'department_id': service.department_id,
         'department_name': service.department.name,
         'name': service.name,
         'default_price': float(service.default_price),
+        'tax_rate_percent': float(service.tax_rate_percent),
         'duration_minutes': service.duration_minutes,
         'notes': service.notes,
         'is_active': service.is_active,
@@ -164,3 +238,10 @@ def _clean_price(value: float) -> Decimal:
     if amount < Decimal('0'):
         raise ValidationAppError('لا يمكن أن يكون السعر سالبًا')
     return amount
+
+
+def _clean_tax_rate(value: float) -> Decimal:
+    rate = Decimal(str(value)).quantize(RATE_QUANT, rounding=ROUND_HALF_UP)
+    if rate < Decimal('0') or rate > Decimal('100'):
+        raise ValidationAppError('نسبة الضريبة يجب أن تكون بين 0 و 100')
+    return rate

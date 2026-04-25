@@ -10,6 +10,8 @@ import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
 import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined';
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import SpaOutlinedIcon from '@mui/icons-material/SpaOutlined';
+import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
+import PolicyOutlinedIcon from '@mui/icons-material/PolicyOutlined';
 import { AppBar, Box, Button, Drawer, List, ListItemButton, ListItemIcon, ListItemText, Stack, Toolbar, Typography } from '@mui/material';
 import { Link as RouterLink, useLocation } from 'react-router-dom';
 
@@ -24,7 +26,7 @@ const drawerWidth = 260;
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { user, logoutAction } = useAuth();
-  const { direction, textAlign } = useLanguage();
+  const { direction, textAlign, language } = useLanguage();
   const navigationText = useNavigationText();
   const location = useLocation();
   const roleNames = user?.role_names ?? [];
@@ -34,6 +36,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const mainOffset = { [isRtl ? 'mr' : 'ml']: { md: `${drawerWidth}px` } };
   const drawerPaperSide = isRtl ? { right: 0, left: 'auto' } : { left: 0, right: 'auto' };
   const usersLabel = isAdmin ? navigationText.usersAdmin : navigationText.usersSelf;
+  const custodyNavLabel = language === 'ar' ? 'استلام وتسليم الفساتين' : 'Custody & Delivery';
 
   const navItems = [
     { to: '/dashboard', label: navigationText.dashboard, icon: <DashboardOutlinedIcon /> },
@@ -42,9 +45,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     { to: '/services', label: navigationText.pages.services, icon: <SpaOutlinedIcon /> },
     { to: '/dresses', label: navigationText.pages.dresses, icon: <CheckroomOutlinedIcon /> },
     { to: '/payments', label: navigationText.pages.payments, icon: <PaymentsOutlinedIcon /> },
+    { to: '/custody', label: custodyNavLabel, icon: <Inventory2OutlinedIcon /> },
     { to: '/reports', label: navigationText.pages.reports, icon: <AssessmentOutlinedIcon /> },
     { to: '/exports', label: navigationText.pages.exports, icon: <FileDownloadOutlinedIcon /> },
     { to: '/accounting', label: navigationText.pages.accounting, icon: <AccountBalanceOutlinedIcon /> },
+    ...(isAdmin ? [{ to: '/audit', label: navigationText.pages.audit, icon: <PolicyOutlinedIcon /> }] : []),
     { to: '/users', label: usersLabel, icon: <AccountCircleOutlinedIcon /> },
     { to: '/settings', label: navigationText.pages.settings, icon: <SettingsOutlinedIcon /> },
   ];

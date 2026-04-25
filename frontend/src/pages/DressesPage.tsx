@@ -1,20 +1,22 @@
 import CheckroomOutlinedIcon from '@mui/icons-material/CheckroomOutlined';
+import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
-import { Alert, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, Chip, Stack, TextField, Typography } from '@mui/material';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
-
+import { useMemo, useState } from 'react';
+import { DestructiveDeleteDialog } from '../components/DestructiveDeleteDialog';
+import { LifecycleReasonDialog } from '../components/LifecycleReasonDialog';
+import { AppDataTable } from '../components/data-table/AppDataTable';
 import { SectionCard } from '../components/SectionCard';
-import { createDress, listDresses, updateDress, type DressRecord } from '../features/dresses/api';
+import { archiveDress, createDress, listDresses, restoreDress, updateDress, type DressRecord } from '../features/dresses/api';
+import { DressFormDialog, type DressFormState } from '../features/dresses/DressFormDialog';
 import { useLanguage } from '../features/language/LanguageProvider';
 import { queryClient } from '../lib/queryClient';
-import { useCommonText } from '../text/common';
+import { EMPTY_VALUE, useCommonText } from '../text/common';
 import { dressStatusLabel, useDressesText } from '../text/dresses';
-
 function emptyForm() {
-  return { code: '', dress_type: '', purchase_date: '', status: 'available', description: '', image_path: '', is_active: true };
+  return { code: '', dress_type: '', purchase_date: '', status: 'available', description: '', image_path: '', is_active: true } satisfies DressFormState;
 }
-
 export function DressesPage() {
   const { language } = useLanguage();
   const commonText = useCommonText();
@@ -22,8 +24,14 @@ export function DressesPage() {
   const [error, setError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingDress, setEditingDress] = useState<DressRecord | null>(null);
-  const [form, setForm] = useState(emptyForm());
-  const dressesQuery = useQuery({ queryKey: ['dresses'], queryFn: listDresses });
+  const [form, setForm] = useState<DressFormState>(emptyForm());
+  const [statusFilter, setStatusFilter] = useState<'all' | 'available' | 'reserved' | 'with_customer' | 'maintenance'>('all');
+  const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [lifecycleTarget, setLifecycleTarget] = useState<DressRecord | null>(null);
+  const [lifecycleMode, setLifecycleMode] = useState<'archive' | 'restore'>('archive');
+  const [lifecycleReason, setLifecycleReason] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<DressRecord | null>(null);
+  const dressesQuery = useQuery({ queryKey: ['dresses', activeFilter], queryFn: () => listDresses(activeFilter) });
 
   const createMutation = useMutation({
     mutationFn: createDress,
@@ -38,6 +46,15 @@ export function DressesPage() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['dresses'] });
       closeDialog();
+    },
+    onError: (mutationError: Error) => setError(mutationError.message),
+  });
+  const lifecycleMutation = useMutation({
+    mutationFn: ({ dress, archive, reason }: { dress: DressRecord; archive: boolean; reason?: string }) =>
+      archive ? archiveDress(dress.id, reason) : restoreDress(dress.id, reason),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['dresses'] });
+      closeLifecycleDialog();
     },
     onError: (mutationError: Error) => setError(mutationError.message),
   });
@@ -88,6 +105,41 @@ export function DressesPage() {
     await createMutation.mutateAsync(payload);
   }
 
+  function openLifecycleDialog(dress: DressRecord, archive: boolean) {
+    setError(null);
+    setLifecycleTarget(dress);
+    setLifecycleMode(archive ? 'archive' : 'restore');
+    setLifecycleReason('');
+  }
+
+  function closeLifecycleDialog() {
+    setLifecycleTarget(null);
+    setLifecycleReason('');
+  }
+
+  async function confirmLifecycle() {
+    if (!lifecycleTarget) return;
+    await lifecycleMutation.mutateAsync({
+      dress: lifecycleTarget,
+      archive: lifecycleMode === 'archive',
+      reason: lifecycleReason || undefined,
+    });
+  }
+
+  function closeDeleteDialog() {
+    setDeleteTarget(null);
+  }
+
+  const rows = useMemo(
+    () => (dressesQuery.data ?? []).filter((dress) => (statusFilter === 'all' ? true : dress.status === statusFilter)),
+    [dressesQuery.data, statusFilter],
+  );
+
+  const labels =
+    language === 'ar'
+      ? { search: 'بحث', searchPlaceholder: 'ابحث بالكود أو النوع أو الوصف', filters: 'الفلاتر', columns: 'الأعمدة', export: 'تصدير', reset: 'إعادة الضبط', noRows: 'لا توجد بيانات مطابقة' }
+      : { search: 'Search', searchPlaceholder: 'Search by code, type, or description', filters: 'Filters', columns: 'Columns', export: 'Export', reset: 'Reset', noRows: 'No matching rows' };
+
   return (
     <Stack spacing={3}>
       <Stack direction='row' justifyContent='space-between' alignItems='center'>
@@ -103,67 +155,97 @@ export function DressesPage() {
       {error ? <Alert severity='error'>{error}</Alert> : null}
 
       <SectionCard title={dressesText.page.listTitle} subtitle={dressesText.page.listSubtitle}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>{dressesText.table.code}</TableCell>
-              <TableCell>{dressesText.table.type}</TableCell>
-              <TableCell>{dressesText.table.status}</TableCell>
-              <TableCell>{dressesText.table.purchaseDate}</TableCell>
-              <TableCell>{dressesText.table.imageRef}</TableCell>
-              <TableCell>{dressesText.table.action}</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {(dressesQuery.data ?? []).map((dress) => (
-              <TableRow key={dress.id}>
-                <TableCell>{dress.code}</TableCell>
-                <TableCell>{dress.dress_type}</TableCell>
-                <TableCell>
-                  <Chip label={dressStatusLabel(language, dress.status)} size='small' color={dress.status === 'available' ? 'success' : dress.status === 'reserved' ? 'warning' : 'default'} />
-                </TableCell>
-                <TableCell>{dress.purchase_date ?? '—'}</TableCell>
-                <TableCell>{dress.image_path ?? '—'}</TableCell>
-                <TableCell>
-                  <Button startIcon={<EditOutlinedIcon />} onClick={() => openEditDialog(dress)}>
+        <AppDataTable
+          tableKey='dresses-list'
+          rows={rows}
+          columns={[
+            { key: 'code', header: dressesText.table.code, searchValue: (row) => row.code, render: (row) => row.code },
+            { key: 'type', header: dressesText.table.type, searchValue: (row) => row.dress_type, render: (row) => row.dress_type },
+            {
+              key: 'status',
+              header: dressesText.table.status,
+              searchValue: (row) => dressStatusLabel(language, row.status),
+              render: (row) => <Chip label={dressStatusLabel(language, row.status)} size='small' color={row.status === 'available' ? 'success' : row.status === 'reserved' ? 'warning' : row.status === 'with_customer' ? 'info' : 'default'} />,
+            },
+            {
+              key: 'operational_status',
+              header: language === 'ar' ? 'الحالة التشغيلية' : 'Operational status',
+              searchValue: (row) => (row.is_active ? dressesText.status.active : dressesText.status.inactive),
+              render: (row) => <Chip label={row.is_active ? dressesText.status.active : dressesText.status.inactive} size='small' color={row.is_active ? 'success' : 'default'} />,
+            },
+            { key: 'purchase_date', header: dressesText.table.purchaseDate, searchValue: (row) => row.purchase_date ?? '', render: (row) => row.purchase_date ?? EMPTY_VALUE },
+            { key: 'image_path', header: dressesText.table.imageRef, searchValue: (row) => row.image_path ?? '', render: (row) => row.image_path ?? EMPTY_VALUE },
+            {
+              key: 'action',
+              header: dressesText.table.action,
+              render: (row) => (
+                <Stack direction='row' spacing={1}>
+                  <Button size='small' startIcon={<EditOutlinedIcon />} onClick={() => openEditDialog(row)}>
                     {commonText.edit}
                   </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </SectionCard>
-
-      <Dialog open={dialogOpen} onClose={closeDialog} fullWidth maxWidth='sm'>
-        <DialogTitle>{editingDress ? dressesText.dialog.edit : dressesText.dialog.create}</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ pt: 1 }}>
-            <TextField label={dressesText.dialog.code} value={form.code} onChange={(event) => setForm({ ...form, code: event.target.value })} />
-            <TextField label={dressesText.dialog.type} value={form.dress_type} onChange={(event) => setForm({ ...form, dress_type: event.target.value })} />
-            <TextField label={dressesText.dialog.purchaseDate} type='date' InputLabelProps={{ shrink: true }} value={form.purchase_date} onChange={(event) => setForm({ ...form, purchase_date: event.target.value })} />
-            <TextField select SelectProps={{ native: true }} label={dressesText.dialog.status} value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value })}>
-              <option value='available'>{dressStatusLabel(language, 'available')}</option>
-              <option value='reserved'>{dressStatusLabel(language, 'reserved')}</option>
-              <option value='maintenance'>{dressStatusLabel(language, 'maintenance')}</option>
-            </TextField>
-            <TextField label={dressesText.dialog.description} value={form.description} multiline minRows={3} onChange={(event) => setForm({ ...form, description: event.target.value })} />
-            <TextField label={dressesText.dialog.imageRef} value={form.image_path} onChange={(event) => setForm({ ...form, image_path: event.target.value })} helperText={dressesText.dialog.imageHint} />
-            {editingDress ? (
-              <TextField select SelectProps={{ native: true }} label={dressesText.dialog.operationalStatus} value={form.is_active ? 'active' : 'inactive'} onChange={(event) => setForm({ ...form, is_active: event.target.value === 'active' })}>
+                  <Button size='small' color={row.is_active ? 'warning' : 'success'} onClick={() => openLifecycleDialog(row, row.is_active)}>
+                    {row.is_active ? (language === 'ar' ? 'أرشفة' : 'Archive') : language === 'ar' ? 'استعادة' : 'Restore'}
+                  </Button>
+                  <Button size='small' color='error' startIcon={<DeleteOutlineOutlinedIcon />} onClick={() => setDeleteTarget(row)}>
+                    {language === 'ar' ? 'حذف تصحيحي' : 'Corrective delete'}
+                  </Button>
+                </Stack>
+              ),
+            },
+          ]}
+          searchLabel={labels.search}
+          searchPlaceholder={labels.searchPlaceholder}
+          resetColumnsLabel={labels.reset}
+          noRowsLabel={labels.noRows}
+          filtersLabel={labels.filters}
+          columnsLabel={labels.columns}
+          exportLabel={labels.export}
+          rowsPerPageLabel={language === 'ar' ? 'عدد الصفوف' : 'Rows per page'}
+          closeLabel={language === 'ar' ? 'إغلاق' : 'Close'}
+          searchFields={[(row) => row.code, (row) => row.dress_type, (row) => row.description ?? '', (row) => row.image_path ?? '']}
+          filterContent={
+            <Stack spacing={2}>
+              <TextField select SelectProps={{ native: true }} fullWidth label={language === 'ar' ? 'الحالة التشغيلية' : 'Operational status'} value={activeFilter} onChange={(event) => setActiveFilter(event.target.value as typeof activeFilter)}>
+                <option value='all'>{language === 'ar' ? 'الكل' : 'All'}</option>
                 <option value='active'>{dressesText.status.active}</option>
                 <option value='inactive'>{dressesText.status.inactive}</option>
               </TextField>
-            ) : null}
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={closeDialog}>{commonText.cancel}</Button>
-          <Button variant='contained' onClick={() => void saveDress()}>
-            {commonText.save}
-          </Button>
-        </DialogActions>
-      </Dialog>
+              <TextField select SelectProps={{ native: true }} fullWidth label={dressesText.table.status} value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)}>
+                <option value='all'>{language === 'ar' ? 'الكل' : 'All'}</option>
+                <option value='available'>{dressStatusLabel(language, 'available')}</option>
+                <option value='reserved'>{dressStatusLabel(language, 'reserved')}</option>
+                <option value='with_customer'>{dressStatusLabel(language, 'with_customer')}</option>
+                <option value='maintenance'>{dressStatusLabel(language, 'maintenance')}</option>
+              </TextField>
+            </Stack>
+          }
+        />
+      </SectionCard>
+
+      <DressFormDialog open={dialogOpen} editing={Boolean(editingDress)} form={form} onChange={setForm} onClose={closeDialog} onSave={() => void saveDress()} />
+
+      <LifecycleReasonDialog
+        open={Boolean(lifecycleTarget)}
+        mode={lifecycleMode}
+        entityLabel={lifecycleTarget?.code ?? ''}
+        reason={lifecycleReason}
+        language={language}
+        onReasonChange={setLifecycleReason}
+        onCancel={closeLifecycleDialog}
+        onConfirm={() => void confirmLifecycle()}
+        loading={lifecycleMutation.isPending}
+      />
+      <DestructiveDeleteDialog
+        open={Boolean(deleteTarget)}
+        entityType='dress'
+        entityId={deleteTarget?.id ?? null}
+        entityLabel={deleteTarget?.code ?? ''}
+        onClose={closeDeleteDialog}
+        onDeleted={() => {
+          void queryClient.invalidateQueries({ queryKey: ['dresses'] });
+        }}
+        onError={(message) => setError(message)}
+      />
     </Stack>
   );
 }

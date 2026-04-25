@@ -34,4 +34,4 @@
 - End-user restore UI
 - One-click restore workflow
 - Automated scheduled restore drills
-- Retention and pruning policy
+- Managed execution of retention cleanup with operations scheduling and alerting integration

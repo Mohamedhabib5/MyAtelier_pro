@@ -3,7 +3,7 @@ from __future__ import annotations
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
-from app.modules.identity.models import Permission, Role, User
+from app.modules.identity.models import Permission, Role, User, UserGridPreference
 
 
 class IdentityRepository:
@@ -45,3 +45,16 @@ class IdentityRepository:
     def add_permission(self, permission: Permission) -> Permission:
         self.db.add(permission)
         return permission
+
+    def get_user_grid_preference(self, user_id: str, table_key: str) -> UserGridPreference | None:
+        stmt = select(UserGridPreference).where(UserGridPreference.user_id == user_id, UserGridPreference.table_key == table_key)
+        return self.db.scalars(stmt).first()
+
+    def upsert_user_grid_preference(self, *, user_id: str, table_key: str, state_json: str) -> UserGridPreference:
+        row = self.get_user_grid_preference(user_id, table_key)
+        if row is None:
+            row = UserGridPreference(user_id=user_id, table_key=table_key, state_json=state_json)
+            self.db.add(row)
+        else:
+            row.state_json = state_json
+        return row

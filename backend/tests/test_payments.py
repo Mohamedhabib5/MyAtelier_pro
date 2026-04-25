@@ -49,7 +49,7 @@ def seed_booking_context(
 
 
 def test_admin_can_create_list_and_update_payment_document(app_client: TestClient) -> None:
-    login(app_client)
+    auth_user = login(app_client)
     context = seed_booking_context(app_client)
 
     create_response = app_client.post(
@@ -72,7 +72,15 @@ def test_admin_can_create_list_and_update_payment_document(app_client: TestClien
     assert created['payment_number'].startswith('PAY')
     assert created['total_amount'] == 1000.0
     assert created['allocation_count'] == 1
+    assert created['payment_method_id']
+    assert created['payment_method_name']
     assert created['allocations'][0]['booking_line_id'] == context['line_id']
+    assert created['created_by_user_id'] == auth_user['id']
+    assert created['updated_by_user_id'] == auth_user['id']
+    assert created['entity_version'] == 1
+    assert created['allocations'][0]['created_by_user_id'] == auth_user['id']
+    assert created['allocations'][0]['updated_by_user_id'] == auth_user['id']
+    assert created['allocations'][0]['entity_version'] == 1
 
     update_response = app_client.patch(
         f"/api/payments/{created['id']}",
@@ -93,6 +101,13 @@ def test_admin_can_create_list_and_update_payment_document(app_client: TestClien
     updated = update_response.json()
     assert updated['total_amount'] == 1200.0
     assert updated['allocations'][0]['allocated_amount'] == 1200.0
+    assert updated['payment_method_id']
+    assert updated['payment_method_name']
+    assert updated['updated_by_user_id'] == auth_user['id']
+    assert updated['entity_version'] == 2
+    assert updated['allocations'][0]['created_by_user_id'] == auth_user['id']
+    assert updated['allocations'][0]['updated_by_user_id'] == auth_user['id']
+    assert updated['allocations'][0]['entity_version'] == 1
 
     list_response = app_client.get('/api/payments')
     assert list_response.status_code == 200
@@ -138,6 +153,28 @@ def test_payment_document_can_allocate_across_multiple_lines_and_bookings(app_cl
     assert created['allocation_count'] == 3
     assert created['total_amount'] == 1450.0
     assert set(created['booking_numbers']) == {booking_one['booking_number'], booking_two['booking_number']}
+
+
+def test_payment_document_uses_selected_payment_method(app_client: TestClient) -> None:
+    login(app_client)
+    context = seed_booking_context(app_client, dress_code='PAY-METHOD-1')
+    payment_method = app_client.post('/api/payment-methods', json={'name': 'Bank Transfer', 'code': 'bank_transfer'})
+    assert payment_method.status_code == 201, payment_method.text
+    payment_method_id = payment_method.json()['id']
+
+    create_response = app_client.post(
+        '/api/payments',
+        json={
+            'customer_id': context['customer_id'],
+            'payment_method_id': payment_method_id,
+            'payment_date': '2026-06-09',
+            'allocations': [{'booking_id': context['booking_id'], 'booking_line_id': context['line_id'], 'allocated_amount': 900}],
+        },
+    )
+    assert create_response.status_code == 201, create_response.text
+    created = create_response.json()
+    assert created['payment_method_id'] == payment_method_id
+    assert created['payment_method_name'] == 'Bank Transfer'
 
 
 def test_overallocation_and_cross_customer_mix_are_blocked(app_client: TestClient) -> None:
@@ -209,3 +246,44 @@ def test_regular_user_can_manage_payments(app_client: TestClient) -> None:
     list_response = app_client.get('/api/payments')
     assert list_response.status_code == 200
     assert len(list_response.json()) == 1
+
+
+def test_payment_table_endpoint_supports_search_filters_and_paging(app_client: TestClient) -> None:
+    login(app_client)
+    primary = seed_booking_context(app_client, dress_code='PAY-TABLE-1')
+    secondary_customer = app_client.post('/api/customers', json={'full_name': 'Payment Search', 'phone': '01010010013'})
+    assert secondary_customer.status_code == 201, secondary_customer.text
+    secondary = seed_booking_context(app_client, customer_id=secondary_customer.json()['id'], dress_code='PAY-TABLE-2', service_date='2026-07-02')
+
+    first_payment = app_client.post(
+        '/api/payments',
+        json={
+            'customer_id': primary['customer_id'],
+            'payment_date': '2026-06-01',
+            'notes': 'سند أول',
+            'allocations': [{'booking_id': primary['booking_id'], 'booking_line_id': primary['line_id'], 'allocated_amount': 700}],
+        },
+    )
+    assert first_payment.status_code == 201, first_payment.text
+    second_payment = app_client.post(
+        '/api/payments',
+        json={
+            'customer_id': secondary['customer_id'],
+            'payment_date': '2026-06-02',
+            'notes': 'سند للبحث',
+            'allocations': [{'booking_id': secondary['booking_id'], 'booking_line_id': secondary['line_id'], 'allocated_amount': 800}],
+        },
+    )
+    assert second_payment.status_code == 201, second_payment.text
+
+    list_response = app_client.get('/api/payments/table', params={'search': 'Search', 'page': 1, 'page_size': 1, 'sort_by': 'customer_name', 'sort_dir': 'asc'})
+    assert list_response.status_code == 200, list_response.text
+    payload = list_response.json()
+    assert payload['total'] == 1
+    assert payload['items'][0]['id'] == second_payment.json()['id']
+
+    filtered_response = app_client.get('/api/payments/table', params={'status': 'active', 'date_from': '2026-06-01', 'date_to': '2026-06-01'})
+    assert filtered_response.status_code == 200, filtered_response.text
+    filtered_payload = filtered_response.json()
+    assert filtered_payload['total'] == 1
+    assert filtered_payload['items'][0]['id'] == first_payment.json()['id']
