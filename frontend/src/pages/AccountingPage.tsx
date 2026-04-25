@@ -1,13 +1,16 @@
-import { Alert, Box, Chip, FormControlLabel, Grid, Stack, Switch, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from '@mui/material';
+import { Alert, Box, Chip, FormControlLabel, Grid, Stack, Switch, TextField, Typography } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 
+import { AppDataTable } from '../components/data-table/AppDataTable';
 import { SectionCard } from '../components/SectionCard';
 import { getChartOfAccounts, getJournalEntries, getTrialBalance } from '../features/accounting/api';
+import { useLanguage } from '../features/language/LanguageProvider';
 import { useAccountingText } from '../text/accounting';
 import { useLanguageFormatters } from '../text/common';
 
 export function AccountingPage() {
+  const { language } = useLanguage();
   const accountingText = useAccountingText();
   const formatters = useLanguageFormatters();
   const [asOfDate, setAsOfDate] = useState('');
@@ -31,6 +34,28 @@ export function AccountingPage() {
       `${accountingText.trialBalance.summary.balanceCredit}: ${formatters.formatDecimal(Number(summary.balance_credit_total))}`,
     ];
   }, [accountingText.trialBalance.summary, formatters, trialBalanceQuery.data]);
+  const tableLabels =
+    language === 'ar'
+      ? {
+          search: 'بحث',
+          filters: 'الفلاتر',
+          columns: 'الأعمدة',
+          export: 'تصدير',
+          reset: 'إعادة الضبط',
+          noRows: 'لا توجد بيانات مطابقة',
+          rowsPerPage: 'عدد الصفوف',
+          close: 'إغلاق',
+        }
+      : {
+          search: 'Search',
+          filters: 'Filters',
+          columns: 'Columns',
+          export: 'Export',
+          reset: 'Reset',
+          noRows: 'No matching rows',
+          rowsPerPage: 'Rows per page',
+          close: 'Close',
+        };
 
   return (
     <Stack spacing={3}>
@@ -44,53 +69,52 @@ export function AccountingPage() {
       <Grid container spacing={3}>
         <Grid size={{ xs: 12, md: 5 }}>
           <SectionCard title={accountingText.chart.title} subtitle={accountingText.chart.subtitle}>
-            <Table size='small'>
-              <TableHead>
-                <TableRow>
-                  <TableCell>{accountingText.chart.code}</TableCell>
-                  <TableCell>{accountingText.chart.account}</TableCell>
-                  <TableCell>{accountingText.chart.type}</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {(chartQuery.data ?? []).map((account) => (
-                  <TableRow key={account.id}>
-                    <TableCell>{account.code}</TableCell>
-                    <TableCell>{account.name}</TableCell>
-                    <TableCell>{account.account_type}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <AppDataTable
+              tableKey='accounting-chart'
+              rows={chartQuery.data ?? []}
+              columns={[
+                { key: 'code', header: accountingText.chart.code, searchValue: (row) => row.code, render: (row) => row.code },
+                { key: 'name', header: accountingText.chart.account, searchValue: (row) => row.name, render: (row) => row.name },
+                { key: 'account_type', header: accountingText.chart.type, searchValue: (row) => row.account_type, render: (row) => row.account_type },
+              ]}
+              searchLabel={tableLabels.search}
+              searchPlaceholder={language === 'ar' ? 'ابحث بالكود أو اسم الحساب' : 'Search by code or account name'}
+              resetColumnsLabel={tableLabels.reset}
+              noRowsLabel={tableLabels.noRows}
+              filtersLabel={tableLabels.filters}
+              columnsLabel={tableLabels.columns}
+              exportLabel={tableLabels.export}
+              rowsPerPageLabel={tableLabels.rowsPerPage}
+              closeLabel={tableLabels.close}
+              searchFields={[(row) => row.code, (row) => row.name, (row) => row.account_type]}
+            />
           </SectionCard>
         </Grid>
 
         <Grid size={{ xs: 12, md: 7 }}>
           <SectionCard title={accountingText.journals.title} subtitle={accountingText.journals.subtitle}>
-            <Table size='small'>
-              <TableHead>
-                <TableRow>
-                  <TableCell>{accountingText.journals.number}</TableCell>
-                  <TableCell>{accountingText.journals.date}</TableCell>
-                  <TableCell>{accountingText.journals.status}</TableCell>
-                  <TableCell>{accountingText.journals.reference}</TableCell>
-                  <TableCell>{accountingText.journals.debit}</TableCell>
-                  <TableCell>{accountingText.journals.credit}</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {(journalsQuery.data ?? []).map((entry) => (
-                  <TableRow key={entry.id}>
-                    <TableCell>{entry.entry_number}</TableCell>
-                    <TableCell>{entry.entry_date}</TableCell>
-                    <TableCell><Chip label={entry.status} size='small' /></TableCell>
-                    <TableCell>{entry.reference ?? '-'}</TableCell>
-                    <TableCell>{formatters.formatDecimal(Number(entry.total_debit))}</TableCell>
-                    <TableCell>{formatters.formatDecimal(Number(entry.total_credit))}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <AppDataTable
+              tableKey='accounting-journals'
+              rows={journalsQuery.data ?? []}
+              columns={[
+                { key: 'entry_number', header: accountingText.journals.number, searchValue: (row) => row.entry_number, render: (row) => row.entry_number },
+                { key: 'entry_date', header: accountingText.journals.date, searchValue: (row) => row.entry_date, render: (row) => row.entry_date },
+                { key: 'status', header: accountingText.journals.status, searchValue: (row) => row.status, render: (row) => <Chip label={row.status} size='small' /> },
+                { key: 'reference', header: accountingText.journals.reference, searchValue: (row) => row.reference ?? '', render: (row) => row.reference ?? '-' },
+                { key: 'total_debit', header: accountingText.journals.debit, sortValue: (row) => Number(row.total_debit), render: (row) => formatters.formatDecimal(Number(row.total_debit)) },
+                { key: 'total_credit', header: accountingText.journals.credit, sortValue: (row) => Number(row.total_credit), render: (row) => formatters.formatDecimal(Number(row.total_credit)) },
+              ]}
+              searchLabel={tableLabels.search}
+              searchPlaceholder={language === 'ar' ? 'ابحث برقم القيد أو المرجع' : 'Search by entry number or reference'}
+              resetColumnsLabel={tableLabels.reset}
+              noRowsLabel={tableLabels.noRows}
+              filtersLabel={tableLabels.filters}
+              columnsLabel={tableLabels.columns}
+              exportLabel={tableLabels.export}
+              rowsPerPageLabel={tableLabels.rowsPerPage}
+              closeLabel={tableLabels.close}
+              searchFields={[(row) => row.entry_number, (row) => row.reference ?? '', (row) => row.status]}
+            />
           </SectionCard>
         </Grid>
       </Grid>
@@ -108,32 +132,36 @@ export function AccountingPage() {
             ))}
           </Stack>
 
-          <Table size='small'>
-            <TableHead>
-              <TableRow>
-                <TableCell>{accountingText.trialBalance.code}</TableCell>
-                <TableCell>{accountingText.trialBalance.account}</TableCell>
-                <TableCell>{accountingText.trialBalance.accountType}</TableCell>
-                <TableCell>{accountingText.trialBalance.movementDebit}</TableCell>
-                <TableCell>{accountingText.trialBalance.movementCredit}</TableCell>
-                <TableCell>{accountingText.trialBalance.balanceDebit}</TableCell>
-                <TableCell>{accountingText.trialBalance.balanceCredit}</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {(trialBalanceQuery.data?.rows ?? []).map((row) => (
-                <TableRow key={row.account_id}>
-                  <TableCell>{row.account_code}</TableCell>
-                  <TableCell>{row.account_name}</TableCell>
-                  <TableCell>{row.account_type}</TableCell>
-                  <TableCell>{formatters.formatDecimal(Number(row.movement_debit))}</TableCell>
-                  <TableCell>{formatters.formatDecimal(Number(row.movement_credit))}</TableCell>
-                  <TableCell>{formatters.formatDecimal(Number(row.balance_debit))}</TableCell>
-                  <TableCell>{formatters.formatDecimal(Number(row.balance_credit))}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <AppDataTable
+            tableKey='accounting-trial-balance'
+            rows={trialBalanceQuery.data?.rows ?? []}
+            columns={[
+              { key: 'account_code', header: accountingText.trialBalance.code, searchValue: (row) => row.account_code, render: (row) => row.account_code },
+              { key: 'account_name', header: accountingText.trialBalance.account, searchValue: (row) => row.account_name, render: (row) => row.account_name },
+              { key: 'account_type', header: accountingText.trialBalance.accountType, searchValue: (row) => row.account_type, render: (row) => row.account_type },
+              { key: 'movement_debit', header: accountingText.trialBalance.movementDebit, sortValue: (row) => Number(row.movement_debit), render: (row) => formatters.formatDecimal(Number(row.movement_debit)) },
+              { key: 'movement_credit', header: accountingText.trialBalance.movementCredit, sortValue: (row) => Number(row.movement_credit), render: (row) => formatters.formatDecimal(Number(row.movement_credit)) },
+              { key: 'balance_debit', header: accountingText.trialBalance.balanceDebit, sortValue: (row) => Number(row.balance_debit), render: (row) => formatters.formatDecimal(Number(row.balance_debit)) },
+              { key: 'balance_credit', header: accountingText.trialBalance.balanceCredit, sortValue: (row) => Number(row.balance_credit), render: (row) => formatters.formatDecimal(Number(row.balance_credit)) },
+            ]}
+            searchLabel={tableLabels.search}
+            searchPlaceholder={language === 'ar' ? 'ابحث بالكود أو اسم الحساب أو النوع' : 'Search by code, account, or type'}
+            resetColumnsLabel={tableLabels.reset}
+            noRowsLabel={tableLabels.noRows}
+            filtersLabel={tableLabels.filters}
+            columnsLabel={tableLabels.columns}
+            exportLabel={tableLabels.export}
+            rowsPerPageLabel={tableLabels.rowsPerPage}
+            closeLabel={tableLabels.close}
+            searchFields={[(row) => row.account_code, (row) => row.account_name, (row) => row.account_type]}
+            footerContent={
+              <Stack direction='row' spacing={1} flexWrap='wrap' useFlexGap>
+                {summaryChips.map((chip) => (
+                  <Chip key={chip} label={chip} />
+                ))}
+              </Stack>
+            }
+          />
         </Stack>
       </SectionCard>
     </Stack>

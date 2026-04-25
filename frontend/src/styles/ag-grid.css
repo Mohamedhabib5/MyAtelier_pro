@@ -1,0 +1,28 @@
+.app-ag-grid .ag-root-wrapper {
+  border: none;
+  border-radius: 0;
+}
+
+.app-ag-grid .ag-header {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.app-ag-grid .ag-header-cell-label {
+  font-weight: 700;
+}
+
+.app-ag-grid .ag-row-hover::before,
+.app-ag-grid .ag-row-hover {
+  background-color: rgba(124, 58, 237, 0.04) !important;
+}
+
+.app-ag-grid .ag-paging-panel {
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.app-ag-grid .ag-overlay-no-rows-center,
+.app-ag-grid .ag-overlay-loading-center {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}

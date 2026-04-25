@@ -1,0 +1,59 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: myatelier-ops-alert-secrets
+type: Opaque
+stringData:
+  BASE_URL: "http://backend.default.svc.cluster.local:8000"
+  USERNAME: "ops.user"
+  PASSWORD: "replace-with-secure-password"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: myatelier-ops-alert-config
+data:
+  DRY_RUN: "false"
+  FORCE: "false"
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: myatelier-backup-stale-alert-check
+spec:
+  schedule: "0 * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: backup-stale-alert-check
+              image: curlimages/curl:8.8.0
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -e
+                  login_payload=$(printf '{"username":"%s","password":"%s"}' "$USERNAME" "$PASSWORD")
+                  curl -sS -f -c /tmp/cookies.txt \
+                    -H "Content-Type: application/json" \
+                    -X POST "$BASE_URL/api/auth/login" \
+                    -d "$login_payload" >/dev/null
+
+                  check_payload=$(printf '{"dry_run":%s,"force":%s}' "$DRY_RUN" "$FORCE")
+                  result=$(curl -sS -f -b /tmp/cookies.txt \
+                    -H "Content-Type: application/json" \
+                    -X POST "$BASE_URL/api/settings/ops/alerts/run-backup-check" \
+                    -d "$check_payload")
+                  echo "Backup stale check result: $result"
+
+                  curl -sS -b /tmp/cookies.txt -X POST "$BASE_URL/api/auth/logout" >/dev/null || true
+              envFrom:
+                - secretRef:
+                    name: myatelier-ops-alert-secrets
+                - configMapRef:
+                    name: myatelier-ops-alert-config

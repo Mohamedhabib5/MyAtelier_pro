@@ -6,7 +6,7 @@ from .test_foundation import login
 
 
 def test_admin_can_create_list_and_update_dress(app_client: TestClient) -> None:
-    login(app_client)
+    auth_user = login(app_client)
 
     create_response = app_client.post(
         '/api/dresses',
@@ -22,6 +22,9 @@ def test_admin_can_create_list_and_update_dress(app_client: TestClient) -> None:
     assert create_response.status_code == 201, create_response.text
     created = create_response.json()
     assert created['code'] == 'D-001'
+    assert created['created_by_user_id'] == auth_user['id']
+    assert created['updated_by_user_id'] == auth_user['id']
+    assert created['entity_version'] == 1
 
     list_response = app_client.get('/api/dresses')
     assert list_response.status_code == 200
@@ -44,6 +47,8 @@ def test_admin_can_create_list_and_update_dress(app_client: TestClient) -> None:
     updated = update_response.json()
     assert updated['status'] == 'maintenance'
     assert updated['dress_type'] == 'خطوبة'
+    assert updated['updated_by_user_id'] == auth_user['id']
+    assert updated['entity_version'] == 2
 
 
 def test_duplicate_dress_code_is_blocked(app_client: TestClient) -> None:
@@ -82,3 +87,42 @@ def test_regular_user_can_manage_dresses(app_client: TestClient) -> None:
     list_response = app_client.get('/api/dresses')
     assert list_response.status_code == 200
     assert len(list_response.json()) == 1
+
+
+def test_dress_archive_restore_and_status_filter(app_client: TestClient) -> None:
+    auth_user = login(app_client)
+
+    create_response = app_client.post(
+        '/api/dresses',
+        json={'code': 'D-010', 'dress_type': 'زفاف', 'status': 'available', 'description': 'فستان اختبار للأرشفة'},
+    )
+    assert create_response.status_code == 201, create_response.text
+    dress = create_response.json()
+
+    archive_response = app_client.post(
+        f"/api/dresses/{dress['id']}/archive",
+        json={'reason': 'Needs maintenance and temporary archive'},
+    )
+    assert archive_response.status_code == 200, archive_response.text
+    archived = archive_response.json()
+    assert archived['is_active'] is False
+    assert archived['updated_by_user_id'] == auth_user['id']
+    assert archived['entity_version'] == 2
+
+    active_rows = app_client.get('/api/dresses?status=active')
+    assert active_rows.status_code == 200
+    assert dress['id'] not in {row['id'] for row in active_rows.json()}
+
+    inactive_rows = app_client.get('/api/dresses?status=inactive')
+    assert inactive_rows.status_code == 200
+    assert dress['id'] in {row['id'] for row in inactive_rows.json()}
+
+    restore_response = app_client.post(
+        f"/api/dresses/{dress['id']}/restore",
+        json={'reason': 'Maintenance completed'},
+    )
+    assert restore_response.status_code == 200, restore_response.text
+    restored = restore_response.json()
+    assert restored['is_active'] is True
+    assert restored['updated_by_user_id'] == auth_user['id']
+    assert restored['entity_version'] == 3

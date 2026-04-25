@@ -15,6 +15,9 @@ class Booking(Base, UUIDPrimaryKeyMixin, TimestampMixin):
 
     company_id: Mapped[str] = mapped_column(ForeignKey('companies.id', ondelete='CASCADE'), nullable=False)
     branch_id: Mapped[str] = mapped_column(ForeignKey('branches.id', ondelete='RESTRICT'), nullable=False)
+    created_by_user_id: Mapped[str | None] = mapped_column(ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    updated_by_user_id: Mapped[str | None] = mapped_column(ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    entity_version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     booking_number: Mapped[str] = mapped_column(String(40), nullable=False)
     customer_id: Mapped[str] = mapped_column(ForeignKey('customers.id', ondelete='RESTRICT'), nullable=False)
     booking_date: Mapped[str] = mapped_column(Date, nullable=False)
@@ -37,6 +40,9 @@ class BookingLine(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     __table_args__ = (UniqueConstraint('booking_id', 'line_number', name='uq_booking_lines_booking_line_number'),)
 
     booking_id: Mapped[str] = mapped_column(ForeignKey('bookings.id', ondelete='CASCADE'), nullable=False)
+    created_by_user_id: Mapped[str | None] = mapped_column(ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    updated_by_user_id: Mapped[str | None] = mapped_column(ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    entity_version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     department_id: Mapped[str] = mapped_column(ForeignKey('departments.id', ondelete='RESTRICT'), nullable=False)
     service_id: Mapped[str] = mapped_column(ForeignKey('service_catalog_items.id', ondelete='RESTRICT'), nullable=False)
     dress_id: Mapped[str | None] = mapped_column(ForeignKey('dress_resources.id', ondelete='SET NULL'), nullable=True)
@@ -45,6 +51,8 @@ class BookingLine(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     service_date: Mapped[str] = mapped_column(Date, nullable=False)
     suggested_price: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     line_price: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    tax_rate_percent: Mapped[Decimal] = mapped_column(Numeric(5, 2), default=Decimal("0.00"), nullable=False)
+    tax_amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=Decimal("0.00"), nullable=False)
     status: Mapped[str] = mapped_column(String(40), nullable=False)
     revenue_recognized_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)

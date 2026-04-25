@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 
 import { SectionCard } from '../components/SectionCard';
 import { MetricCard } from '../features/dashboard/MetricCard';
+import { MetricsBarChart } from '../features/dashboard/MetricsBarChart';
 import { MetricsList } from '../features/dashboard/MetricsList';
 import { getFinanceDashboard } from '../features/dashboard/api';
 import { useDashboardText } from '../text/dashboard';
@@ -13,6 +14,9 @@ export function FinanceDashboardPage() {
   const formatters = useLanguageFormatters();
   const dashboardQuery = useQuery({ queryKey: ['dashboard', 'finance'], queryFn: () => getFinanceDashboard() });
   const dashboard = dashboardQuery.data;
+  const dailyIncomeChart = (dashboard?.daily_income ?? []).map((item) => ({ label: item.label, value: item.value, valueLabel: formatters.formatCurrency(item.value) }));
+  const departmentIncomeChart = (dashboard?.department_income ?? []).map((item) => ({ label: item.label, value: item.value, valueLabel: formatters.formatCurrency(item.value) }));
+  const topServicesChart = (dashboard?.top_services ?? []).map((item) => ({ label: item.label, value: item.count, valueLabel: `${formatters.formatCount(item.count)} ${dashboardText.subtitles.bookingsSuffix}` }));
   const dailyIncome = (dashboard?.daily_income ?? []).map((item) => ({ label: item.label, value: formatters.formatCurrency(item.value) }));
   const departmentIncome = (dashboard?.department_income ?? []).map((item) => ({ label: item.label, value: formatters.formatCurrency(item.value) }));
   const topServices = (dashboard?.top_services ?? []).map((item) => ({ label: item.label, value: `${formatters.formatCount(item.count)} ${dashboardText.subtitles.bookingsSuffix}` }));
@@ -33,9 +37,30 @@ export function FinanceDashboardPage() {
       </Grid>
 
       <Grid container spacing={2}>
-        <Grid size={{ xs: 12, md: 4 }}><SectionCard title={dashboardText.sections.dailyIncome} subtitle={dashboardText.subtitles.dailyIncome}><MetricsList items={dailyIncome} emptyLabel={dashboardText.subtitles.empty} /></SectionCard></Grid>
-        <Grid size={{ xs: 12, md: 4 }}><SectionCard title={dashboardText.sections.departmentIncome} subtitle={dashboardText.subtitles.departmentIncome}><MetricsList items={departmentIncome} emptyLabel={dashboardText.subtitles.empty} /></SectionCard></Grid>
-        <Grid size={{ xs: 12, md: 4 }}><SectionCard title={dashboardText.sections.topServices} subtitle={dashboardText.subtitles.topServices}><MetricsList items={topServices} emptyLabel={dashboardText.subtitles.empty} /></SectionCard></Grid>
+        <Grid size={{ xs: 12, md: 4 }}>
+          <SectionCard title={dashboardText.sections.dailyIncome} subtitle={dashboardText.subtitles.dailyIncome}>
+            <Stack spacing={2}>
+              <MetricsBarChart items={dailyIncomeChart} emptyLabel={dashboardText.subtitles.empty} color='#2e7d32' />
+              <MetricsList items={dailyIncome} emptyLabel={dashboardText.subtitles.empty} />
+            </Stack>
+          </SectionCard>
+        </Grid>
+        <Grid size={{ xs: 12, md: 4 }}>
+          <SectionCard title={dashboardText.sections.departmentIncome} subtitle={dashboardText.subtitles.departmentIncome}>
+            <Stack spacing={2}>
+              <MetricsBarChart items={departmentIncomeChart} emptyLabel={dashboardText.subtitles.empty} color='#1565c0' />
+              <MetricsList items={departmentIncome} emptyLabel={dashboardText.subtitles.empty} />
+            </Stack>
+          </SectionCard>
+        </Grid>
+        <Grid size={{ xs: 12, md: 4 }}>
+          <SectionCard title={dashboardText.sections.topServices} subtitle={dashboardText.subtitles.topServices}>
+            <Stack spacing={2}>
+              <MetricsBarChart items={topServicesChart} emptyLabel={dashboardText.subtitles.empty} color='#ef6c00' />
+              <MetricsList items={topServices} emptyLabel={dashboardText.subtitles.empty} />
+            </Stack>
+          </SectionCard>
+        </Grid>
       </Grid>
     </Stack>
   );

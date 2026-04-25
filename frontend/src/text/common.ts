@@ -69,10 +69,14 @@ const paymentKindLabels = {
   ar: {
     collection: 'تحصيل',
     refund: 'استرداد',
+    custody_deposit: 'تأمين حيازة',
+    custody_compensation: 'تعويض عهدة',
   },
   en: {
     collection: 'Collection',
     refund: 'Refund',
+    custody_deposit: 'Custody deposit',
+    custody_compensation: 'Custody compensation',
   },
 } as const;
 

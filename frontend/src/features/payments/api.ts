@@ -24,6 +24,8 @@ export type PaymentDocumentSummaryRecord = {
   branch_name: string;
   customer_id: string;
   customer_name: string;
+  payment_method_id: string | null;
+  payment_method_name: string | null;
   payment_number: string;
   payment_date: string;
   document_kind: string;
@@ -43,6 +45,25 @@ export type PaymentDocumentRecord = PaymentDocumentSummaryRecord & {
   allocations: PaymentAllocationRecord[];
 };
 
+export type PaymentTablePage = {
+  items: PaymentDocumentSummaryRecord[];
+  total: number;
+  page: number;
+  page_size: number;
+};
+
+export type PaymentTableQuery = {
+  search?: string;
+  status?: string;
+  documentKind?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  page?: number;
+  pageSize?: number;
+  sortBy?: string;
+  sortDir?: 'asc' | 'desc';
+};
+
 export type PaymentAllocationPayload = {
   booking_id: string;
   booking_line_id: string;
@@ -51,9 +72,12 @@ export type PaymentAllocationPayload = {
 
 export type PaymentDocumentPayload = {
   customer_id: string;
+  payment_method_id?: string | null;
   payment_date: string;
   notes?: string | null;
   allocations: PaymentAllocationPayload[];
+  override_lock?: boolean;
+  override_reason?: string | null;
 };
 
 export type PaymentTargetSearchRecord = {
@@ -105,10 +129,27 @@ export type PaymentTargetDetailRecord = {
 export type PaymentVoidPayload = {
   void_date: string;
   reason: string;
+  override_lock?: boolean;
+  override_reason?: string | null;
 };
 
 export function listPayments(): Promise<PaymentDocumentSummaryRecord[]> {
   return apiRequest<PaymentDocumentSummaryRecord[]>('/api/payments', { method: 'GET' });
+}
+
+export function listPaymentsPage(query: PaymentTableQuery): Promise<PaymentTablePage> {
+  const params = new URLSearchParams();
+  if (query.search?.trim()) params.set('search', query.search.trim());
+  if (query.status?.trim()) params.set('status', query.status.trim());
+  if (query.documentKind?.trim()) params.set('document_kind', query.documentKind.trim());
+  if (query.dateFrom) params.set('date_from', query.dateFrom);
+  if (query.dateTo) params.set('date_to', query.dateTo);
+  if (query.page) params.set('page', String(query.page));
+  if (query.pageSize) params.set('page_size', String(query.pageSize));
+  if (query.sortBy) params.set('sort_by', query.sortBy);
+  if (query.sortDir) params.set('sort_dir', query.sortDir);
+  const suffix = params.toString() ? `?${params.toString()}` : '';
+  return apiRequest<PaymentTablePage>(`/api/payments/table${suffix}`, { method: 'GET' });
 }
 
 export function getPaymentDocument(paymentDocumentId: string): Promise<PaymentDocumentRecord> {

@@ -6,8 +6,8 @@ from sqlalchemy.orm import Session
 from app.api.deps import require_self_manage, require_users_manage
 from app.db.session import get_db
 from app.modules.identity.models import User
-from app.modules.identity.schemas import AdminUpdateUserRequest, CreateUserRequest, SelfUpdateUserRequest, UserResponse
-from app.modules.identity.service import create_user, get_user_profile, list_visible_users, update_own_profile, update_user_by_admin
+from app.modules.identity.schemas import AdminUpdateUserRequest, CreateUserRequest, SelfUpdateUserRequest, UserGridPreferenceResponse, UserGridPreferenceUpdateRequest, UserResponse
+from app.modules.identity.service import create_user, get_user_grid_preference, get_user_profile, list_visible_users, set_user_grid_preference, update_own_profile, update_user_by_admin
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -48,3 +48,22 @@ def update_user_route(
     db: Session = Depends(get_db),
 ) -> UserResponse:
     return UserResponse(**update_user_by_admin(db, manager_user, user_id, payload))
+
+
+@router.get("/me/grid-preferences/{table_key}", response_model=UserGridPreferenceResponse)
+def get_my_grid_preference(
+    table_key: str,
+    current_user: User = Depends(require_self_manage),
+    db: Session = Depends(get_db),
+) -> UserGridPreferenceResponse:
+    return UserGridPreferenceResponse.model_validate(get_user_grid_preference(db, current_user, table_key))
+
+
+@router.put("/me/grid-preferences/{table_key}", response_model=UserGridPreferenceResponse)
+def update_my_grid_preference(
+    table_key: str,
+    payload: UserGridPreferenceUpdateRequest,
+    current_user: User = Depends(require_self_manage),
+    db: Session = Depends(get_db),
+) -> UserGridPreferenceResponse:
+    return UserGridPreferenceResponse.model_validate(set_user_grid_preference(db, current_user, table_key, payload.state))

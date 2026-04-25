@@ -8,6 +8,9 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: 5173,
+    watch: {
+      usePolling: true,
+    },
     proxy: {
       '/api': {
         target: proxyTarget,
@@ -16,20 +19,42 @@ export default defineConfig({
     },
   },
   build: {
+    chunkSizeWarningLimit: 800,
     rollupOptions: {
       output: {
-        manualChunks: {
-          'react-vendor': ['react', 'react-dom', 'react-router', 'react-router-dom', '@tanstack/react-query'],
-          'mui-vendor': [
-            '@emotion/cache',
-            '@emotion/react',
-            '@emotion/styled',
-            '@mui/icons-material',
-            '@mui/material',
-            '@popperjs/core',
-            'stylis',
-            'stylis-plugin-rtl',
-          ],
+        manualChunks(id) {
+          if (!id.includes('node_modules')) {
+            return undefined;
+          }
+
+          if (id.includes('ag-grid-community') || id.includes('ag-grid-react')) {
+            return 'ag-grid-vendor';
+          }
+
+          if (
+            id.includes('@emotion/cache') ||
+            id.includes('@emotion/react') ||
+            id.includes('@emotion/styled') ||
+            id.includes('@mui/icons-material') ||
+            id.includes('@mui/material') ||
+            id.includes('@popperjs/core') ||
+            id.includes('stylis') ||
+            id.includes('stylis-plugin-rtl')
+          ) {
+            return 'mui-vendor';
+          }
+
+          if (
+            id.includes('react-dom') ||
+            id.includes('react-router') ||
+            id.includes('react-router-dom') ||
+            id.includes('@tanstack/react-query') ||
+            /[\\/]node_modules[\\/]react[\\/]/.test(id)
+          ) {
+            return 'react-vendor';
+          }
+
+          return undefined;
         },
       },
     },

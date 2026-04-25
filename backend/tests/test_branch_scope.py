@@ -1,7 +1,11 @@
-﻿from __future__ import annotations
+from __future__ import annotations
+
+import json
 
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 
+from app.modules.core_platform.models import AuditLog
 from app.modules.organization.models import Branch
 from app.modules.organization.service import get_company_settings
 
@@ -90,3 +94,24 @@ def test_login_sets_active_branch_context(app_client: TestClient) -> None:
     payload = login(app_client)
     assert payload['active_branch_id']
     assert payload['active_branch_name']
+
+
+def test_switch_active_branch_is_audited(app_client: TestClient) -> None:
+    login(app_client)
+    second_branch_id = create_second_branch(app_client)
+    response = app_client.post('/api/settings/branches/active', json={'branch_id': second_branch_id})
+    assert response.status_code == 200, response.text
+
+    session_factory = app_client.app.state.session_factory
+    with session_factory() as db:
+        row = db.scalars(
+            select(AuditLog)
+            .where(AuditLog.action == 'branch.active_switched')
+            .order_by(AuditLog.occurred_at.desc())
+        ).first()
+    assert row is not None
+    assert row.target_type == 'branch'
+    assert row.target_id == second_branch_id
+    assert row.request_id == response.headers.get('x-request-id')
+    payload = json.loads(row.diff_json or '{}')
+    assert payload.get('next_branch_id') == second_branch_id

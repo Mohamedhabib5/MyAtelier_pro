@@ -3,9 +3,11 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Request, Response, status
 from sqlalchemy.orm import Session
 
+from app.core.exceptions import AuthenticationError
 from app.api.deps import get_current_user
 from app.core.language import DEFAULT_LANGUAGE, LANGUAGE_SESSION_KEY, normalize_language
 from app.db.session import get_db
+from app.modules.core_platform.service import record_audit
 from app.modules.identity.models import User
 from app.modules.identity.schemas import AuthUserResponse, LoginRequest, SessionLanguageRequest
 from app.modules.identity.service import authenticate_user, get_user_profile
@@ -16,7 +18,23 @@ router = APIRouter(prefix='/auth', tags=['auth'])
 
 @router.post('/login', response_model=AuthUserResponse)
 def login(payload: LoginRequest, request: Request, db: Session = Depends(get_db)) -> AuthUserResponse:
-    user = authenticate_user(db, payload.username, payload.password)
+    attempted_username = payload.username.strip().lower()
+    try:
+        user = authenticate_user(db, payload.username, payload.password)
+    except AuthenticationError:
+        record_audit(
+            db,
+            actor_user_id=None,
+            action="auth.login_failed",
+            target_type="auth_session",
+            target_id=None,
+            summary="Failed login attempt",
+            diff={"username": attempted_username},
+            success=False,
+            error_code="invalid_credentials",
+        )
+        db.commit()
+        raise
     request.session.clear()
     branch = ensure_active_branch(db, request.session)
     request.session.update(
@@ -26,11 +44,36 @@ def login(payload: LoginRequest, request: Request, db: Session = Depends(get_db)
             LANGUAGE_SESSION_KEY: normalize_language(payload.language or user.preferred_language),
         }
     )
+    record_audit(
+        db,
+        actor_user_id=user.id,
+        action="auth.login_success",
+        target_type="user",
+        target_id=user.id,
+        summary=f"User {user.username} logged in",
+        diff={"username": user.username, "branch_id": branch.id},
+        success=True,
+    )
+    db.commit()
     return AuthUserResponse(**_build_auth_payload(user, request, branch.id, branch.name))
 
 
 @router.post('/logout', status_code=status.HTTP_204_NO_CONTENT)
-def logout(request: Request) -> Response:
+def logout(request: Request, db: Session = Depends(get_db)) -> Response:
+    user_id = request.session.get("user_id")
+    active_branch_id = request.session.get("active_branch_id")
+    if user_id:
+        record_audit(
+            db,
+            actor_user_id=user_id,
+            action="auth.logout",
+            target_type="user",
+            target_id=user_id,
+            summary="User logged out",
+            diff={"branch_id": active_branch_id},
+            success=True,
+        )
+        db.commit()
     request.session.clear()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
@@ -49,7 +92,20 @@ def set_session_language(
     db: Session = Depends(get_db),
 ) -> AuthUserResponse:
     branch = ensure_active_branch(db, request.session)
-    request.session[LANGUAGE_SESSION_KEY] = normalize_language(payload.language)
+    previous_language = normalize_language(request.session.get(LANGUAGE_SESSION_KEY) or current_user.preferred_language)
+    next_language = normalize_language(payload.language)
+    request.session[LANGUAGE_SESSION_KEY] = next_language
+    record_audit(
+        db,
+        actor_user_id=current_user.id,
+        action="auth.session_language_changed",
+        target_type="user",
+        target_id=current_user.id,
+        summary=f"Changed session language for {current_user.username}",
+        diff={"previous_language": previous_language, "next_language": next_language, "branch_id": branch.id},
+        success=True,
+    )
+    db.commit()
     return AuthUserResponse(**_build_auth_payload(current_user, request, branch.id, branch.name))
 
 

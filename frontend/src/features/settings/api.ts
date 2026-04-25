@@ -49,6 +49,88 @@ export type SetActiveBranchPayload = {
   branch_id: string;
 };
 
+export type DestructiveReasonRecord = {
+  code: string;
+  category: string;
+  label_ar: string;
+  label_en: string;
+  actions: string[];
+};
+
+export type DestructivePreviewPayload = {
+  entity_type: string;
+  entity_id: string;
+  reason_code?: string | null;
+  reason_text?: string | null;
+};
+
+export type PeriodLockOverridePayload = {
+  override_lock?: boolean;
+  override_reason?: string | null;
+};
+
+export type DestructivePreviewRecord = {
+  entity_type: string;
+  entity_id: string;
+  entity_label: string;
+  recommended_action: string;
+  eligible_for_hard_delete: boolean;
+  blockers: string[];
+  impact: Record<string, number>;
+  reason_code: string;
+  reason_text: string | null;
+};
+
+export type DestructiveDeletePayload = DestructivePreviewPayload & PeriodLockOverridePayload;
+
+export type DestructiveDeleteRecord = {
+  entity_type: string;
+  entity_id: string;
+  entity_label: string;
+  deleted: boolean;
+  reason_code: string;
+  reason_text: string | null;
+  impact: Record<string, number>;
+};
+
+export type PeriodLockRecord = {
+  locked_through: string | null;
+  updated_by_user_id: string | null;
+  updated_at: string | null;
+  is_locked: boolean;
+};
+
+export type PeriodLockUpdatePayload = {
+  locked_through: string | null;
+  note?: string | null;
+};
+
+export type PeriodLockExceptionRecord = {
+  audit_id: string;
+  occurred_at: string;
+  actor_user_id: string | null;
+  actor_name: string | null;
+  target_type: string;
+  target_id: string | null;
+  action_key: string | null;
+  action_date: string | null;
+  locked_through: string | null;
+  override_reason: string | null;
+};
+
+export type NightlyRunSnapshotRecord = {
+  available: boolean;
+  event: string | null;
+  repository: string | null;
+  ref: string | null;
+  run_id: string | null;
+  run_attempt: string | null;
+  run_url: string | null;
+  failed_at_utc: string | null;
+  results: Record<string, string>;
+  reported_at: string | null;
+};
+
 export function getCompany(): Promise<CompanyRecord> {
   return apiRequest<CompanyRecord>('/api/settings/company', { method: 'GET' });
 }
@@ -88,4 +170,41 @@ export function createBackup(): Promise<BackupRecord> {
 
 export function getBackupDownloadUrl(backupId: string): string {
   return `/api/settings/backups/${backupId}/download`;
+}
+
+export function listDestructiveReasons(action = 'hard_delete'): Promise<DestructiveReasonRecord[]> {
+  return apiRequest<DestructiveReasonRecord[]>(`/api/settings/destructive-reasons?action=${action}`, { method: 'GET' });
+}
+
+export function previewDestructiveDelete(payload: DestructivePreviewPayload): Promise<DestructivePreviewRecord> {
+  return apiRequest<DestructivePreviewRecord>('/api/settings/destructive-preview', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function executeDestructiveDelete(payload: DestructiveDeletePayload): Promise<DestructiveDeleteRecord> {
+  return apiRequest<DestructiveDeleteRecord>('/api/settings/destructive-delete', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function getPeriodLock(): Promise<PeriodLockRecord> {
+  return apiRequest<PeriodLockRecord>('/api/settings/period-lock', { method: 'GET' });
+}
+
+export function updatePeriodLock(payload: PeriodLockUpdatePayload): Promise<PeriodLockRecord> {
+  return apiRequest<PeriodLockRecord>('/api/settings/period-lock', {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function listPeriodLockExceptions(limit = 100): Promise<PeriodLockExceptionRecord[]> {
+  return apiRequest<PeriodLockExceptionRecord[]>(`/api/settings/period-lock/exceptions?limit=${limit}`, { method: 'GET' });
+}
+
+export function getLatestNightlySnapshot(): Promise<NightlyRunSnapshotRecord> {
+  return apiRequest<NightlyRunSnapshotRecord>('/api/settings/ops/nightly/latest', { method: 'GET' });
 }

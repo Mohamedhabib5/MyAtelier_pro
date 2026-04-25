@@ -42,9 +42,11 @@ export function LanguageProvider({ children }: PropsWithChildren) {
     persistGuestLanguage(language);
     document.documentElement.lang = language;
     document.documentElement.dir = direction;
+    document.documentElement.setAttribute('translate', 'no');
     document.body.dir = direction;
     document.body.style.direction = direction;
     document.body.style.textAlign = textAlign;
+    document.body.setAttribute('translate', 'no');
   }, [direction, language, textAlign]);
 
   const value = useMemo<LanguageContextValue>(

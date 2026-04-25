@@ -10,8 +10,11 @@ class CustomersRepository:
     def __init__(self, db: Session):
         self.db = db
 
-    def list_customers(self, company_id: str) -> list[Customer]:
-        stmt = select(Customer).where(Customer.company_id == company_id).order_by(Customer.full_name.asc())
+    def list_customers(self, company_id: str, *, is_active: bool | None = None) -> list[Customer]:
+        stmt = select(Customer).where(Customer.company_id == company_id)
+        if is_active is not None:
+            stmt = stmt.where(Customer.is_active == is_active)
+        stmt = stmt.order_by(Customer.full_name.asc())
         return list(self.db.scalars(stmt))
 
     def get_customer(self, customer_id: str) -> Customer | None:

@@ -2,91 +2,30 @@ import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import PersonAddOutlinedIcon from '@mui/icons-material/PersonAddOutlined';
-import { Alert, Box, Button, Chip, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, Chip, MenuItem, Stack, TextField, Typography } from '@mui/material';
+import type { ICellRendererParams, SuppressKeyboardEventParams } from 'ag-grid-community';
 import { useEffect, useMemo, useState } from 'react';
 
+import { AppAgGrid, type AppAgGridColumn } from '../../components/ag-grid';
 import { useLanguage } from '../../features/language/LanguageProvider';
 import { useBookingsText } from '../../text/bookings';
 import { EMPTY_VALUE, bookingStatusLabel, useCommonText } from '../../text/common';
 import type { DepartmentRecord, ServiceRecord } from '../catalog/api';
 import type { CustomerPayload, CustomerRecord } from '../customers/api';
 import type { DressRecord } from '../dresses/api';
-import type { BookingDocumentPayload, BookingDocumentRecord, BookingLinePayload, BookingLineRecord } from './api';
+import type { PaymentMethodRecord } from '../paymentMethods/api';
+import type { BookingDocumentPayload, BookingDocumentRecord, BookingLinePayload } from './api';
 import { departmentUsesDressCode } from './departmentRules';
+import { buildEmptyLine, lineFromRecord, type EditableLine } from './editorLineModel';
+import { NumericCell } from './NumericCell';
 import { QuickCustomerDialog } from './QuickCustomerDialog';
-
-type EditableLine = {
-  local_id: string;
-  id?: string;
-  department_id: string;
-  service_id: string;
-  dress_id: string;
-  service_date: string;
-  suggested_price: string;
-  line_price: string;
-  initial_payment_amount: string;
-  status: string;
-  notes: string;
-  paid_total: number;
-  remaining_amount: number;
-  payment_state: string;
-  is_locked: boolean;
-  revenue_journal_entry_number: string | null;
-};
-
-function makeLocalId() {
-  return globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
-}
-
-function lineFromRecord(line: BookingLineRecord): EditableLine {
-  return {
-    local_id: makeLocalId(),
-    id: line.id,
-    department_id: line.department_id,
-    service_id: line.service_id,
-    dress_id: line.dress_id ?? '',
-    service_date: line.service_date,
-    suggested_price: String(line.suggested_price),
-    line_price: String(line.line_price),
-    initial_payment_amount: '',
-    status: line.status,
-    notes: line.notes ?? '',
-    paid_total: line.paid_total,
-    remaining_amount: line.remaining_amount,
-    payment_state: line.payment_state,
-    is_locked: line.is_locked,
-    revenue_journal_entry_number: line.revenue_journal_entry_number,
-  };
-}
-
-function buildEmptyLine(departments: DepartmentRecord[], services: ServiceRecord[]): EditableLine {
-  const department = departments[0];
-  const service = services.find((item) => item.department_id === department?.id) ?? services[0];
-  const defaultPrice = Number(service?.default_price ?? 0);
-  return {
-    local_id: makeLocalId(),
-    department_id: department?.id ?? '',
-    service_id: service?.id ?? '',
-    dress_id: '',
-    service_date: '',
-    suggested_price: String(defaultPrice),
-    line_price: String(defaultPrice),
-    initial_payment_amount: '',
-    status: 'confirmed',
-    notes: '',
-    paid_total: 0,
-    remaining_amount: defaultPrice,
-    payment_state: 'unpaid',
-    is_locked: false,
-    revenue_journal_entry_number: null,
-  };
-}
 
 export function BookingDocumentEditor({
   customers,
   departments,
   services,
   dresses,
+  paymentMethods,
   document,
   saving,
   onSave,
@@ -94,11 +33,13 @@ export function BookingDocumentEditor({
   onCreateCustomer,
   onCompleteLine,
   onCancelLine,
+  onReverseRevenueLine,
 }: {
   customers: CustomerRecord[];
   departments: DepartmentRecord[];
   services: ServiceRecord[];
   dresses: DressRecord[];
+  paymentMethods: PaymentMethodRecord[];
   document: BookingDocumentRecord | null;
   saving: boolean;
   onSave: (payload: BookingDocumentPayload) => Promise<void>;
@@ -106,12 +47,14 @@ export function BookingDocumentEditor({
   onCreateCustomer: (payload: CustomerPayload) => Promise<CustomerRecord>;
   onCompleteLine: (lineId: string) => Promise<void>;
   onCancelLine: (lineId: string) => Promise<void>;
+  onReverseRevenueLine: (lineId: string) => Promise<void>;
 }) {
   const { language } = useLanguage();
   const bookingsText = useBookingsText();
   const commonText = useCommonText();
   const [customerDialogOpen, setCustomerDialogOpen] = useState(false);
   const [customerId, setCustomerId] = useState('');
+  const [initialPaymentMethodId, setInitialPaymentMethodId] = useState('');
   const [bookingDate, setBookingDate] = useState('');
   const [notes, setNotes] = useState('');
   const [lines, setLines] = useState<EditableLine[]>([]);
@@ -119,16 +62,19 @@ export function BookingDocumentEditor({
   useEffect(() => {
     if (document) {
       setCustomerId(document.customer_id);
+      setInitialPaymentMethodId(paymentMethods[0]?.id ?? '');
       setBookingDate(document.booking_date);
       setNotes(document.notes ?? '');
       setLines(document.lines.map(lineFromRecord));
       return;
     }
+
     setCustomerId(customers[0]?.id ?? '');
+    setInitialPaymentMethodId(paymentMethods[0]?.id ?? '');
     setBookingDate(new Date().toISOString().slice(0, 10));
     setNotes('');
     setLines([buildEmptyLine(departments, services)]);
-  }, [customers, departments, document, services]);
+  }, [customers, departments, document, paymentMethods, services]);
 
   const lineStatusOptions = useMemo(
     () => [
@@ -141,6 +87,11 @@ export function BookingDocumentEditor({
 
   function updateLine(localId: string, patch: Partial<EditableLine>) {
     setLines((current) => current.map((line) => (line.local_id === localId ? { ...line, ...patch } : line)));
+  }
+
+  function suppressGridKeyboardEvent(params: SuppressKeyboardEventParams<EditableLine>) {
+    const target = params.event?.target;
+    return target instanceof HTMLElement && Boolean(target.closest('input, textarea, select'));
   }
 
   function handleDepartmentChange(localId: string, departmentId: string) {
@@ -157,6 +108,7 @@ export function BookingDocumentEditor({
   function handleServiceChange(localId: string, serviceId: string) {
     const service = services.find((item) => item.id === serviceId);
     if (!service) return;
+
     updateLine(localId, {
       department_id: service.department_id,
       service_id: service.id,
@@ -175,6 +127,7 @@ export function BookingDocumentEditor({
   async function handleSave() {
     const payload: BookingDocumentPayload = {
       customer_id: customerId,
+      initial_payment_method_id: initialPaymentMethodId || null,
       booking_date: bookingDate,
       notes: notes || null,
       lines: lines.map(
@@ -192,8 +145,265 @@ export function BookingDocumentEditor({
         }),
       ),
     };
+
     await onSave(payload);
   }
+
+  const lineColumns = useMemo<AppAgGridColumn<EditableLine>[]>(
+    () => [
+      {
+        colId: 'line_number',
+        headerName: '#',
+        width: 72,
+        maxWidth: 84,
+        sortable: false,
+        filter: false,
+        pinned: language === 'ar' ? 'right' : 'left',
+        valueGetter: (params) => params.node?.rowIndex !== null ? params.node!.rowIndex! + 1 : '',
+      },
+      {
+        colId: 'department_id',
+        headerName: bookingsText.lineTable.department,
+        minWidth: 170,
+        cellRenderer: ({ data }: ICellRendererParams<EditableLine>) =>
+          data ? (
+            <TextField
+              select
+              SelectProps={{ native: true }}
+              size='small'
+              fullWidth
+              value={data.department_id}
+              onChange={(event) => handleDepartmentChange(data.local_id, event.target.value)}
+              disabled={data.is_locked}
+            >
+              {departments.map((department) => (
+                <option key={department.id} value={department.id}>
+                  {department.name}
+                </option>
+              ))}
+            </TextField>
+          ) : null,
+      },
+      {
+        colId: 'service_id',
+        headerName: bookingsText.lineTable.service,
+        minWidth: 180,
+        cellRenderer: ({ data }: ICellRendererParams<EditableLine>) => {
+          if (!data) return null;
+          const departmentServices = services.filter((item) => item.department_id === data.department_id);
+          return (
+            <TextField
+              select
+              SelectProps={{ native: true }}
+              size='small'
+              fullWidth
+              value={data.service_id}
+              onChange={(event) => handleServiceChange(data.local_id, event.target.value)}
+              disabled={data.is_locked}
+            >
+              {departmentServices.map((service) => (
+                <option key={service.id} value={service.id}>
+                  {service.name}
+                </option>
+              ))}
+            </TextField>
+          );
+        },
+      },
+      {
+        colId: 'service_date',
+        headerName: bookingsText.lineTable.serviceDate,
+        minWidth: 155,
+        cellRenderer: ({ data }: ICellRendererParams<EditableLine>) =>
+          data ? (
+            <TextField
+              type='date'
+              size='small'
+              fullWidth
+              value={data.service_date}
+              onChange={(event) => updateLine(data.local_id, { service_date: event.target.value })}
+              InputLabelProps={{ shrink: true }}
+              disabled={data.is_locked}
+            />
+          ) : null,
+      },
+      {
+        colId: 'dress_id',
+        headerName: bookingsText.lineTable.dress,
+        minWidth: 150,
+        cellRenderer: ({ data }: ICellRendererParams<EditableLine>) => {
+          if (!data) return null;
+          const selectedDepartment = departments.find((item) => item.id === data.department_id);
+          const dressVisible = departmentUsesDressCode(selectedDepartment);
+
+          if (!dressVisible) {
+            return <Typography color='text.secondary'>{EMPTY_VALUE}</Typography>;
+          }
+
+          return (
+            <TextField
+              select
+              SelectProps={{ native: true }}
+              size='small'
+              fullWidth
+              value={data.dress_id}
+              onChange={(event) => updateLine(data.local_id, { dress_id: event.target.value })}
+              disabled={data.is_locked}
+            >
+              <option value=''>{bookingsText.editor.noDress}</option>
+              {dresses.map((dress) => (
+                <option key={dress.id} value={dress.id}>
+                  {dress.code}
+                </option>
+              ))}
+            </TextField>
+          );
+        },
+      },
+      {
+        colId: 'suggested_price',
+        headerName: bookingsText.lineTable.suggestedPrice,
+        minWidth: 135,
+        cellRenderer: ({ data }: ICellRendererParams<EditableLine>) =>
+          data ? (
+            <TextField
+              type='text'
+              size='small'
+              fullWidth
+              value={data.suggested_price}
+              disabled={true}
+              InputProps={{ readOnly: true }}
+              sx={{ 
+                bgcolor: '#f5f5f5',
+                '& .MuiInputBase-input': {
+                  textAlign: 'center',
+                  fontWeight: 'bold',
+                },
+              }}
+            />
+          ) : null,
+      },
+      {
+        colId: 'line_price',
+        headerName: bookingsText.lineTable.linePrice,
+        minWidth: 135,
+        suppressKeyboardEvent: suppressGridKeyboardEvent,
+        cellRenderer: ({ data }: ICellRendererParams<EditableLine>) =>
+          data ? (
+            <NumericCell 
+              value={data.line_price} 
+              onFlush={(val) => updateLine(data.local_id, { line_price: val })} 
+              disabled={data.is_locked}
+            />
+          ) : null,
+      },
+      {
+        colId: 'initial_payment_amount',
+        headerName: bookingsText.lineTable.initialPayment,
+        minWidth: 145,
+        suppressKeyboardEvent: suppressGridKeyboardEvent,
+        cellRenderer: ({ data }: ICellRendererParams<EditableLine>) =>
+          data ? (
+            <NumericCell 
+              value={data.initial_payment_amount} 
+              onFlush={(val) => updateLine(data.local_id, { initial_payment_amount: val })} 
+              disabled={data.is_locked}
+            />
+          ) : null,
+      },
+      {
+        colId: 'paid_total',
+        headerName: bookingsText.lineTable.paid,
+        minWidth: 110,
+        valueGetter: (params) => params.data?.paid_total ?? 0,
+      },
+      {
+        colId: 'remaining_preview',
+        headerName: bookingsText.lineTable.remaining,
+        minWidth: 120,
+        valueGetter: (params) => {
+          const line = params.data;
+          if (!line) return 0;
+          return Number(line.line_price || 0) - line.paid_total - Number(line.initial_payment_amount || 0);
+        },
+      },
+      {
+        colId: 'status',
+        headerName: bookingsText.lineTable.status,
+        minWidth: 180,
+        autoHeight: true,
+        cellRenderer: ({ data }: ICellRendererParams<EditableLine>) =>
+          data ? (
+            <Stack spacing={1} sx={{ py: 1 }}>
+              <TextField
+                select
+                SelectProps={{ native: true }}
+                size='small'
+                fullWidth
+                value={data.status}
+                onChange={(event) => updateLine(data.local_id, { status: event.target.value })}
+                disabled={data.is_locked}
+              >
+                {lineStatusOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </TextField>
+              {data.revenue_journal_entry_number ? (
+                <Chip size='small' color='success' label={`${bookingsText.editor.revenueEntryPrefix} ${data.revenue_journal_entry_number}`} />
+              ) : null}
+            </Stack>
+          ) : null,
+      },
+      {
+        colId: 'actions',
+        headerName: commonText.actions,
+        minWidth: 190,
+        autoHeight: true,
+        sortable: false,
+        filter: false,
+        pinned: language === 'ar' ? 'left' : 'right',
+        cellRenderer: ({ data }: ICellRendererParams<EditableLine>) => {
+          if (!data) return null;
+
+          return (
+            <Stack spacing={1} sx={{ py: 1 }}>
+              {data.id && data.status !== 'completed' && data.status !== 'cancelled' ? (
+                <Button size='small' color='success' startIcon={<CheckCircleOutlineIcon />} onClick={() => void onCompleteLine(data.id!)}>
+                  {bookingsText.editor.completeLine}
+                </Button>
+              ) : null}
+              {data.id && data.status !== 'cancelled' && !data.is_locked ? (
+                <Button size='small' onClick={() => void onCancelLine(data.id!)}>
+                  {bookingsText.editor.cancelLine}
+                </Button>
+              ) : null}
+              {data.id && data.status === 'completed' && data.is_locked ? (
+                <Button size='small' color='warning' onClick={() => void onReverseRevenueLine(data.id!)}>
+                  {language === 'ar' ? 'عكس الإيراد' : 'Reverse revenue'}
+                </Button>
+              ) : null}
+              {!data.id && !data.is_locked ? (
+                <Button
+                  size='small'
+                  color='error'
+                  startIcon={<DeleteOutlineIcon />}
+                  onClick={() => setLines((current) => current.filter((item) => item.local_id !== data.local_id))}
+                >
+                  {bookingsText.editor.deleteLine}
+                </Button>
+              ) : null}
+            </Stack>
+          );
+        },
+      },
+    ],
+    [bookingsText, commonText.actions, departments, dresses, language, lineStatusOptions, onCancelLine, onCompleteLine, onReverseRevenueLine, services],
+  );
+
+  const gridHeight = Math.min(720, Math.max(260, lines.length * 84 + 110));
+  const hasInitialPayments = lines.some((line) => Number(line.initial_payment_amount || 0) > 0);
 
   return (
     <Stack spacing={2}>
@@ -206,7 +416,11 @@ export function BookingDocumentEditor({
         </Box>
         <Stack direction='row' spacing={1}>
           <Button onClick={onCancel}>{commonText.cancel}</Button>
-          <Button variant='contained' disabled={saving || !customerId || !lines.length} onClick={() => void handleSave()}>
+          <Button
+            variant='contained'
+            disabled={saving || !customerId || !lines.length || (hasInitialPayments && !initialPaymentMethodId)}
+            onClick={() => void handleSave()}
+          >
             {bookingsText.editor.save}
           </Button>
         </Stack>
@@ -229,6 +443,19 @@ export function BookingDocumentEditor({
         <Button variant='outlined' startIcon={<PersonAddOutlinedIcon />} onClick={() => setCustomerDialogOpen(true)}>
           {bookingsText.editor.addCustomer}
         </Button>
+        <TextField
+          select
+          label={bookingsText.editor.initialPaymentMethod}
+          value={initialPaymentMethodId}
+          onChange={(event) => setInitialPaymentMethodId(event.target.value)}
+          sx={{ minWidth: 220 }}
+        >
+          {paymentMethods.map((method) => (
+            <MenuItem key={method.id} value={method.id}>
+              {method.name}
+            </MenuItem>
+          ))}
+        </TextField>
         <TextField label={bookingsText.editor.bookingDate} type='date' InputLabelProps={{ shrink: true }} value={bookingDate} onChange={(event) => setBookingDate(event.target.value)} />
       </Stack>
 
@@ -241,118 +468,24 @@ export function BookingDocumentEditor({
         </Button>
       </Stack>
 
-      <Table size='small'>
-        <TableHead>
-          <TableRow>
-            <TableCell>#</TableCell>
-            <TableCell>{bookingsText.lineTable.department}</TableCell>
-            <TableCell>{bookingsText.lineTable.service}</TableCell>
-            <TableCell>{bookingsText.lineTable.serviceDate}</TableCell>
-            <TableCell>{bookingsText.lineTable.dress}</TableCell>
-            <TableCell>{bookingsText.lineTable.suggestedPrice}</TableCell>
-            <TableCell>{bookingsText.lineTable.linePrice}</TableCell>
-            <TableCell>{bookingsText.lineTable.initialPayment}</TableCell>
-            <TableCell>{bookingsText.lineTable.paid}</TableCell>
-            <TableCell>{bookingsText.lineTable.remaining}</TableCell>
-            <TableCell>{bookingsText.lineTable.status}</TableCell>
-            <TableCell>{commonText.actions}</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {lines.map((line, index) => {
-            const lineId = line.id;
-            const selectedDepartment = departments.find((item) => item.id === line.department_id);
-            const departmentServices = services.filter((item) => item.department_id === line.department_id);
-            const dressVisible = departmentUsesDressCode(selectedDepartment);
-            const pendingRemaining = Number(line.line_price || 0) - line.paid_total - Number(line.initial_payment_amount || 0);
-
-            return (
-              <TableRow key={line.local_id}>
-                <TableCell>{index + 1}</TableCell>
-                <TableCell>
-                  <TextField select SelectProps={{ native: true }} value={line.department_id} onChange={(event) => handleDepartmentChange(line.local_id, event.target.value)} disabled={line.is_locked}>
-                    {departments.map((department) => (
-                      <option key={department.id} value={department.id}>
-                        {department.name}
-                      </option>
-                    ))}
-                  </TextField>
-                </TableCell>
-                <TableCell>
-                  <TextField select SelectProps={{ native: true }} value={line.service_id} onChange={(event) => handleServiceChange(line.local_id, event.target.value)} disabled={line.is_locked}>
-                    {departmentServices.map((service) => (
-                      <option key={service.id} value={service.id}>
-                        {service.name}
-                      </option>
-                    ))}
-                  </TextField>
-                </TableCell>
-                <TableCell>
-                  <TextField type='date' value={line.service_date} onChange={(event) => updateLine(line.local_id, { service_date: event.target.value })} InputLabelProps={{ shrink: true }} disabled={line.is_locked} />
-                </TableCell>
-                <TableCell>
-                  {dressVisible ? (
-                    <TextField select SelectProps={{ native: true }} value={line.dress_id} onChange={(event) => updateLine(line.local_id, { dress_id: event.target.value })} disabled={line.is_locked}>
-                      <option value=''>{bookingsText.editor.noDress}</option>
-                      {dresses.map((dress) => (
-                        <option key={dress.id} value={dress.id}>
-                          {dress.code}
-                        </option>
-                      ))}
-                    </TextField>
-                  ) : (
-                    EMPTY_VALUE
-                  )}
-                </TableCell>
-                <TableCell>
-                  <TextField type='number' value={line.suggested_price} onChange={(event) => updateLine(line.local_id, { suggested_price: event.target.value })} disabled={line.is_locked} />
-                </TableCell>
-                <TableCell>
-                  <TextField type='number' value={line.line_price} onChange={(event) => updateLine(line.local_id, { line_price: event.target.value })} disabled={line.is_locked} />
-                </TableCell>
-                <TableCell>
-                  <TextField type='number' value={line.initial_payment_amount} onChange={(event) => updateLine(line.local_id, { initial_payment_amount: event.target.value })} disabled={line.is_locked} />
-                </TableCell>
-                <TableCell>{line.paid_total}</TableCell>
-                <TableCell>{pendingRemaining}</TableCell>
-                <TableCell>
-                  <Stack spacing={1}>
-                    <TextField select SelectProps={{ native: true }} value={line.status} onChange={(event) => updateLine(line.local_id, { status: event.target.value })} disabled={line.is_locked}>
-                      {lineStatusOptions.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </TextField>
-                    {line.revenue_journal_entry_number ? (
-                      <Chip size='small' color='success' label={`${bookingsText.editor.revenueEntryPrefix} ${line.revenue_journal_entry_number}`} />
-                    ) : null}
-                  </Stack>
-                </TableCell>
-                <TableCell>
-                  <Stack spacing={1}>
-                    {lineId && line.status !== 'completed' && line.status !== 'cancelled' ? (
-                      <Button size='small' color='success' startIcon={<CheckCircleOutlineIcon />} onClick={() => void onCompleteLine(lineId)}>
-                        {bookingsText.editor.completeLine}
-                      </Button>
-                    ) : null}
-                    {lineId && line.status !== 'cancelled' && !line.is_locked ? (
-                      <Button size='small' onClick={() => void onCancelLine(lineId)}>
-                        {bookingsText.editor.cancelLine}
-                      </Button>
-                    ) : null}
-                    {!line.id && !line.is_locked ? (
-                      <Button size='small' color='error' startIcon={<DeleteOutlineIcon />} onClick={() => setLines((current) => current.filter((item) => item.local_id !== line.local_id))}>
-                        {bookingsText.editor.deleteLine}
-                      </Button>
-                    ) : null}
-                  </Stack>
-                </TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
+      <AppAgGrid
+        tableKey='booking-document-editor-lines'
+        rows={lines}
+        columns={lineColumns}
+        language={language}
+        searchLabel={bookingsText.editor.linesTitle}
+        searchPlaceholder={bookingsText.editor.linesTitle}
+        columnsLabel={commonText.actions}
+        exportLabel='Export'
+        resetLabel='Reset'
+        closeLabel='Close'
+        noRowsLabel={language === 'ar' ? 'لا توجد سطور بعد' : 'No lines yet'}
+        rowsPerPageLabel={language === 'ar' ? 'عدد الصفوف' : 'Rows per page'}
+        getRowId={(params) => params.data.local_id}
+        hideToolbar
+        pagination={false}
+        height={gridHeight}
+      />
 
       <QuickCustomerDialog open={customerDialogOpen} onClose={() => setCustomerDialogOpen(false)} onSubmit={handleQuickCustomerSubmit} />
     </Stack>

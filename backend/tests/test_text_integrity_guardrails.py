@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import pytest
 from fastapi.testclient import TestClient
 
 from .test_bookings import build_booking_document_payload, build_booking_line_payload, seed_customer, seed_dress, seed_service_bundle
 from .test_foundation import login
+
+pytestmark = pytest.mark.guardrail
 
 
 def test_booking_date_validation_message_is_arabic(app_client: TestClient) -> None:

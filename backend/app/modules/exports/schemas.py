@@ -1,5 +1,7 @@
 ﻿from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -31,3 +33,27 @@ class ExportScheduleRunResponse(BaseModel):
 
 class ExportScheduleToggleResponse(BaseModel):
     schedule: ExportScheduleResponse
+
+
+class ExportScheduleRunDueRequest(BaseModel):
+    dry_run: bool = False
+    limit: int = Field(default=50, ge=1, le=500)
+    notify: bool = False
+    delivery_dry_run: bool = True
+    trigger_source: Literal["manual", "automation"] = "manual"
+
+
+class ExportScheduleRunDueItem(BaseModel):
+    schedule_id: str
+    schedule_name: str
+    run_url: str
+    executed: bool
+
+
+class ExportScheduleRunDueResponse(BaseModel):
+    total_due: int
+    executed_count: int
+    skipped_count: int
+    delivery_sent: bool
+    delivery_detail: str
+    runs: list[ExportScheduleRunDueItem]

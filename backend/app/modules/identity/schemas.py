@@ -64,3 +64,19 @@ class SelfUpdateUserRequest(BaseModel):
     full_name: str | None = Field(default=None, min_length=2, max_length=120)
     password: str | None = Field(default=None, min_length=6, max_length=120)
     preferred_language: LanguageLiteral | None = None
+
+
+class UserGridPreferenceState(BaseModel):
+    columnState: list[dict] | None = None
+    filterModel: dict | None = None
+    pageSize: int = Field(default=10, ge=1, le=500)
+
+
+class UserGridPreferenceResponse(BaseModel):
+    table_key: str
+    state: UserGridPreferenceState
+    updated_at: datetime | None = None
+
+
+class UserGridPreferenceUpdateRequest(BaseModel):
+    state: UserGridPreferenceState

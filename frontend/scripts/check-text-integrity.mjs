@@ -6,6 +6,10 @@ const targets = [path.join(root, 'src'), path.join(root, '..', 'backend', 'app')
 const extensions = new Set(['.ts', '.tsx', '.py', '.md']);
 const brokenPatterns = [
   { label: 'lost-question-marks', matcher: (text) => text.includes('???') },
+  {
+    label: 'question-placeholder-literal',
+    matcher: (text) => /'[^'\r\n]*\?{3,}[^'\r\n]*'/.test(text),
+  },
   { label: 'replacement-character', matcher: (text) => text.includes('\uFFFD') },
   { label: 'encoded-dash', matcher: (text) => text.includes('â€”') },
   { label: 'encoded-bullet', matcher: (text) => text.includes('â€¢') },

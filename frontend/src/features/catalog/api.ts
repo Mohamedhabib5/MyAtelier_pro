@@ -41,8 +41,15 @@ export type ServiceUpdatePayload = ServicePayload & {
   is_active: boolean;
 };
 
-export function listDepartments(): Promise<DepartmentRecord[]> {
-  return apiRequest<DepartmentRecord[]>('/api/catalog/departments', { method: 'GET' });
+export type RecordStatusFilter = 'all' | 'active' | 'inactive';
+
+function resolveStatus(status: unknown): RecordStatusFilter {
+  return status === 'active' || status === 'inactive' || status === 'all' ? status : 'all';
+}
+
+export function listDepartments(status: RecordStatusFilter | unknown = 'all'): Promise<DepartmentRecord[]> {
+  const resolved = resolveStatus(status);
+  return apiRequest<DepartmentRecord[]>(`/api/catalog/departments?status=${resolved}`, { method: 'GET' });
 }
 
 export function createDepartment(payload: DepartmentPayload): Promise<DepartmentRecord> {
@@ -56,8 +63,23 @@ export function updateDepartment(departmentId: string, payload: DepartmentUpdate
   });
 }
 
-export function listServices(): Promise<ServiceRecord[]> {
-  return apiRequest<ServiceRecord[]>('/api/catalog/services', { method: 'GET' });
+export function archiveDepartment(departmentId: string, reason?: string): Promise<DepartmentRecord> {
+  return apiRequest<DepartmentRecord>(`/api/catalog/departments/${departmentId}/archive`, {
+    method: 'POST',
+    body: JSON.stringify({ reason: reason ?? null }),
+  });
+}
+
+export function restoreDepartment(departmentId: string, reason?: string): Promise<DepartmentRecord> {
+  return apiRequest<DepartmentRecord>(`/api/catalog/departments/${departmentId}/restore`, {
+    method: 'POST',
+    body: JSON.stringify({ reason: reason ?? null }),
+  });
+}
+
+export function listServices(status: RecordStatusFilter | unknown = 'all'): Promise<ServiceRecord[]> {
+  const resolved = resolveStatus(status);
+  return apiRequest<ServiceRecord[]>(`/api/catalog/services?status=${resolved}`, { method: 'GET' });
 }
 
 export function createService(payload: ServicePayload): Promise<ServiceRecord> {
@@ -68,5 +90,19 @@ export function updateService(serviceId: string, payload: ServiceUpdatePayload):
   return apiRequest<ServiceRecord>(`/api/catalog/services/${serviceId}`, {
     method: 'PATCH',
     body: JSON.stringify(payload),
+  });
+}
+
+export function archiveService(serviceId: string, reason?: string): Promise<ServiceRecord> {
+  return apiRequest<ServiceRecord>(`/api/catalog/services/${serviceId}/archive`, {
+    method: 'POST',
+    body: JSON.stringify({ reason: reason ?? null }),
+  });
+}
+
+export function restoreService(serviceId: string, reason?: string): Promise<ServiceRecord> {
+  return apiRequest<ServiceRecord>(`/api/catalog/services/${serviceId}/restore`, {
+    method: 'POST',
+    body: JSON.stringify({ reason: reason ?? null }),
   });
 }

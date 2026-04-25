@@ -43,3 +43,16 @@
 - Input validation must be explicit and strict.
 - Session security, CORS restrictions, secret handling, and backup protection are part of the architecture, not optional polish.
 - Every milestone should include a lightweight security review before completion.
+
+## Codex token efficiency rule
+- Execution should minimize context and output size to reduce token usage and cost.
+- Prefer small, milestone-sized tasks with short responses and focused file reads.
+- Avoid dumping long command output unless it is required for a decision or requested by the owner.
+- Start a fresh implementation thread for new major tasks when possible to avoid carrying oversized historical context.
+
+## Mandatory final review gate (end of each phase)
+- No phase is marked complete until a strict end-to-end review is finished.
+- Final review must confirm: functional correctness, integration between modules, data integrity, security posture, and administrative workflow consistency.
+- Final review must include code-level checks for coupling correctness, missing links between layers, and regression risk.
+- All critical flows must be validated as working successfully before sign-off.
+- Any discovered gap or risk must be documented and resolved (or explicitly approved with a mitigation plan) before closure.

@@ -4,19 +4,20 @@
 - This file defines the accounting assumptions introduced across the accounting checkpoints.
 - The current implementation now includes the chart-of-accounts foundation, journal create/post/reverse workflows, a read-only trial balance, and automatic journal posting for payment receipts.
 
-## Scope through Checkpoint 5C
+## Scope through Checkpoint 8M
 - read-only trial balance endpoint
 - trial balance filtering by date and fiscal period
 - inclusion of posted and reversed journal effects only
 - balance aggregation by account
 - automatic posted journals for payment receipts
 - reversal and replacement of linked journals when payment receipts are updated
+- booking-line revenue recognition and guarded reversal workflow
+- tax-aware revenue split between service revenue and output-tax payable
 
-## Out of scope after Checkpoint 5C
+## Out of scope after Checkpoint 8M
 - tax engine
 - inventory valuation
 - customer invoice integration
-- automatic revenue recognition from booking completion
 - advanced financial statements
 - branch-specific accounting ledgers
 
@@ -35,6 +36,7 @@ The first default chart is intentionally small and operationally useful:
 - `1100` البنك
 - `1200` ذمم العملاء
 - `2100` عربون العملاء
+- `2200` ضريبة المخرجات
 - `3100` حقوق الملكية
 - `4100` إيرادات الخدمات
 - `5100` مصروفات تشغيلية
@@ -43,7 +45,7 @@ The first default chart is intentionally small and operationally useful:
 - all customer collections created from the payments module currently credit `2100 عربون العملاء`
 - refunds from the payments module currently debit `2100 عربون العملاء`
 - this keeps customer cash movements traceable without recognizing revenue too early
-- final recognition into `4100 إيرادات الخدمات` is deferred to a later operational completion slice
+- booking completion now recognizes revenue and can split tax into `2200 ضريبة المخرجات` when applicable
 
 ## Trial balance interpretation
 - `movement_debit` and `movement_credit` show period movement included in the report scope.
