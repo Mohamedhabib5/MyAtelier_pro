@@ -46,22 +46,19 @@ export function lineFromRecord(line: BookingLineRecord): EditableLine {
 }
 
 export function buildEmptyLine(departments: DepartmentRecord[], services: ServiceRecord[]): EditableLine {
-  const department = departments[0];
-  const service = services.find((item) => item.department_id === department?.id) ?? services[0];
-  const defaultPrice = Number(service?.default_price ?? 0);
   return {
     local_id: makeLocalId(),
-    department_id: department?.id ?? '',
-    service_id: service?.id ?? '',
+    department_id: '',
+    service_id: '',
     dress_id: '',
     service_date: '',
-    suggested_price: String(defaultPrice),
-    line_price: String(defaultPrice),
+    suggested_price: '0',
+    line_price: '0',
     initial_payment_amount: '',
-    status: 'confirmed',
+    status: 'draft',
     notes: '',
     paid_total: 0,
-    remaining_amount: defaultPrice,
+    remaining_amount: 0,
     payment_state: 'unpaid',
     is_locked: false,
     revenue_journal_entry_number: null,

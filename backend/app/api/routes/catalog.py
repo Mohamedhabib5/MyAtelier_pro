@@ -23,8 +23,9 @@ from app.modules.catalog.schemas import (
     ServiceCreateRequest,
     ServiceResponse,
     ServiceUpdateRequest,
+    SetDressDepartmentRequest,
 )
-from app.modules.catalog.service import create_department, create_service, update_department, update_service
+from app.modules.catalog.service import create_department, create_service, set_dress_department, update_department, update_service
 from app.modules.identity.models import User
 
 router = APIRouter(prefix="/catalog", tags=["catalog"])
@@ -77,6 +78,15 @@ def restore_department_route(
     current_user: User = Depends(require_catalog_manage),
 ) -> DepartmentResponse:
     return DepartmentResponse.model_validate(restore_department(db, current_user, department_id, payload.reason))
+
+
+@router.post("/operational/dresses-department", response_model=DepartmentResponse)
+def make_dress_department_route(
+    payload: SetDressDepartmentRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_catalog_manage),
+) -> DepartmentResponse:
+    return DepartmentResponse.model_validate(set_dress_department(db, current_user, payload.department_id))
 
 
 @router.get("/services", response_model=list[ServiceResponse])

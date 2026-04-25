@@ -13,6 +13,7 @@ export type ServiceFormState = {
   duration_minutes: string;
   notes: string;
   is_active: boolean;
+  display_order: number;
 };
 
 type ServiceFormDialogProps = {
@@ -64,6 +65,12 @@ export function ServiceFormDialog({ open, editing, form, departments, onChange, 
           allowDecimal={false}
         />
         <TextField label={catalogText.services.notes} value={form.notes} multiline minRows={3} onChange={(event) => onChange({ ...form, notes: event.target.value })} />
+        <StableNumericField
+          label={catalogText.departments.displayOrder}
+          value={String(form.display_order)}
+          onValueChange={(value) => onChange({ ...form, display_order: parseInt(value) || 0 })}
+          allowDecimal={false}
+        />
         {editing ? (
           <TextField select SelectProps={{ native: true }} label={catalogText.departments.status} value={form.is_active ? 'active' : 'inactive'} onChange={(event) => onChange({ ...form, is_active: event.target.value === 'active' })}>
             <option value='active'>{catalogText.status.active}</option>

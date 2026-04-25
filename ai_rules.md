@@ -96,6 +96,9 @@ MyAtelier is an **Arabic-first** application. All AI agents must prioritize text
    - Revenue is recognized upon booking completion.
 3. **Branch Scoping**:
    - All data must be scoped to the active branch context where applicable.
+4. **Selection Persistence (Critical UX)**:
+   - When a "Quick Create" action is performed (e.g., adding a customer from within a booking), the newly created entity **MUST** be automatically selected.
+   - Component state must be **PROTECTED** against resets during background refetches. Specifically, `useEffect` hooks that initialize form state must depend on unique entity IDs (like `document.id`) rather than metadata lists (like `customers`, `departments`) that may refresh frequently.
 
 ---
 

@@ -2,7 +2,7 @@ import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import PersonAddOutlinedIcon from '@mui/icons-material/PersonAddOutlined';
-import { Alert, Box, Button, Chip, MenuItem, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Autocomplete, Box, Button, Chip, MenuItem, Stack, TextField, Typography } from '@mui/material';
 import type { ICellRendererParams, SuppressKeyboardEventParams } from 'ag-grid-community';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -59,7 +59,12 @@ export function BookingDocumentEditor({
   const [notes, setNotes] = useState('');
   const [lines, setLines] = useState<EditableLine[]>([]);
 
+  const documentId = document?.id;
+
   useEffect(() => {
+    // PROTECTED: This effect must only run when the document ID changes.
+    // Do NOT add 'customers', 'departments', 'services', or 'paymentMethods' to dependencies.
+    // Adding them will cause state resets during background refetches, breaking the "auto-select new customer" feature.
     if (document) {
       setCustomerId(document.customer_id);
       setInitialPaymentMethodId(paymentMethods[0]?.id ?? '');
@@ -69,12 +74,12 @@ export function BookingDocumentEditor({
       return;
     }
 
-    setCustomerId(customers[0]?.id ?? '');
+    setCustomerId('');
     setInitialPaymentMethodId(paymentMethods[0]?.id ?? '');
     setBookingDate(new Date().toISOString().slice(0, 10));
     setNotes('');
     setLines([buildEmptyLine(departments, services)]);
-  }, [customers, departments, document, paymentMethods, services]);
+  }, [documentId]); // Only depend on documentId to trigger a full reset
 
   const lineStatusOptions = useMemo(
     () => [
@@ -95,7 +100,18 @@ export function BookingDocumentEditor({
   }
 
   function handleDepartmentChange(localId: string, departmentId: string) {
-    const service = services.find((item) => item.department_id === departmentId) ?? services[0];
+    if (!departmentId) {
+      updateLine(localId, {
+        department_id: '',
+        service_id: '',
+        dress_id: '',
+        suggested_price: '0',
+        line_price: '0',
+      });
+      return;
+    }
+    const departmentServices = services.filter((item) => item.department_id === departmentId);
+    const service = departmentServices[0];
     updateLine(localId, {
       department_id: departmentId,
       service_id: service?.id ?? '',
@@ -120,6 +136,7 @@ export function BookingDocumentEditor({
 
   async function handleQuickCustomerSubmit(payload: CustomerPayload) {
     const created = await onCreateCustomer(payload);
+    // PROTECTED: Auto-select newly created customer
     setCustomerId(created.id);
     setCustomerDialogOpen(false);
   }
@@ -176,6 +193,7 @@ export function BookingDocumentEditor({
               onChange={(event) => handleDepartmentChange(data.local_id, event.target.value)}
               disabled={data.is_locked}
             >
+              <option value=''>{bookingsText.editor.selectDepartment}</option>
               {departments.map((department) => (
                 <option key={department.id} value={department.id}>
                   {department.name}
@@ -201,6 +219,7 @@ export function BookingDocumentEditor({
               onChange={(event) => handleServiceChange(data.local_id, event.target.value)}
               disabled={data.is_locked}
             >
+              <option value=''>{bookingsText.editor.selectService}</option>
               {departmentServices.map((service) => (
                 <option key={service.id} value={service.id}>
                   {service.name}
@@ -270,7 +289,8 @@ export function BookingDocumentEditor({
               type='text'
               size='small'
               fullWidth
-              value={data.suggested_price}
+              value={data.suggested_price === '0' ? '' : data.suggested_price}
+              placeholder='0'
               disabled={true}
               InputProps={{ readOnly: true }}
               sx={{ 
@@ -433,13 +453,17 @@ export function BookingDocumentEditor({
       ) : null}
 
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-        <TextField select SelectProps={{ native: true }} label={bookingsText.editor.customer} value={customerId} onChange={(event) => setCustomerId(event.target.value)} fullWidth>
-          {customers.map((customer) => (
-            <option key={customer.id} value={customer.id}>
-              {customer.full_name}
-            </option>
-          ))}
-        </TextField>
+        <Autocomplete
+          fullWidth
+          options={customers}
+          getOptionLabel={(option) => option.full_name}
+          value={customers.find((c) => c.id === customerId) || null}
+          onChange={(_, newValue) => setCustomerId(newValue?.id ?? '')}
+          renderInput={(params) => (
+            <TextField {...params} label={bookingsText.editor.customer} placeholder={bookingsText.editor.selectCustomer} />
+          )}
+          noOptionsText={language === 'ar' ? 'لا توجد نتائج' : 'No results'}
+        />
         <Button variant='outlined' startIcon={<PersonAddOutlinedIcon />} onClick={() => setCustomerDialogOpen(true)}>
           {bookingsText.editor.addCustomer}
         </Button>

@@ -49,7 +49,8 @@ export function StableNumericCell({ value, onFlush, disabled, allowDecimal = tru
       type='text'
       size='small'
       fullWidth
-      value={draftValue}
+      value={draftValue === '0' ? '' : draftValue}
+      placeholder='0'
       onChange={(event) => setDraftValue(normalizeNumericText(event.target.value, { allowDecimal }))}
       onFocus={() => setIsFocused(true)}
       onBlur={handleBlur}

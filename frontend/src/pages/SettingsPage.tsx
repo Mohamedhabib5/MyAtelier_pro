@@ -12,6 +12,7 @@ import { useLanguage } from '../features/language/LanguageProvider';
 import { NightlyStatusSection } from '../features/settings/NightlyStatusSection';
 import { PaymentMethodsSection } from '../features/settings/PaymentMethodsSection';
 import { PeriodLockSection } from '../features/settings/PeriodLockSection';
+import { DressDepartmentSection } from '../features/settings/DressDepartmentSection';
 import { createBackup, createBranch, getActiveBranch, getBackupDownloadUrl, getCompany, listBackups, updateCompany } from '../features/settings/api';
 import { queryClient } from '../lib/queryClient';
 import { EMPTY_VALUE } from '../text/common';
@@ -214,6 +215,8 @@ export function SettingsPage() {
           />
         </Stack>
       </SectionCard>
+
+      <DressDepartmentSection />
 
       <PaymentMethodsSection
         language={language}

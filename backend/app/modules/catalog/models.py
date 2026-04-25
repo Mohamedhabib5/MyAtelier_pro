@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from decimal import Decimal
 
@@ -19,6 +19,8 @@ class Department(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     code: Mapped[str] = mapped_column(String(40), nullable=False)
     name: Mapped[str] = mapped_column(String(120), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    is_dress_department: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    display_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     services = relationship('ServiceCatalogItem', back_populates='department', lazy='selectin')
 
@@ -38,5 +40,6 @@ class ServiceCatalogItem(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     duration_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    display_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     department = relationship('Department', back_populates='services', lazy='joined')

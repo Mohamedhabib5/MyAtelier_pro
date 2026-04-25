@@ -172,7 +172,12 @@ export function PaymentDocumentBuilder({
             </MenuItem>
           ))}
         </TextField>
-        <TextField label={paymentsText.builder.selectedTotal} value={selectedTotal} InputProps={{ readOnly: true }} />
+        <TextField
+          label={paymentsText.builder.selectedTotal}
+          value={selectedTotal === 0 ? '' : selectedTotal}
+          placeholder='0'
+          InputProps={{ readOnly: true }}
+        />
       </Stack>
 
       <TextField label={paymentsText.builder.notes} value={notes} multiline minRows={3} onChange={(event) => setNotes(event.target.value)} />

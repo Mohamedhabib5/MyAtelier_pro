@@ -145,6 +145,8 @@ def _serialize_department(department: Department) -> dict:
         "code": department.code,
         "name": department.name,
         "is_active": department.is_active,
+        "is_dress_department": department.is_dress_department,
+        "display_order": department.display_order,
     }
 
 
@@ -163,6 +165,7 @@ def _serialize_service(service: ServiceCatalogItem) -> dict:
         "duration_minutes": service.duration_minutes,
         "notes": service.notes,
         "is_active": service.is_active,
+        "display_order": service.display_order,
     }
 
 

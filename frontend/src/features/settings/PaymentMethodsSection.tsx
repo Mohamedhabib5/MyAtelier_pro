@@ -4,6 +4,7 @@ import { Alert, Button, Chip, Stack, TextField, Typography } from '@mui/material
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 
+import { StableNumericField } from '../../components/inputs/StableNumericField';
 import { SectionCard } from '../../components/SectionCard';
 import { queryClient } from '../../lib/queryClient';
 import { createPaymentMethod, listPaymentMethods, updatePaymentMethod, type PaymentMethodRecord } from '../paymentMethods/api';
@@ -145,17 +146,17 @@ export function PaymentMethodsSection({ language, onSuccess, onError }: Props) {
                       sx={{ minWidth: 260 }}
                     />
                     <TextField label={text.code} value={item.code} InputProps={{ readOnly: true }} sx={{ minWidth: 180 }} />
-                    <TextField
+                    <StableNumericField
                       label={text.order}
-                      type='number'
                       value={draft.displayOrder}
-                      onChange={(event) =>
+                      onValueChange={(value) =>
                         setDrafts((current) => ({
                           ...current,
-                          [item.id]: { ...rowDraft(item), displayOrder: event.target.value },
+                          [item.id]: { ...rowDraft(item), displayOrder: value },
                         }))
                       }
                       sx={{ minWidth: 130 }}
+                      allowDecimal={false}
                     />
                     <Stack direction='row' spacing={1} alignItems='center'>
                       <Typography variant='body2' color='text.secondary'>

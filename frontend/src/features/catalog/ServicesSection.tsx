@@ -16,7 +16,7 @@ import { archiveService, createService, listServices, restoreService, updateServ
 import { ServiceFormDialog, type ServiceFormState } from './ServiceFormDialog';
 
 function emptyForm(departmentId = '') {
-  return { department_id: departmentId, name: '', default_price: '', duration_minutes: '', notes: '', is_active: true } satisfies ServiceFormState;
+  return { department_id: departmentId, name: '', default_price: '', duration_minutes: '', notes: '', is_active: true, display_order: 0 } satisfies ServiceFormState;
 }
 
 export function ServicesSection({ departments }: { departments: DepartmentRecord[] }) {
@@ -84,6 +84,7 @@ export function ServicesSection({ departments }: { departments: DepartmentRecord
       duration_minutes: service.duration_minutes ? String(service.duration_minutes) : '',
       notes: service.notes ?? '',
       is_active: service.is_active,
+      display_order: service.display_order,
     });
     setDialogOpen(true);
   }
@@ -97,6 +98,7 @@ export function ServicesSection({ departments }: { departments: DepartmentRecord
       duration_minutes: form.duration_minutes ? Number(form.duration_minutes) : null,
       notes: form.notes || null,
       is_active: form.is_active,
+      display_order: form.display_order,
     };
     if (editingService) {
       await updateMutation.mutateAsync({ serviceId: editingService.id, payload });
@@ -161,6 +163,7 @@ export function ServicesSection({ departments }: { departments: DepartmentRecord
           columns={[
             { key: 'name', header: catalogText.services.tableName, searchValue: (row) => row.name, render: (row) => row.name },
             { key: 'department', header: catalogText.services.tableDepartment, searchValue: (row) => row.department_name, render: (row) => row.department_name },
+            { key: 'display_order', header: catalogText.services.displayOrder, render: (row) => row.display_order },
             { key: 'price', header: catalogText.services.tablePrice, sortValue: (row) => row.default_price, exportValue: (row) => row.default_price, render: (row) => row.default_price },
             {
               key: 'duration',

@@ -54,7 +54,8 @@ export function StableNumericField({
       {...props}
       inputRef={inputRef}
       type='text'
-      value={draftValue}
+      value={draftValue === '0' ? '' : draftValue}
+      placeholder='0'
       onChange={(event) => handleChange(event.target.value)}
       onFocus={(event) => {
         setIsFocused(true);
@@ -73,6 +74,7 @@ export function StableNumericField({
           unicodeBidi: 'plaintext',
         },
       }}
+      sx={props.sx}
     />
   );
 }
