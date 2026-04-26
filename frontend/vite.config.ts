@@ -12,9 +12,17 @@ export default defineConfig({
       usePolling: true,
     },
     proxy: {
+      '/attachments': {
+        target: proxyTarget,
+        changeOrigin: true,
+        secure: false,
+        ws: true,
+      },
       '/api': {
         target: proxyTarget,
         changeOrigin: true,
+        secure: false,
+        ws: true,
       },
     },
   },

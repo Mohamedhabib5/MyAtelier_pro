@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.api.routes import (
     accounting,
@@ -131,6 +132,9 @@ def create_app(settings_obj: Settings | None = None) -> FastAPI:
         max_age=settings_obj.session_max_age_seconds,
     )
     app.add_middleware(RequestContextMiddleware)
+
+    # Mount static files for attachments
+    app.mount("/attachments", StaticFiles(directory=settings_obj.attachment_storage_dir), name="attachments")
 
     @app.middleware('http')
     async def add_security_headers(request: Request, call_next):

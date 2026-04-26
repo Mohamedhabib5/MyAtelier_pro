@@ -1,9 +1,12 @@
-import { Button, Stack, TextField } from '@mui/material';
+import { Button, Stack, TextField, Box, IconButton, Typography, CircularProgress } from '@mui/material';
+import { PhotoCamera, Delete } from '@mui/icons-material';
+import { useState, useRef } from 'react';
 
 import { AppDialogShell } from '../../components/AppDialogShell';
 import { useLanguage } from '../language/LanguageProvider';
 import { useCommonText } from '../../text/common';
 import { dressStatusLabel, useDressesText } from '../../text/dresses';
+import { uploadDressImage } from './api';
 
 export type DressFormState = {
   code: string;
@@ -28,6 +31,41 @@ export function DressFormDialog({ open, editing, form, onChange, onClose, onSave
   const { language } = useLanguage();
   const commonText = useCommonText();
   const dressesText = useDressesText();
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // 300 KB limit
+    if (file.size > 307200) {
+      alert(dressesText.dialog.invalidSize);
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      alert(dressesText.dialog.invalidType);
+      return;
+    }
+
+    try {
+      setUploading(true);
+      const { image_path } = await uploadDressImage(file);
+      onChange({ ...form, image_path });
+    } catch (error: any) {
+      alert(error.message || 'Error uploading image');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const removeImage = () => {
+    onChange({ ...form, image_path: '' });
+  };
+
+  const backendUrl = `${window.location.protocol}//${window.location.hostname}:8000`;
+  const imageUrl = form.image_path ? (form.image_path.startsWith('http') ? form.image_path : `${backendUrl}/attachments/${form.image_path}`) : null;
 
   return (
     <AppDialogShell
@@ -54,7 +92,61 @@ export function DressFormDialog({ open, editing, form, onChange, onClose, onSave
           <option value='maintenance'>{dressStatusLabel(language, 'maintenance')}</option>
         </TextField>
         <TextField label={dressesText.dialog.description} value={form.description} multiline minRows={3} onChange={(event) => onChange({ ...form, description: event.target.value })} />
-        <TextField label={dressesText.dialog.imageRef} value={form.image_path} onChange={(event) => onChange({ ...form, image_path: event.target.value })} helperText={dressesText.dialog.imageHint} />
+        
+        <Box>
+          <Typography variant='caption' color='textSecondary' display='block' sx={{ mb: 1 }}>
+            {dressesText.dialog.imageRef}
+          </Typography>
+          <Stack direction='row' spacing={2} alignItems='center'>
+            {imageUrl ? (
+              <Box sx={{ position: 'relative', width: 100, height: 100 }}>
+                <Box
+                  component='img'
+                  src={imageUrl}
+                  alt='Dress'
+                  sx={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    borderRadius: 1,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                  }}
+                />
+                <IconButton
+                  size='small'
+                  color='error'
+                  onClick={removeImage}
+                  sx={{
+                    position: 'absolute',
+                    top: -8,
+                    right: -8,
+                    bgcolor: 'background.paper',
+                    boxShadow: 1,
+                    '&:hover': { bgcolor: 'background.paper' },
+                  }}
+                >
+                  <Delete fontSize='small' />
+                </IconButton>
+              </Box>
+            ) : (
+              <Button
+                variant='outlined'
+                component='label'
+                startIcon={uploading ? <CircularProgress size={20} /> : <PhotoCamera />}
+                disabled={uploading}
+                sx={{ width: 100, height: 100, flexDirection: 'column', gap: 1 }}
+              >
+                {dressesText.dialog.uploadButton}
+                <input type='file' hidden accept='image/*' ref={fileInputRef} onChange={handleFileChange} />
+              </Button>
+            )}
+            <Typography variant='caption' color='textSecondary'>
+              {dressesText.dialog.imageHint}
+            </Typography>
+          </Stack>
+        </Box>
+
         {editing ? (
           <TextField select SelectProps={{ native: true }} label={dressesText.dialog.operationalStatus} value={form.is_active ? 'active' : 'inactive'} onChange={(event) => onChange({ ...form, is_active: event.target.value === 'active' })}>
             <option value='active'>{dressesText.status.active}</option>

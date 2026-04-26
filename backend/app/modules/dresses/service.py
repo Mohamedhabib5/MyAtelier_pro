@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from datetime import date
 
@@ -38,7 +38,7 @@ def create_dress(db: Session, actor: User, payload: DressCreateRequest) -> dict:
         dress_type=_clean(payload.dress_type),
         purchase_date=_parse_date(payload.purchase_date),
         status=_clean_status(payload.status),
-        description=_clean(payload.description),
+        description=_clean_optional(payload.description),
         image_path=_clean_optional(payload.image_path),
         is_active=True,
     )
@@ -72,7 +72,7 @@ def update_dress(db: Session, actor: User, dress_id: str, payload: DressUpdateRe
     dress.dress_type = _clean(payload.dress_type)
     dress.purchase_date = _parse_date(payload.purchase_date)
     dress.status = _clean_status(payload.status)
-    dress.description = _clean(payload.description)
+    dress.description = _clean_optional(payload.description)
     dress.image_path = _clean_optional(payload.image_path)
     dress.is_active = payload.is_active
     dress.updated_by_user_id = actor.id

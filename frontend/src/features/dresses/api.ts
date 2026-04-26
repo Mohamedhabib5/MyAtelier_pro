@@ -1,4 +1,4 @@
-﻿import { apiRequest } from '../../lib/api';
+import { apiRequest } from '../../lib/api';
 
 export type DressRecord = {
   id: string;
@@ -7,7 +7,7 @@ export type DressRecord = {
   dress_type: string;
   purchase_date: string | null;
   status: string;
-  description: string;
+  description: string | null;
   image_path: string | null;
   is_active: boolean;
 };
@@ -17,7 +17,7 @@ export type DressPayload = {
   dress_type: string;
   purchase_date?: string | null;
   status: string;
-  description: string;
+  description?: string | null;
   image_path?: string | null;
 };
 
@@ -55,5 +55,14 @@ export function restoreDress(dressId: string, reason?: string): Promise<DressRec
   return apiRequest<DressRecord>(`/api/dresses/${dressId}/restore`, {
     method: 'POST',
     body: JSON.stringify({ reason: reason ?? null }),
+  });
+}
+
+export function uploadDressImage(file: File): Promise<{ image_path: string }> {
+  const formData = new FormData();
+  formData.append('file', file);
+  return apiRequest<{ image_path: string }>('/api/dresses/upload', {
+    method: 'POST',
+    body: formData,
   });
 }
