@@ -82,7 +82,7 @@ export function DressesPage() {
       dress_type: dress.dress_type,
       purchase_date: dress.purchase_date ?? '',
       status: dress.status,
-      description: dress.description,
+      description: dress.description ?? '',
       image_path: dress.image_path ?? '',
       is_active: dress.is_active,
     });

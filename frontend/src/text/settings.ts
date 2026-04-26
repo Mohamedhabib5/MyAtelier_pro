@@ -63,6 +63,17 @@ const settingsText = {
       selectDepartment: 'اختر القسم...',
       success: 'تم تحديث قسم الفساتين بنجاح.',
     },
+    appearance: {
+      title: 'تخصيص المظهر',
+      subtitle: 'تغيير ألوان النظام الأساسية والثانوية.',
+      primaryColor: 'اللون الأساسي',
+      secondaryColor: 'اللون الثانوي',
+      sidebarColor: 'لون القائمة الجانبية',
+      headerColor: 'لون الشريط العلوي',
+      textColor: 'لون النصوص والأيقونات',
+      reset: 'استعادة الألوان الافتراضية',
+      success: 'تم حفظ تفضيلات المظهر بنجاح.',
+    },
     tabs: {
       general: 'إعدادات عامة',
       catalog: 'الكتالوج والخدمات',
@@ -75,6 +86,7 @@ const settingsText = {
       data: 'البيانات والتصدير',
       users: 'إدارة المستخدمين',
       exports: 'التصدير والاستخراج',
+      appearance: 'المظهر والألوان',
     },
   },
   en: {
@@ -139,6 +151,17 @@ const settingsText = {
       selectDepartment: 'Select Department...',
       success: 'Dresses department updated successfully.',
     },
+    appearance: {
+      title: 'Appearance Customization',
+      subtitle: 'Change the primary and secondary colors of the system.',
+      primaryColor: 'Primary Color',
+      secondaryColor: 'Secondary Color',
+      sidebarColor: 'Sidebar Background',
+      headerColor: 'Header Background',
+      textColor: 'Text & Icon Color',
+      reset: 'Reset to Default Colors',
+      success: 'Theme preferences saved successfully.',
+    },
     tabs: {
       general: 'General Settings',
       catalog: 'Catalog & Services',
@@ -151,6 +174,7 @@ const settingsText = {
       data: 'Data & Exports',
       users: 'Users Management',
       exports: 'Exports & Data',
+      appearance: 'Appearance & Theme',
     },
   },
 } as const;
