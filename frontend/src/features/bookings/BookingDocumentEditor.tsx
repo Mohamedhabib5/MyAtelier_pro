@@ -27,6 +27,7 @@ export function BookingDocumentEditor({
   dresses,
   paymentMethods,
   document,
+  error,
   saving,
   onSave,
   onCancel,
@@ -41,6 +42,7 @@ export function BookingDocumentEditor({
   dresses: DressRecord[];
   paymentMethods: PaymentMethodRecord[];
   document: BookingDocumentRecord | null;
+  error: string | null;
   saving: boolean;
   onSave: (payload: BookingDocumentPayload) => Promise<void>;
   onCancel: () => void;
@@ -78,7 +80,7 @@ export function BookingDocumentEditor({
     setInitialPaymentMethodId(paymentMethods[0]?.id ?? '');
     setBookingDate(new Date().toISOString().slice(0, 10));
     setNotes('');
-    setLines([buildEmptyLine(departments, services)]);
+    setLines([buildEmptyLine(departments, services, new Date().toISOString().slice(0, 10))]);
   }, [documentId]); // Only depend on documentId to trigger a full reset
 
   const lineStatusOptions = useMemo(
@@ -452,6 +454,8 @@ export function BookingDocumentEditor({
         </Alert>
       ) : null}
 
+      {error ? <Alert severity='error'>{error}</Alert> : null}
+
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
         <Autocomplete
           fullWidth
@@ -487,7 +491,7 @@ export function BookingDocumentEditor({
 
       <Stack direction='row' justifyContent='space-between' alignItems='center'>
         <Typography variant='h6'>{bookingsText.editor.linesTitle}</Typography>
-        <Button variant='outlined' startIcon={<AddCircleOutlineIcon />} onClick={() => setLines((current) => [...current, buildEmptyLine(departments, services)])}>
+        <Button variant='outlined' startIcon={<AddCircleOutlineIcon />} onClick={() => setLines((current) => [...current, buildEmptyLine(departments, services, bookingDate)])}>
           {bookingsText.editor.addLine}
         </Button>
       </Stack>

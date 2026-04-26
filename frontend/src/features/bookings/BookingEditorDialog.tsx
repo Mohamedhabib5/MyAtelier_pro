@@ -20,6 +20,7 @@ type Props = {
   services: ServiceRecord[];
   dresses: DressRecord[];
   paymentMethods: PaymentMethodRecord[];
+  error: string | null;
   saving: boolean;
   onClose: () => void;
   onSave: (payload: BookingDocumentPayload) => Promise<void>;
@@ -41,6 +42,7 @@ export function BookingEditorDialog({
   services,
   dresses,
   paymentMethods,
+  error,
   saving,
   onClose,
   onSave,
@@ -63,6 +65,7 @@ export function BookingEditorDialog({
           dresses={dresses}
           paymentMethods={paymentMethods}
           document={document}
+          error={error}
           saving={saving}
           onSave={onSave}
           onCancel={onClose}

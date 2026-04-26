@@ -21,6 +21,7 @@ from app.api.routes import (
     dashboard,
     dresses,
     exports,
+    fiscal_periods,
     health,
     ops_nightly,
     payment_methods,
@@ -161,6 +162,7 @@ def create_app(settings_obj: Settings | None = None) -> FastAPI:
     app.include_router(auth.router, prefix='/api')
     app.include_router(users.router, prefix='/api')
     app.include_router(settings.router, prefix='/api')
+    app.include_router(fiscal_periods.router, prefix='/api')
     app.include_router(ops_nightly.router, prefix='/api')
     app.include_router(audit.router, prefix='/api')
     app.include_router(period_lock.router, prefix='/api')

@@ -5,6 +5,7 @@ import { useLanguage } from '../../language/LanguageProvider';
 import { NightlyStatusSection } from '../NightlyStatusSection';
 import { PaymentMethodsSection } from '../PaymentMethodsSection';
 import { PeriodLockSection } from '../PeriodLockSection';
+import { FiscalPeriodsSection } from '../FiscalPeriodsSection';
 
 export function GeneralFinancialView() {
   const { language } = useLanguage();
@@ -39,6 +40,9 @@ export function GeneralFinancialView() {
           setError(null);
         }}
       />
+
+      <FiscalPeriodsSection language={language} />
+      
       <NightlyStatusSection language={language} />
     </Stack>
   );
