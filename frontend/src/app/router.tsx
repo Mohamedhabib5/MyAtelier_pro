@@ -23,6 +23,7 @@ const SettingsPage = lazy(() => import('../pages/SettingsPage').then((module) =>
 const GeneralCompanyView = lazy(() => import('../features/settings/views/GeneralCompanyView').then((module) => ({ default: module.GeneralCompanyView })));
 const GeneralBackupView = lazy(() => import('../features/settings/views/GeneralBackupView').then((module) => ({ default: module.GeneralBackupView })));
 const GeneralFinancialView = lazy(() => import('../features/settings/views/GeneralFinancialView').then((module) => ({ default: module.GeneralFinancialView })));
+const ThemeSettingsView = lazy(() => import('../features/settings/views/ThemeSettingsView').then((module) => ({ default: module.ThemeSettingsView })));
 const CatalogDepartmentsView = lazy(() => import('../features/catalog/views/CatalogDepartmentsView').then((module) => ({ default: module.CatalogDepartmentsView })));
 const CatalogServicesView = lazy(() => import('../features/catalog/views/CatalogServicesView').then((module) => ({ default: module.CatalogServicesView })));
 const SecurityUsersView = lazy(() => import('../features/users/views/SecurityUsersView').then((module) => ({ default: module.SecurityUsersView })));
@@ -65,6 +66,7 @@ export const router = createBrowserRouter([
               { path: 'general/company', element: <GeneralCompanyView /> },
               { path: 'general/backups', element: <GeneralBackupView /> },
               { path: 'general/financial', element: <GeneralFinancialView /> },
+              { path: 'general/appearance', element: <ThemeSettingsView /> },
               { path: 'catalog', element: <Navigate to='/settings/catalog/departments' replace /> },
               { path: 'catalog/departments', element: <CatalogDepartmentsView /> },
               { path: 'catalog/services', element: <CatalogServicesView /> },

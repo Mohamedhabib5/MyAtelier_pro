@@ -15,6 +15,7 @@ export function SettingsPage() {
         { label: settingsText.tabs.company, path: '/settings/general/company' },
         { label: settingsText.tabs.backups, path: '/settings/general/backups' },
         { label: settingsText.tabs.financial, path: '/settings/general/financial' },
+        { label: settingsText.tabs.appearance, path: '/settings/general/appearance' },
       ]
     },
     {
