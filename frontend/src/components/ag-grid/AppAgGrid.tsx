@@ -102,7 +102,7 @@ export function AppAgGrid<Row>({
   pagination = true,
 }: Props<Row>) {
   const [internalSearch, setInternalSearch] = useState('');
-  const [columnsOpen, setColumnsOpen] = useState(false);
+  const [columnsAnchor, setColumnsAnchor] = useState<HTMLElement | null>(null);
   const [exportAnchor, setExportAnchor] = useState<HTMLElement | null>(null);
   const gridApiRef = useRef<GridApi<Row> | null>(null);
   const { state, setState, defaults } = useAgGridPreferences(tableKey);
@@ -228,7 +228,7 @@ export function AppAgGrid<Row>({
             <Box>{toolbarFilters}</Box>
             <Stack direction='row' spacing={1} flexWrap='wrap' useFlexGap>
               {toolbarActions}
-              <Button variant='outlined' startIcon={<ViewColumnOutlinedIcon />} onClick={() => setColumnsOpen(true)}>
+              <Button variant='outlined' startIcon={<ViewColumnOutlinedIcon />} onClick={(event) => setColumnsAnchor(event.currentTarget)}>
                 {columnsLabel}
               </Button>
               <Button variant='contained' color='inherit' startIcon={<DownloadOutlinedIcon />} onClick={(event) => setExportAnchor(event.currentTarget)}>
@@ -308,13 +308,14 @@ export function AppAgGrid<Row>({
       </Paper>
 
       <GridColumnPanel
-        open={columnsOpen}
+        open={Boolean(columnsAnchor)}
+        anchorEl={columnsAnchor}
         title={columnsLabel}
         resetLabel={resetLabel}
         closeLabel={closeLabel}
         columns={columnsList}
         language={language}
-        onClose={() => setColumnsOpen(false)}
+        onClose={() => setColumnsAnchor(null)}
         onToggleVisibility={(colId, visible) => {
           gridApiRef.current?.setColumnsVisible([colId], visible);
           saveGridState();

@@ -45,13 +45,13 @@ export function lineFromRecord(line: BookingLineRecord): EditableLine {
   };
 }
 
-export function buildEmptyLine(departments: DepartmentRecord[], services: ServiceRecord[]): EditableLine {
+export function buildEmptyLine(departments: DepartmentRecord[], services: ServiceRecord[], defaultDate?: string): EditableLine {
   return {
     local_id: makeLocalId(),
     department_id: '',
     service_id: '',
     dress_id: '',
-    service_date: '',
+    service_date: defaultDate ?? '',
     suggested_price: '0',
     line_price: '0',
     initial_payment_amount: '',

@@ -166,6 +166,7 @@ export function BookingsPage() {
         services={servicesQuery.data ?? []}
         dresses={dressesQuery.data ?? []}
         paymentMethods={paymentMethodsQuery.data ?? []}
+        error={error}
         saving={saving}
         onClose={closeEditor}
         onSave={handleSave}

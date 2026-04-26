@@ -131,6 +131,27 @@ export type NightlyRunSnapshotRecord = {
   reported_at: string | null;
 };
 
+export type FiscalPeriodRecord = {
+  id: string;
+  name: string;
+  starts_on: string;
+  ends_on: string;
+  is_active: boolean;
+  is_locked: boolean;
+};
+
+export type FiscalPeriodCreatePayload = {
+  name: string;
+  starts_on: string;
+  ends_on: string;
+};
+
+export type FiscalPeriodUpdatePayload = {
+  name?: string;
+  is_active?: boolean;
+  is_locked?: boolean;
+};
+
 export function getCompany(): Promise<CompanyRecord> {
   return apiRequest<CompanyRecord>('/api/settings/company', { method: 'GET' });
 }
@@ -207,4 +228,26 @@ export function listPeriodLockExceptions(limit = 100): Promise<PeriodLockExcepti
 
 export function getLatestNightlySnapshot(): Promise<NightlyRunSnapshotRecord> {
   return apiRequest<NightlyRunSnapshotRecord>('/api/settings/ops/nightly/latest', { method: 'GET' });
+}
+
+export function listFiscalPeriods(): Promise<FiscalPeriodRecord[]> {
+  return apiRequest<FiscalPeriodRecord[]>('/api/settings/fiscal-periods', { method: 'GET' });
+}
+
+export function createFiscalPeriod(payload: FiscalPeriodCreatePayload): Promise<FiscalPeriodRecord> {
+  return apiRequest<FiscalPeriodRecord>('/api/settings/fiscal-periods', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateFiscalPeriod(periodId: string, payload: FiscalPeriodUpdatePayload): Promise<FiscalPeriodRecord> {
+  return apiRequest<FiscalPeriodRecord>(`/api/settings/fiscal-periods/${periodId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteFiscalPeriod(periodId: string): Promise<void> {
+  return apiRequest<void>(`/api/settings/fiscal-periods/${periodId}`, { method: 'DELETE' });
 }

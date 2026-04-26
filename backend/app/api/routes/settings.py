@@ -15,8 +15,19 @@ from app.modules.core_platform.destructive_preview import preview_destructive_ac
 from app.modules.core_platform.service import collect_ops_metrics, create_backup, get_backup_or_404, list_backups, list_destructive_reasons, record_audit, record_backup_download, resolve_backup_download_path, run_backup_stale_alert_check, send_ops_webhook_alert
 from app.modules.identity.models import User
 from app.modules.organization.branch_context import ensure_active_branch, set_active_branch
-from app.modules.organization.schemas import ActiveBranchResponse, BranchCreateRequest, BranchResponse, CompanyResponse, SetActiveBranchRequest, UpdateCompanyRequest
-from app.modules.organization.service import create_branch, get_company_settings, update_company_settings
+from app.modules.organization.schemas import (
+    ActiveBranchResponse,
+    BranchCreateRequest,
+    BranchResponse,
+    CompanyResponse,
+    SetActiveBranchRequest,
+    UpdateCompanyRequest,
+)
+from app.modules.organization.service import (
+    create_branch,
+    get_company_settings,
+    update_company_settings,
+)
 
 router = APIRouter(prefix='/settings', tags=['settings'])
 

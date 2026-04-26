@@ -43,6 +43,16 @@ class OrganizationRepository:
         self.db.add(fiscal_period)
         return fiscal_period
 
+    def list_fiscal_periods(self, company_id: str) -> list[FiscalPeriod]:
+        stmt = select(FiscalPeriod).where(FiscalPeriod.company_id == company_id).order_by(FiscalPeriod.starts_on.desc())
+        return list(self.db.scalars(stmt))
+
+    def get_fiscal_period(self, period_id: str) -> FiscalPeriod | None:
+        return self.db.get(FiscalPeriod, period_id)
+
+    def delete_fiscal_period(self, period: FiscalPeriod) -> None:
+        self.db.delete(period)
+
     def add_document_sequence(self, sequence: DocumentSequence) -> DocumentSequence:
         self.db.add(sequence)
         return sequence
