@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, status, UploadFile, File, Request
 from sqlalchemy.orm import Session
 
 from app.api.deps import require_dresses_manage, require_dresses_view
@@ -10,6 +10,10 @@ from app.db.session import get_db
 from app.modules.dresses.schemas import DressArchiveRequest, DressCreateRequest, DressResponse, DressUpdateRequest
 from app.modules.dresses.service import archive_dress, create_dress, list_dresses, restore_dress, update_dress
 from app.modules.identity.models import User
+import shutil
+import os
+from pathlib import Path
+from app.core.exceptions import ValidationAppError
 
 router = APIRouter(prefix="/dresses", tags=["dresses"])
 
@@ -61,3 +65,40 @@ def restore_dress_route(
     current_user: User = Depends(require_dresses_manage),
 ) -> DressResponse:
     return DressResponse.model_validate(restore_dress(db, current_user, dress_id, payload.reason))
+
+
+@router.post("/upload")
+async def upload_dress_image_route(
+    request: Request,
+    file: UploadFile = File(...),
+    current_user: User = Depends(require_dresses_manage),
+) -> dict:
+    settings = request.app.state.settings
+    
+    # Validate file size
+    file_size = 0
+    file.file.seek(0, os.SEEK_END)
+    file_size = file.file.tell()
+    file.file.seek(0)
+    
+    if file_size > settings.max_image_size_bytes:
+        raise ValidationAppError(f"حجم الملف كبير جداً. الحد الأقصى هو {settings.max_image_size_bytes // 1024} كيلوبايت")
+    
+    # Validate file type
+    if not file.content_type.startswith("image/"):
+        raise ValidationAppError("يجب أن يكون الملف صورة")
+        
+    # Ensure directory exists
+    upload_dir = Path(settings.attachment_storage_dir) / "dresses"
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Generate unique filename
+    import uuid
+    extension = Path(file.filename).suffix
+    filename = f"{uuid.uuid4()}{extension}"
+    file_path = upload_dir / filename
+    
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+        
+    return {"image_path": f"dresses/{filename}"}

@@ -39,6 +39,8 @@ class Settings(BaseSettings):
     ops_alert_webhook_url: str = ""
     nightly_failure_ingest_token: str = ""
     export_delivery_webhook_url: str = ""
+    max_image_size_bytes: int = 307200  # 300 KB
+
 
     def resolved_storage_root(self) -> Path:
         return Path(self.storage_root).resolve()

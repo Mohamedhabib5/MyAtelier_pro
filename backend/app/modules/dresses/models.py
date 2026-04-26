@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from sqlalchemy import Boolean, Date, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
@@ -18,6 +18,6 @@ class DressResource(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     dress_type: Mapped[str] = mapped_column(String(80), nullable=False)
     purchase_date: Mapped[str | None] = mapped_column(Date, nullable=True)
     status: Mapped[str] = mapped_column(String(40), nullable=False)
-    description: Mapped[str] = mapped_column(Text, nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
     image_path: Mapped[str | None] = mapped_column(String(255), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)

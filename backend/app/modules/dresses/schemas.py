@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -15,7 +15,7 @@ class DressResponse(BaseModel):
     dress_type: str
     purchase_date: str | None
     status: str
-    description: str
+    description: str | None
     image_path: str | None
     is_active: bool
 
@@ -25,7 +25,7 @@ class DressCreateRequest(BaseModel):
     dress_type: str = Field(min_length=2, max_length=80)
     purchase_date: str | None = None
     status: str = Field(min_length=2, max_length=40)
-    description: str = Field(min_length=2)
+    description: str | None = Field(default=None)
     image_path: str | None = Field(default=None, max_length=255)
 
 
@@ -34,7 +34,7 @@ class DressUpdateRequest(BaseModel):
     dress_type: str = Field(min_length=2, max_length=80)
     purchase_date: str | None = None
     status: str = Field(min_length=2, max_length=40)
-    description: str = Field(min_length=2)
+    description: str | None = Field(default=None)
     image_path: str | None = Field(default=None, max_length=255)
     is_active: bool = True
 

@@ -1,7 +1,8 @@
 import CheckroomOutlinedIcon from '@mui/icons-material/CheckroomOutlined';
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
-import { Alert, Box, Button, Chip, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, Chip, Stack, TextField, Typography, Dialog, DialogContent, IconButton } from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { DestructiveDeleteDialog } from '../components/DestructiveDeleteDialog';
@@ -31,6 +32,7 @@ export function DressesPage() {
   const [lifecycleMode, setLifecycleMode] = useState<'archive' | 'restore'>('archive');
   const [lifecycleReason, setLifecycleReason] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<DressRecord | null>(null);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const dressesQuery = useQuery({ queryKey: ['dresses', activeFilter], queryFn: () => listDresses(activeFilter) });
 
   const createMutation = useMutation({
@@ -174,7 +176,40 @@ export function DressesPage() {
               render: (row) => <Chip label={row.is_active ? dressesText.status.active : dressesText.status.inactive} size='small' color={row.is_active ? 'success' : 'default'} />,
             },
             { key: 'purchase_date', header: dressesText.table.purchaseDate, searchValue: (row) => row.purchase_date ?? '', render: (row) => row.purchase_date ?? EMPTY_VALUE },
-            { key: 'image_path', header: dressesText.table.imageRef, searchValue: (row) => row.image_path ?? '', render: (row) => row.image_path ?? EMPTY_VALUE },
+            {
+              key: 'image_path',
+              header: dressesText.table.imageRef,
+              searchValue: (row) => row.image_path ?? '',
+              render: (row) => {
+                if (!row.image_path) return EMPTY_VALUE;
+                // Temporary fix: point directly to the backend port (8000) for development
+                const backendUrl = `${window.location.protocol}//${window.location.hostname}:8000`;
+                const imageUrl = row.image_path.startsWith('http') ? row.image_path : `${backendUrl}/attachments/${row.image_path}`;
+                return (
+                  <Box
+                    component='img'
+                    src={imageUrl}
+                    alt={row.code}
+                    onClick={() => setPreviewImage(imageUrl)}
+                    sx={{
+                      width: 48,
+                      height: 48,
+                      objectFit: 'cover',
+                      borderRadius: 1.5,
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      transition: 'all 0.2s ease-in-out',
+                      cursor: 'zoom-in',
+                      '&:hover': {
+                        transform: 'scale(1.1)',
+                        zIndex: 10,
+                        boxShadow: 2,
+                      },
+                    }}
+                  />
+                );
+              },
+            },
             {
               key: 'action',
               header: dressesText.table.action,
@@ -246,6 +281,27 @@ export function DressesPage() {
         }}
         onError={(message) => setError(message)}
       />
+
+      <Dialog open={Boolean(previewImage)} onClose={() => setPreviewImage(null)} maxWidth='lg'>
+        <DialogContent sx={{ p: 0, position: 'relative', bgcolor: 'black', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+          <IconButton onClick={() => setPreviewImage(null)} sx={{ position: 'absolute', top: 8, right: 8, color: 'white', bgcolor: 'rgba(0,0,0,0.5)', '&:hover': { bgcolor: 'rgba(0,0,0,0.7)' } }}>
+            <CloseIcon />
+          </IconButton>
+          {previewImage && (
+            <Box
+              component='img'
+              src={previewImage}
+              alt='Preview'
+              sx={{
+                maxWidth: '100%',
+                maxHeight: '90vh',
+                display: 'block',
+                boxShadow: 24,
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </Stack>
   );
 }
