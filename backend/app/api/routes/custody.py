@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.orm import Session
@@ -6,7 +6,8 @@ from sqlalchemy.orm import Session
 from app.api.deps import require_custody_manage, require_custody_view, require_payments_manage
 from app.db.session import get_db
 from app.modules.custody.schemas import CustodyCaseActionRequest, CustodyCaseCreateRequest, CustodyCaseResponse, CustodyCompensationCollectRequest
-from app.modules.custody.service import apply_custody_action, collect_custody_compensation, create_custody_case, get_custody_case, list_custody_cases
+from app.modules.custody.lifecycle import apply_custody_action, collect_custody_compensation
+from app.modules.custody.service import create_custody_case, get_custody_case, list_custody_cases
 from app.modules.identity.models import User
 
 router = APIRouter(prefix="/custody", tags=["custody"])

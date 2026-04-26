@@ -189,16 +189,16 @@ export function AppAgGrid<Row>({
 
       {error ? <Alert severity='error'>{error}</Alert> : null}
 
-      <Paper variant='outlined' sx={{ overflow: 'hidden', borderRadius: 3 }}>
+      <Paper variant='outlined' sx={{ overflow: 'hidden', borderRadius: 4, border: '1px solid rgba(0,0,0,0.05)' }}>
         {!hideToolbar ? (
-        <Stack spacing={2} sx={{ p: { xs: 2, md: 2.5 }, background: 'linear-gradient(180deg, rgba(124,58,237,0.05) 0%, rgba(124,58,237,0) 100%)' }}>
-          <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} justifyContent='space-between' alignItems={{ md: 'center' }}>
+        <Stack spacing={2} sx={{ p: { xs: 2, md: 3 }, background: 'rgba(0,0,0,0.02)' }}>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent='space-between' alignItems={{ sm: 'center' }}>
             <Stack spacing={0.5}>
-              <Typography variant='subtitle1' fontWeight={700}>
+              <Typography variant='subtitle1' fontWeight={800} sx={{ fontSize: { xs: '1rem', md: '1.1rem' } }}>
                 {title ?? searchLabel}
               </Typography>
-              <Typography variant='body2' color='text.secondary'>
-                {visibleRowsCount}
+              <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 600, opacity: 0.8 }}>
+                {visibleRowsCount} {language === 'ar' ? 'سجل' : 'records'}
               </Typography>
             </Stack>
             <TextField
@@ -213,8 +213,9 @@ export function AppAgGrid<Row>({
                 }
               }}
               size='small'
-              sx={{ minWidth: { xs: '100%', md: 320 } }}
+              sx={{ minWidth: { xs: '100%', sm: 300, md: 360 } }}
               InputProps={{
+                sx: { borderRadius: 3, bgcolor: 'background.paper' },
                 startAdornment: (
                   <InputAdornment position='start'>
                     <SearchOutlinedIcon fontSize='small' color='action' />
@@ -224,14 +225,25 @@ export function AppAgGrid<Row>({
             />
           </Stack>
 
-          <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.25} justifyContent='space-between' alignItems={{ md: 'center' }}>
-            <Box>{toolbarFilters}</Box>
-            <Stack direction='row' spacing={1} flexWrap='wrap' useFlexGap>
+          <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5} justifyContent='space-between' alignItems={{ md: 'center' }}>
+            <Box sx={{ width: { xs: '100%', md: 'auto' } }}>{toolbarFilters}</Box>
+            <Stack direction='row' spacing={1} sx={{ width: { xs: '100%', md: 'auto' }, flexWrap: 'nowrap', overflowX: 'auto', pb: { xs: 1, md: 0 } }}>
               {toolbarActions}
-              <Button variant='outlined' startIcon={<ViewColumnOutlinedIcon />} onClick={(event) => setColumnsAnchor(event.currentTarget)}>
+              <Button 
+                variant='outlined' 
+                startIcon={<ViewColumnOutlinedIcon size={18} />} 
+                onClick={(event) => setColumnsAnchor(event.currentTarget)}
+                sx={{ whiteSpace: 'nowrap', borderRadius: 3 }}
+              >
                 {columnsLabel}
               </Button>
-              <Button variant='contained' color='inherit' startIcon={<DownloadOutlinedIcon />} onClick={(event) => setExportAnchor(event.currentTarget)}>
+              <Button 
+                variant='contained' 
+                color='inherit' 
+                startIcon={<DownloadOutlinedIcon size={18} />} 
+                onClick={(event) => setExportAnchor(event.currentTarget)}
+                sx={{ whiteSpace: 'nowrap', borderRadius: 3 }}
+              >
                 {exportLabel}
               </Button>
             </Stack>

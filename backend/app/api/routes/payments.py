@@ -16,7 +16,8 @@ from app.modules.payments.schemas import (
     PaymentDocumentUpdateRequest,
     PaymentVoidRequest,
 )
-from app.modules.payments.service import create_payment, get_payment_document, list_payment_page, list_payments, update_payment, void_payment
+from app.modules.payments.service import create_payment, get_payment_document, list_payment_page, list_payments, update_payment
+from app.modules.payments.lifecycle import void_payment
 
 router = APIRouter(prefix='/payments', tags=['payments'])
 

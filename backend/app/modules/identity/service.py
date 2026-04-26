@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import json
 from datetime import UTC, datetime
@@ -247,3 +247,28 @@ def _parse_grid_state(raw_value: str) -> dict:
     if not isinstance(parsed, dict):
         return UserGridPreferenceState().model_dump()
     return UserGridPreferenceState.model_validate(parsed).model_dump()
+
+
+def get_user_theme_preference(db: Session, actor: User) -> dict:
+    row = IdentityRepository(db).get_user_theme_preference(actor.id)
+    if row is None:
+        return {"theme_json": "{}", "updated_at": None}
+    return {"theme_json": row.theme_json, "updated_at": row.updated_at}
+
+
+def set_user_theme_preference(db: Session, actor: User, theme_json: str) -> dict:
+    row = IdentityRepository(db).upsert_user_theme_preference(
+        user_id=actor.id,
+        theme_json=theme_json,
+    )
+    record_audit(
+        db,
+        actor_user_id=actor.id,
+        action="user.theme_preferences_updated",
+        target_type="user",
+        target_id=actor.id,
+        summary=f"Updated theme preferences for {actor.username}",
+    )
+    db.commit()
+    db.refresh(row)
+    return {"theme_json": theme_json, "updated_at": row.updated_at}

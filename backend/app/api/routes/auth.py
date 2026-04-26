@@ -3,9 +3,10 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Request, Response, status
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import AuthenticationError
 from app.api.deps import get_current_user
+from app.core.exceptions import AuthenticationError, RateLimitError
 from app.core.language import DEFAULT_LANGUAGE, LANGUAGE_SESSION_KEY, normalize_language
+from app.core.rate_limiter import login_rate_limiter
 from app.db.session import get_db
 from app.modules.core_platform.service import record_audit
 from app.modules.identity.models import User
@@ -18,7 +19,26 @@ router = APIRouter(prefix='/auth', tags=['auth'])
 
 @router.post('/login', response_model=AuthUserResponse)
 def login(payload: LoginRequest, request: Request, db: Session = Depends(get_db)) -> AuthUserResponse:
+    client_ip = request.client.host if request.client else "unknown"
     attempted_username = payload.username.strip().lower()
+    
+    # Rate limit by IP + Username
+    rate_limit_key = f"login:{client_ip}:{attempted_username}"
+    if not login_rate_limiter.is_allowed(rate_limit_key):
+        record_audit(
+            db,
+            actor_user_id=None,
+            action="auth.rate_limit_exceeded",
+            target_type="auth_session",
+            target_id=None,
+            summary=f"Rate limit exceeded for {attempted_username}",
+            diff={"ip": client_ip, "username": attempted_username},
+            success=False,
+            error_code="rate_limit_exceeded",
+        )
+        db.commit()
+        raise RateLimitError()
+
     try:
         user = authenticate_user(db, payload.username, payload.password)
     except AuthenticationError:

@@ -104,13 +104,13 @@ def create_app(settings_obj: Settings | None = None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
-        _ensure_storage_dirs(settings_obj)
         _bootstrap_foundation(app, settings_obj)
         try:
             yield
         finally:
             app.state.engine.dispose()
 
+    _ensure_storage_dirs(settings_obj)
     app = FastAPI(title=settings_obj.app_name, debug=settings_obj.app_debug, lifespan=lifespan)
     app.state.settings = settings_obj
     app.state.engine = build_engine(settings_obj.database_url)
@@ -142,11 +142,29 @@ def create_app(settings_obj: Settings | None = None) -> FastAPI:
         response = await call_next(request)
         response.headers.setdefault('X-Content-Type-Options', 'nosniff')
         response.headers.setdefault('X-Frame-Options', 'DENY')
-        response.headers.setdefault('Referrer-Policy', 'same-origin')
+        response.headers.setdefault('X-XSS-Protection', '1; mode=block')
+        response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
+        
+        # Content Security Policy (CSP)
+        # Allow self, data: for images, and unsafe-inline for MUI styles
+        csp = (
+            "default-src 'self'; "
+            "script-src 'self'; "
+            "style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data: blob:; "
+            "connect-src 'self'; "
+            "font-src 'self' data:; "
+            "frame-ancestors 'none'; "
+            "base-uri 'self'; "
+            "form-action 'self';"
+        )
+        response.headers.setdefault('Content-Security-Policy', csp)
+        
         if request.url.path.startswith('/api/auth'):
             response.headers.setdefault('Cache-Control', 'no-store')
         if settings_obj.effective_session_https_only():
             response.headers.setdefault('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
+            response.headers.setdefault('Expect-CT', 'max-age=86400, enforce')
         return response
 
     @app.exception_handler(AppError)

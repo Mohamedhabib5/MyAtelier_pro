@@ -28,3 +28,8 @@ class NotFoundError(AppError):
 class ValidationAppError(AppError):
     status_code = 422
     detail = VALIDATION_FAILED
+
+
+class RateLimitError(AppError):
+    status_code = 429
+    detail = "عدد المحاولات كبير جداً. يرجى المحاولة لاحقاً."

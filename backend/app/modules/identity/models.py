@@ -63,3 +63,11 @@ class UserGridPreference(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     table_key: Mapped[str] = mapped_column(String(120), nullable=False)
     state_json: Mapped[str] = mapped_column(Text, nullable=False)
+
+
+class UserThemePreference(Base, UUIDPrimaryKeyMixin, TimestampMixin):
+    __tablename__ = "user_theme_preferences"
+    __table_args__ = (UniqueConstraint("user_id", name="uq_user_theme_preferences_user"),)
+
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    theme_json: Mapped[str] = mapped_column(Text, nullable=False)

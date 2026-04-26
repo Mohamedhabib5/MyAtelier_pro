@@ -6,8 +6,8 @@ from sqlalchemy.orm import Session
 from app.api.deps import require_self_manage, require_users_manage
 from app.db.session import get_db
 from app.modules.identity.models import User
-from app.modules.identity.schemas import AdminUpdateUserRequest, CreateUserRequest, SelfUpdateUserRequest, UserGridPreferenceResponse, UserGridPreferenceUpdateRequest, UserResponse
-from app.modules.identity.service import create_user, get_user_grid_preference, get_user_profile, list_visible_users, set_user_grid_preference, update_own_profile, update_user_by_admin
+from app.modules.identity.schemas import AdminUpdateUserRequest, CreateUserRequest, SelfUpdateUserRequest, UserGridPreferenceResponse, UserGridPreferenceUpdateRequest, UserResponse, ThemePreferenceResponse, ThemePreferenceUpdateRequest
+from app.modules.identity.service import create_user, get_user_grid_preference, get_user_profile, list_visible_users, set_user_grid_preference, update_own_profile, update_user_by_admin, get_user_theme_preference, set_user_theme_preference
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -67,3 +67,20 @@ def update_my_grid_preference(
     db: Session = Depends(get_db),
 ) -> UserGridPreferenceResponse:
     return UserGridPreferenceResponse.model_validate(set_user_grid_preference(db, current_user, table_key, payload.state))
+
+
+@router.get("/me/theme-preferences", response_model=ThemePreferenceResponse)
+def get_my_theme_preference(
+    current_user: User = Depends(require_self_manage),
+    db: Session = Depends(get_db),
+) -> ThemePreferenceResponse:
+    return ThemePreferenceResponse.model_validate(get_user_theme_preference(db, current_user))
+
+
+@router.put("/me/theme-preferences", response_model=ThemePreferenceResponse)
+def update_my_theme_preference(
+    payload: ThemePreferenceUpdateRequest,
+    current_user: User = Depends(require_self_manage),
+    db: Session = Depends(get_db),
+) -> ThemePreferenceResponse:
+    return ThemePreferenceResponse.model_validate(set_user_theme_preference(db, current_user, payload.theme_json))

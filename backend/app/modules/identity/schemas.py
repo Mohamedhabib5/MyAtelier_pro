@@ -80,3 +80,12 @@ class UserGridPreferenceResponse(BaseModel):
 
 class UserGridPreferenceUpdateRequest(BaseModel):
     state: UserGridPreferenceState
+
+
+class ThemePreferenceResponse(BaseModel):
+    theme_json: str
+    updated_at: datetime | None = None
+
+
+class ThemePreferenceUpdateRequest(BaseModel):
+    theme_json: str

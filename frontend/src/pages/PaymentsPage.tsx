@@ -1,94 +1,50 @@
 import { Alert, Stack } from '@mui/material';
-import { useQuery } from '@tanstack/react-query';
-import { useDeferredValue, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 
-import type { PaymentExportFilters } from '../features/exports/api';
 import { PaymentEditorDialog } from '../features/payments/PaymentEditorDialog';
 import { PaymentsOverviewSection } from '../features/payments/PaymentsOverviewSection';
 import { PaymentsPageHeader } from '../features/payments/PaymentsPageHeader';
 import { PaymentsTableSection } from '../features/payments/PaymentsTableSection';
 import { PaymentUpdateOverrideDialog } from '../features/payments/PaymentUpdateOverrideDialog';
 import { PaymentVoidDialog } from '../features/payments/PaymentVoidDialog';
-import { listPaymentMethods } from '../features/paymentMethods/api';
 import { usePaymentActions } from '../features/payments/usePaymentActions';
-import {
-  getBookingPaymentTarget,
-  getCustomerPaymentTarget,
-  getPaymentDocument,
-  listPaymentsPage,
-  searchPaymentTargets,
-  type PaymentDocumentPayload,
-  type PaymentDocumentSummaryRecord,
-  type PaymentTargetSearchRecord,
-} from '../features/payments/api';
+import { usePaymentsPageState, type PaymentSortField } from '../features/payments/usePaymentsPageState';
 import { usePaymentsText } from '../text/payments';
-
-function todayIso() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-type PaymentSortField = 'payment_date' | 'payment_number' | 'customer_name' | 'status' | 'document_kind';
+import type { PaymentExportFilters } from '../features/exports/api';
 
 export function PaymentsPage() {
   const paymentsText = usePaymentsText();
-  const [error, setError] = useState<string | null>(null);
-  const [creatingNew, setCreatingNew] = useState(false);
-  const [searchText, setSearchText] = useState('');
-  const [selectedTarget, setSelectedTarget] = useState<PaymentTargetSearchRecord | null>(null);
-  const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null);
-  const [voidingPayment, setVoidingPayment] = useState<PaymentDocumentSummaryRecord | null>(null);
-  const [voidDate, setVoidDate] = useState(todayIso());
-  const [voidReason, setVoidReason] = useState('');
-  const [voidOverrideLock, setVoidOverrideLock] = useState(false);
-  const [voidOverrideReason, setVoidOverrideReason] = useState('');
-  const [tableSearchInput, setTableSearchInput] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [documentKindFilter, setDocumentKindFilter] = useState('');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
-  const [page, setPage] = useState(0);
-  const [pageSize, setPageSize] = useState(10);
-  const [sortBy, setSortBy] = useState<PaymentSortField>('payment_date');
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
-  const [pendingUpdateOverridePayload, setPendingUpdateOverridePayload] = useState<PaymentDocumentPayload | null>(null);
-  const deferredTargetSearch = useDeferredValue(searchText);
-  const deferredTableSearch = useDeferredValue(tableSearchInput.trim());
-  const editorOpen = creatingNew || Boolean(editingPaymentId);
-
-  const paymentsQuery = useQuery({
-    queryKey: ['payments', 'table', deferredTableSearch, statusFilter, documentKindFilter, dateFrom, dateTo, page, pageSize, sortBy, sortDir],
-    queryFn: () =>
-      listPaymentsPage({
-        search: deferredTableSearch || undefined,
-        status: statusFilter || undefined,
-        documentKind: documentKindFilter || undefined,
-        dateFrom: dateFrom || undefined,
-        dateTo: dateTo || undefined,
-        page: page + 1,
-        pageSize,
-        sortBy,
-        sortDir,
-      }),
-  });
-  const searchQuery = useQuery({
-    queryKey: ['payment-targets', 'search', deferredTargetSearch],
-    queryFn: () => searchPaymentTargets(deferredTargetSearch),
-    enabled: editorOpen && !selectedTarget,
-  });
-  const paymentMethodsQuery = useQuery({
-    queryKey: ['payment-methods', 'active'],
-    queryFn: () => listPaymentMethods('active'),
-  });
-  const paymentDocumentQuery = useQuery({
-    queryKey: ['payments', editingPaymentId],
-    queryFn: () => getPaymentDocument(editingPaymentId!),
-    enabled: Boolean(editingPaymentId),
-  });
-  const targetQuery = useQuery({
-    queryKey: ['payment-target', selectedTarget?.kind, selectedTarget?.id, editingPaymentId],
-    queryFn: () => (selectedTarget?.kind === 'booking' ? getBookingPaymentTarget(selectedTarget.id, editingPaymentId) : getCustomerPaymentTarget(selectedTarget!.id, editingPaymentId)),
-    enabled: Boolean(selectedTarget),
-  });
+  const state = usePaymentsPageState();
+  const {
+    error, setError,
+    creatingNew, setCreatingNew,
+    searchText, setSearchText,
+    selectedTarget, setSelectedTarget,
+    editingPaymentId, setEditingPaymentId,
+    voidingPayment, setVoidingPayment,
+    voidDate, setVoidDate,
+    voidReason, setVoidReason,
+    voidOverrideLock, setVoidOverrideLock,
+    voidOverrideReason, setVoidOverrideReason,
+    tableSearchInput, setTableSearchInput,
+    statusFilter, setStatusFilter,
+    documentKindFilter, setDocumentKindFilter,
+    dateFrom, setDateFrom,
+    dateTo, setDateTo,
+    page, setPage,
+    pageSize, setPageSize,
+    sortBy, setSortBy,
+    sortDir, setSortDir,
+    pendingUpdateOverridePayload, setPendingUpdateOverridePayload,
+    deferredTableSearch,
+    editorOpen,
+    paymentsQuery,
+    searchQuery,
+    paymentMethodsQuery,
+    paymentDocumentQuery,
+    targetQuery,
+    todayIso,
+  } = state;
 
   function closeVoidDialog() {
     setVoidingPayment(null);
@@ -96,6 +52,14 @@ export function PaymentsPage() {
     setVoidReason('');
     setVoidOverrideLock(false);
     setVoidOverrideReason('');
+  }
+
+  function closePaymentEditor() {
+    setCreatingNew(false);
+    setSelectedTarget(null);
+    setEditingPaymentId(null);
+    setSearchText('');
+    setPendingUpdateOverridePayload(null);
   }
 
   const { startNewFromTarget, openEditDocument, handleSave, submitVoid, confirmUpdateOverride, saving } = usePaymentActions({
@@ -106,7 +70,7 @@ export function PaymentsPage() {
     voidOverrideLock,
     voidOverrideReason,
     setError,
-    closeBuilder,
+    closeBuilder: closePaymentEditor,
     closeVoidDialog,
     setPendingUpdateOverridePayload,
     setSelectedTarget,
@@ -116,9 +80,8 @@ export function PaymentsPage() {
   const searchResults = useMemo(() => searchQuery.data ?? [], [searchQuery.data]);
   const paymentRows = paymentsQuery.data?.items ?? [];
   const paymentTotal = paymentsQuery.data?.total ?? 0;
-  const hasTargetSearch = deferredTargetSearch.trim().length > 0;
-  const editorLoading =
-    targetQuery.isLoading || paymentMethodsQuery.isLoading || (Boolean(editingPaymentId) && paymentDocumentQuery.isLoading);
+  const editorLoading = targetQuery.isLoading || paymentMethodsQuery.isLoading || (Boolean(editingPaymentId) && paymentDocumentQuery.isLoading);
+  
   const activeExportFilters: PaymentExportFilters = {
     search: deferredTableSearch || undefined,
     status: statusFilter || undefined,
@@ -129,51 +92,24 @@ export function PaymentsPage() {
     sortDir,
   };
 
-  function focusPaymentTargetSearch() {
-    setTimeout(() => {
-      const input = document.querySelector<HTMLInputElement>('input[data-payment-target-search-input="true"]');
-      input?.focus();
-    }, 0);
-  }
-
-  function resetEditorState() {
-    setSelectedTarget(null);
-    setEditingPaymentId(null);
-    setSearchText('');
-    setPendingUpdateOverridePayload(null);
-  }
-
-  function closePaymentEditor() {
-    setCreatingNew(false);
-    resetEditorState();
-  }
-
-  function closeBuilder() {
-    closePaymentEditor();
-  }
-
-  function handleCreateMultiPayment() {
-    setError(null);
-    setCreatingNew(true);
-    resetEditorState();
-    focusPaymentTargetSearch();
-  }
-
   return (
     <Stack spacing={3}>
       <PaymentsPageHeader
         title={paymentsText.page.title}
         subtitle={paymentsText.page.subtitle}
         createLabel={paymentsText.page.addMultiAction}
-        onCreate={handleCreateMultiPayment}
+        onCreate={() => {
+          setError(null);
+          setCreatingNew(true);
+          setSelectedTarget(null);
+          setEditingPaymentId(null);
+          setSearchText('');
+          setPendingUpdateOverridePayload(null);
+          setTimeout(() => document.querySelector<HTMLInputElement>('input[data-payment-target-search-input="true"]')?.focus(), 0);
+        }}
       />
 
-      {error ? <Alert severity='error'>{error}</Alert> : null}
-      {paymentsQuery.error instanceof Error ? <Alert severity='error'>{paymentsQuery.error.message}</Alert> : null}
-      {searchQuery.error instanceof Error ? <Alert severity='error'>{searchQuery.error.message}</Alert> : null}
-      {targetQuery.error instanceof Error ? <Alert severity='error'>{targetQuery.error.message}</Alert> : null}
-      {paymentDocumentQuery.error instanceof Error ? <Alert severity='error'>{paymentDocumentQuery.error.message}</Alert> : null}
-      {paymentMethodsQuery.error instanceof Error ? <Alert severity='error'>{paymentMethodsQuery.error.message}</Alert> : null}
+      <PaymentsPageErrors state={state} />
 
       <PaymentsOverviewSection rows={paymentRows} total={paymentTotal} loading={paymentsQuery.isLoading} />
 
@@ -193,7 +129,7 @@ export function PaymentsPage() {
         searchText={searchText}
         searchResults={searchResults}
         searchLoading={searchQuery.isFetching}
-        hasTargetSearch={hasTargetSearch}
+        hasTargetSearch={searchText.trim().length > 0}
         searchLoadingLabel={paymentsText.page.searchLoading}
         searchNoResultsLabel={paymentsText.page.searchNoResults}
         customerKindLabel={paymentsText.page.searchCustomerTag}
@@ -209,49 +145,24 @@ export function PaymentsPage() {
         total={paymentTotal}
         loading={paymentsQuery.isLoading}
         tableSearchInput={tableSearchInput}
-        onTableSearchChange={(value) => {
-          setTableSearchInput(value);
-          setPage(0);
-        }}
+        onTableSearchChange={(v) => { setTableSearchInput(v); setPage(0); }}
         statusFilter={statusFilter}
-        onStatusFilterChange={(value) => {
-          setStatusFilter(value);
-          setPage(0);
-        }}
+        onStatusFilterChange={(v) => { setStatusFilter(v); setPage(0); }}
         documentKindFilter={documentKindFilter}
-        onDocumentKindFilterChange={(value) => {
-          setDocumentKindFilter(value);
-          setPage(0);
-        }}
+        onDocumentKindFilterChange={(v) => { setDocumentKindFilter(v); setPage(0); }}
         dateFrom={dateFrom}
-        onDateFromChange={(value) => {
-          setDateFrom(value);
-          setPage(0);
-        }}
+        onDateFromChange={(v) => { setDateFrom(v); setPage(0); }}
         dateTo={dateTo}
-        onDateToChange={(value) => {
-          setDateTo(value);
-          setPage(0);
-        }}
+        onDateToChange={(v) => { setDateTo(v); setPage(0); }}
         page={page}
         pageSize={pageSize}
         onPageChange={setPage}
-        onPageSizeChange={(nextPageSize) => {
-          setPageSize(nextPageSize);
-          setPage(0);
-        }}
+        onPageSizeChange={(v) => { setPageSize(v); setPage(0); }}
         sortBy={sortBy}
         sortDir={sortDir}
         exportFilters={activeExportFilters}
-        onSortChange={(nextSortBy, nextSortDir) => {
-          setSortBy(nextSortBy);
-          setSortDir(nextSortDir);
-          setPage(0);
-        }}
-        onOpenEdit={(row) => {
-          setCreatingNew(false);
-          openEditDocument(row);
-        }}
+        onSortChange={(b, d) => { setSortBy(b as PaymentSortField); setSortDir(d); setPage(0); }}
+        onOpenEdit={(row) => { setCreatingNew(false); openEditDocument(row); }}
         onOpenVoid={setVoidingPayment}
       />
 
@@ -273,10 +184,27 @@ export function PaymentsPage() {
       <PaymentUpdateOverrideDialog
         open={Boolean(pendingUpdateOverridePayload)}
         onClose={() => setPendingUpdateOverridePayload(null)}
-        onConfirm={async (reason) => {
-          await confirmUpdateOverride(reason, pendingUpdateOverridePayload);
-        }}
+        onConfirm={async (reason) => { await confirmUpdateOverride(reason, pendingUpdateOverridePayload); }}
       />
+    </Stack>
+  );
+}
+
+function PaymentsPageErrors({ state }: { state: any }) {
+  const errors = [
+    state.error,
+    state.paymentsQuery.error?.message,
+    state.searchQuery.error?.message,
+    state.targetQuery.error?.message,
+    state.paymentDocumentQuery.error?.message,
+    state.paymentMethodsQuery.error?.message,
+  ].filter(Boolean);
+
+  if (errors.length === 0) return null;
+
+  return (
+    <Stack spacing={1}>
+      {errors.map((err, i) => <Alert key={i} severity='error'>{err}</Alert>)}
     </Stack>
   );
 }

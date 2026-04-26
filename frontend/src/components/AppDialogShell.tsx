@@ -40,14 +40,24 @@ export function AppDialogShell({
       fullScreen={fullScreen}
       PaperProps={{
         sx: {
-          borderRadius: { xs: fullScreen ? 0 : 2.5, sm: 2.5 },
+          borderRadius: { xs: fullScreen ? 0 : 3, sm: 3 },
           overflow: 'hidden',
+          m: { xs: 1, sm: 2, md: 4 },
+          width: { xs: 'calc(100% - 16px)', sm: 'calc(100% - 32px)', md: 'auto' },
         },
       }}
     >
-      <DialogTitle sx={{ px: 3, py: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1.5 }}>
+      <DialogTitle sx={{ 
+        px: { xs: 2, sm: 3 }, 
+        py: 2, 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'flex-start', 
+        gap: 1.5,
+        borderBottom: '1px solid rgba(0,0,0,0.05)'
+      }}>
         <Stack spacing={0.5}>
-          <Typography variant='h6'>{title}</Typography>
+          <Typography variant='h6' sx={{ fontWeight: 800 }}>{title}</Typography>
           {subtitle ? (
             <Typography variant='body2' color='text.secondary'>
               {subtitle}
@@ -55,16 +65,31 @@ export function AppDialogShell({
           ) : null}
         </Stack>
         {!disableCloseButton ? (
-          <IconButton onClick={onClose} aria-label='close' size='small'>
+          <IconButton onClick={onClose} aria-label='close' size='small' sx={{ mt: -0.5, mr: -0.5 }}>
             <CloseOutlinedIcon fontSize='small' />
           </IconButton>
         ) : null}
       </DialogTitle>
-      <DialogContent dividers={contentDividers} sx={{ px: 3, py: 2.5 }}>
+      <DialogContent dividers={contentDividers} sx={{ 
+        px: { xs: 2, sm: 3 }, 
+        py: { xs: 2, sm: 2.5 },
+        bgcolor: 'rgba(0,0,0,0.01)'
+      }}>
         {children}
       </DialogContent>
       {actions ? (
-        <DialogActions sx={{ px: 3, pb: 2.5, pt: 2, gap: 1, flexDirection: { xs: 'column', sm: 'row' }, alignItems: 'stretch' }}>
+        <DialogActions sx={{ 
+          px: { xs: 2, sm: 3 }, 
+          pb: { xs: 2, sm: 2.5 }, 
+          pt: 2, 
+          gap: 1, 
+          flexDirection: { xs: 'column-reverse', sm: 'row' }, 
+          alignItems: 'stretch',
+          '& > button, & > div': {
+            width: { xs: '100%', sm: 'auto' },
+            m: '0 !important'
+          }
+        }}>
           {actions}
         </DialogActions>
       ) : null}

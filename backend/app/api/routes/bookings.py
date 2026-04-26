@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Query, Request, status
 from sqlalchemy.orm import Session
@@ -13,14 +13,16 @@ from app.modules.bookings.schemas import (
     BookingSummaryResponse,
 )
 from app.modules.bookings.service import (
-    cancel_booking_line,
-    complete_booking_line,
     create_booking,
     get_booking_document,
     list_booking_page,
     list_bookings,
-    reverse_completed_booking_line,
     update_booking,
+)
+from app.modules.bookings.lifecycle import (
+    cancel_booking_line,
+    complete_booking_line,
+    reverse_completed_booking_line,
 )
 from app.modules.identity.models import User
 

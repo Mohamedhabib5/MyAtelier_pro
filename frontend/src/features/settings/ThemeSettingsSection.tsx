@@ -6,9 +6,9 @@ import { useThemeSettings } from '../theme/ThemeSettingsProvider';
 export function ThemeSettingsSection() {
   const settingsText = useSettingsText();
   const { 
-    primaryColor, secondaryColor, sidebarColor, headerColor, sidebarTextColor,
+    primaryColor, secondaryColor, sidebarColor, sidebarColorEnd, headerColor, headerColorEnd, sidebarTextColor,
     bgGradientStart, bgGradientEnd, accentColor,
-    setPrimaryColor, setSecondaryColor, setSidebarColor, setHeaderColor, setSidebarTextColor, 
+    setPrimaryColor, setSecondaryColor, setSidebarColor, setSidebarColorEnd, setHeaderColor, setHeaderColorEnd, setSidebarTextColor, 
     setBgGradientStart, setBgGradientEnd, setAccentColor,
     resetTheme 
   } = useThemeSettings();
@@ -84,7 +84,11 @@ export function ThemeSettingsSection() {
           <Stack spacing={4}>
             <Stack direction="row" spacing={4}>
               <ColorInput label={settingsText.appearance.sidebarColor} value={sidebarColor} onChange={setSidebarColor} />
+              <ColorInput label={settingsText.appearance.sidebarColorEnd} value={sidebarColorEnd} onChange={setSidebarColorEnd} />
+            </Stack>
+            <Stack direction="row" spacing={4}>
               <ColorInput label={settingsText.appearance.headerColor} value={headerColor} onChange={setHeaderColor} />
+              <ColorInput label={settingsText.appearance.headerColorEnd} value={headerColorEnd} onChange={setHeaderColorEnd} />
             </Stack>
             <Stack direction="row" spacing={4}>
               <ColorInput label={settingsText.appearance.textColor} value={sidebarTextColor} onChange={setSidebarTextColor} />

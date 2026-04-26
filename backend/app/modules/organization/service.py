@@ -9,7 +9,12 @@ from app.core.security import norm_text
 from app.modules.core_platform.service import record_audit
 from app.modules.organization.models import Branch, Company, DocumentSequence, FiscalPeriod
 from app.modules.organization.repository import OrganizationRepository
-from app.modules.organization.schemas import BranchCreateRequest, UpdateCompanyRequest
+from app.modules.organization.schemas import (
+    BranchCreateRequest,
+    FiscalPeriodCreateRequest,
+    FiscalPeriodUpdateRequest,
+    UpdateCompanyRequest,
+)
 
 
 DEFAULT_BRANCH_CODE = 'MAIN'
@@ -113,7 +118,7 @@ def create_fiscal_period(db: Session, payload: FiscalPeriodCreateRequest, actor_
     )
     repo.add_fiscal_period(period)
     db.flush()
-    record_audit(db, actor_user_id=actor_user_id, action='fiscal_period.created', target_type='fiscal_period', target_id=period.id, summary=f'Created fiscal period {period.name}', diff={'name': period.name, 'starts_on': str(starts_on)})
+    record_audit(db, actor_user_id=actor_user_id, action='fiscal_period.created', target_type='fiscal_period', target_id=period.id, summary=f'Created fiscal period {period.name}', diff={'name': period.name, 'starts_on': str(payload.starts_on)})
     db.commit()
     db.refresh(period)
     return period

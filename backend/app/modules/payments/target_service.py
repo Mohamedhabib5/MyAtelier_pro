@@ -57,7 +57,7 @@ def get_customer_payment_target(db: Session, session: dict, customer_id: str, br
     if not bookings:
         customer = CustomersRepository(db).get_customer(customer_id)
         if customer is None or customer.company_id != company.id:
-            raise NotFoundError('ظ„ظ… ظٹطھظ… ط§ظ„ط¹ط«ظˆط± ط¹ظ„ظ‰ ط§ظ„ط¹ظ…ظٹظ„')
+            raise NotFoundError('لم يتم العثور على العميل')
         return _serialize_target('customer', customer.id, customer.full_name, branch.id, branch.name, [], ignore_payment_document_id)
     customer_name = bookings[0].customer.full_name
     return _serialize_target('customer', customer_id, customer_name, branch.id, branch.name, bookings, ignore_payment_document_id)
@@ -68,7 +68,7 @@ def get_booking_payment_target(db: Session, session: dict, booking_id: str, bran
     branch = resolve_branch_scope(db, session, branch_id)
     booking = BookingsRepository(db).get_booking(booking_id)
     if booking is None or booking.company_id != company.id or booking.branch_id != branch.id:
-        raise NotFoundError('ظ„ظ… ظٹطھظ… ط§ظ„ط¹ط«ظˆط± ط¹ظ„ظ‰ ط§ظ„ط­ط¬ط²')
+        raise NotFoundError('لم يتم العثور على الحجز')
     return _serialize_target('booking', booking.id, booking.customer.full_name, branch.id, branch.name, [booking], ignore_payment_document_id)
 
 
