@@ -19,6 +19,7 @@ import { departmentUsesDressCode } from './departmentRules';
 import { buildEmptyLine, lineFromRecord, type EditableLine } from './editorLineModel';
 import { NumericCell } from './NumericCell';
 import { QuickCustomerDialog } from './QuickCustomerDialog';
+import { useBookingEditorColumns } from './useBookingEditorColumns';
 
 export function BookingDocumentEditor({
   customers,
@@ -168,280 +169,43 @@ export function BookingDocumentEditor({
     await onSave(payload);
   }
 
-  const lineColumns = useMemo<AppAgGridColumn<EditableLine>[]>(
-    () => [
-      {
-        colId: 'line_number',
-        headerName: '#',
-        width: 72,
-        maxWidth: 84,
-        sortable: false,
-        filter: false,
-        pinned: language === 'ar' ? 'right' : 'left',
-        valueGetter: (params) => params.node?.rowIndex !== null ? params.node!.rowIndex! + 1 : '',
-      },
-      {
-        colId: 'department_id',
-        headerName: bookingsText.lineTable.department,
-        minWidth: 170,
-        cellRenderer: ({ data }: ICellRendererParams<EditableLine>) =>
-          data ? (
-            <TextField
-              select
-              SelectProps={{ native: true }}
-              size='small'
-              fullWidth
-              value={data.department_id}
-              onChange={(event) => handleDepartmentChange(data.local_id, event.target.value)}
-              disabled={data.is_locked}
-            >
-              <option value=''>{bookingsText.editor.selectDepartment}</option>
-              {departments.map((department) => (
-                <option key={department.id} value={department.id}>
-                  {department.name}
-                </option>
-              ))}
-            </TextField>
-          ) : null,
-      },
-      {
-        colId: 'service_id',
-        headerName: bookingsText.lineTable.service,
-        minWidth: 180,
-        cellRenderer: ({ data }: ICellRendererParams<EditableLine>) => {
-          if (!data) return null;
-          const departmentServices = services.filter((item) => item.department_id === data.department_id);
-          return (
-            <TextField
-              select
-              SelectProps={{ native: true }}
-              size='small'
-              fullWidth
-              value={data.service_id}
-              onChange={(event) => handleServiceChange(data.local_id, event.target.value)}
-              disabled={data.is_locked}
-            >
-              <option value=''>{bookingsText.editor.selectService}</option>
-              {departmentServices.map((service) => (
-                <option key={service.id} value={service.id}>
-                  {service.name}
-                </option>
-              ))}
-            </TextField>
-          );
-        },
-      },
-      {
-        colId: 'service_date',
-        headerName: bookingsText.lineTable.serviceDate,
-        minWidth: 155,
-        cellRenderer: ({ data }: ICellRendererParams<EditableLine>) =>
-          data ? (
-            <TextField
-              type='date'
-              size='small'
-              fullWidth
-              value={data.service_date}
-              onChange={(event) => updateLine(data.local_id, { service_date: event.target.value })}
-              InputLabelProps={{ shrink: true }}
-              disabled={data.is_locked}
-            />
-          ) : null,
-      },
-      {
-        colId: 'dress_id',
-        headerName: bookingsText.lineTable.dress,
-        minWidth: 150,
-        cellRenderer: ({ data }: ICellRendererParams<EditableLine>) => {
-          if (!data) return null;
-          const selectedDepartment = departments.find((item) => item.id === data.department_id);
-          const dressVisible = departmentUsesDressCode(selectedDepartment);
-
-          if (!dressVisible) {
-            return <Typography color='text.secondary'>{EMPTY_VALUE}</Typography>;
-          }
-
-          return (
-            <TextField
-              select
-              SelectProps={{ native: true }}
-              size='small'
-              fullWidth
-              value={data.dress_id}
-              onChange={(event) => updateLine(data.local_id, { dress_id: event.target.value })}
-              disabled={data.is_locked}
-            >
-              <option value=''>{bookingsText.editor.noDress}</option>
-              {dresses.map((dress) => (
-                <option key={dress.id} value={dress.id}>
-                  {dress.code}
-                </option>
-              ))}
-            </TextField>
-          );
-        },
-      },
-      {
-        colId: 'suggested_price',
-        headerName: bookingsText.lineTable.suggestedPrice,
-        minWidth: 135,
-        cellRenderer: ({ data }: ICellRendererParams<EditableLine>) =>
-          data ? (
-            <TextField
-              type='text'
-              size='small'
-              fullWidth
-              value={data.suggested_price === '0' ? '' : data.suggested_price}
-              placeholder='0'
-              disabled={true}
-              InputProps={{ readOnly: true }}
-              sx={{ 
-                bgcolor: '#f5f5f5',
-                '& .MuiInputBase-input': {
-                  textAlign: 'center',
-                  fontWeight: 'bold',
-                },
-              }}
-            />
-          ) : null,
-      },
-      {
-        colId: 'line_price',
-        headerName: bookingsText.lineTable.linePrice,
-        minWidth: 135,
-        suppressKeyboardEvent: suppressGridKeyboardEvent,
-        cellRenderer: ({ data }: ICellRendererParams<EditableLine>) =>
-          data ? (
-            <NumericCell 
-              value={data.line_price} 
-              onFlush={(val) => updateLine(data.local_id, { line_price: val })} 
-              disabled={data.is_locked}
-            />
-          ) : null,
-      },
-      {
-        colId: 'initial_payment_amount',
-        headerName: bookingsText.lineTable.initialPayment,
-        minWidth: 145,
-        suppressKeyboardEvent: suppressGridKeyboardEvent,
-        cellRenderer: ({ data }: ICellRendererParams<EditableLine>) =>
-          data ? (
-            <NumericCell 
-              value={data.initial_payment_amount} 
-              onFlush={(val) => updateLine(data.local_id, { initial_payment_amount: val })} 
-              disabled={data.is_locked}
-            />
-          ) : null,
-      },
-      {
-        colId: 'paid_total',
-        headerName: bookingsText.lineTable.paid,
-        minWidth: 110,
-        valueGetter: (params) => params.data?.paid_total ?? 0,
-      },
-      {
-        colId: 'remaining_preview',
-        headerName: bookingsText.lineTable.remaining,
-        minWidth: 120,
-        valueGetter: (params) => {
-          const line = params.data;
-          if (!line) return 0;
-          return Number(line.line_price || 0) - line.paid_total - Number(line.initial_payment_amount || 0);
-        },
-      },
-      {
-        colId: 'status',
-        headerName: bookingsText.lineTable.status,
-        minWidth: 180,
-        autoHeight: true,
-        cellRenderer: ({ data }: ICellRendererParams<EditableLine>) =>
-          data ? (
-            <Stack spacing={1} sx={{ py: 1 }}>
-              <TextField
-                select
-                SelectProps={{ native: true }}
-                size='small'
-                fullWidth
-                value={data.status}
-                onChange={(event) => updateLine(data.local_id, { status: event.target.value })}
-                disabled={data.is_locked}
-              >
-                {lineStatusOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </TextField>
-              {data.revenue_journal_entry_number ? (
-                <Chip size='small' color='success' label={`${bookingsText.editor.revenueEntryPrefix} ${data.revenue_journal_entry_number}`} />
-              ) : null}
-            </Stack>
-          ) : null,
-      },
-      {
-        colId: 'actions',
-        headerName: commonText.actions,
-        minWidth: 190,
-        autoHeight: true,
-        sortable: false,
-        filter: false,
-        pinned: language === 'ar' ? 'left' : 'right',
-        cellRenderer: ({ data }: ICellRendererParams<EditableLine>) => {
-          if (!data) return null;
-
-          return (
-            <Stack spacing={1} sx={{ py: 1 }}>
-              {data.id && data.status !== 'completed' && data.status !== 'cancelled' ? (
-                <Button size='small' color='success' startIcon={<CheckCircleOutlineIcon />} onClick={() => void onCompleteLine(data.id!)}>
-                  {bookingsText.editor.completeLine}
-                </Button>
-              ) : null}
-              {data.id && data.status !== 'cancelled' && !data.is_locked ? (
-                <Button size='small' onClick={() => void onCancelLine(data.id!)}>
-                  {bookingsText.editor.cancelLine}
-                </Button>
-              ) : null}
-              {data.id && data.status === 'completed' && data.is_locked ? (
-                <Button size='small' color='warning' onClick={() => void onReverseRevenueLine(data.id!)}>
-                  {language === 'ar' ? 'عكس الإيراد' : 'Reverse revenue'}
-                </Button>
-              ) : null}
-              {!data.id && !data.is_locked ? (
-                <Button
-                  size='small'
-                  color='error'
-                  startIcon={<DeleteOutlineIcon />}
-                  onClick={() => setLines((current) => current.filter((item) => item.local_id !== data.local_id))}
-                >
-                  {bookingsText.editor.deleteLine}
-                </Button>
-              ) : null}
-            </Stack>
-          );
-        },
-      },
-    ],
-    [bookingsText, commonText.actions, departments, dresses, language, lineStatusOptions, onCancelLine, onCompleteLine, onReverseRevenueLine, services],
-  );
+  const lineColumns = useBookingEditorColumns({
+    language,
+    bookingsText,
+    commonText,
+    departments,
+    services,
+    dresses,
+    lineStatusOptions,
+    updateLine,
+    handleDepartmentChange,
+    handleServiceChange,
+    onCompleteLine,
+    onCancelLine,
+    onReverseRevenueLine,
+    setLines,
+  });
 
   const gridHeight = Math.min(720, Math.max(260, lines.length * 84 + 110));
   const hasInitialPayments = lines.some((line) => Number(line.initial_payment_amount || 0) > 0);
 
   return (
-    <Stack spacing={2}>
-      <Stack direction='row' justifyContent='space-between' alignItems='center'>
+    <Stack spacing={2.5}>
+      <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent='space-between' alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={2}>
         <Box>
-          <Typography variant='h5'>
+          <Typography variant='h5' sx={{ fontWeight: 800, fontSize: { xs: '1.25rem', md: '1.5rem' } }}>
             {document ? `${bookingsText.editor.updateTitlePrefix} ${document.booking_number}` : bookingsText.editor.createTitle}
           </Typography>
-          <Typography color='text.secondary'>{bookingsText.editor.subtitle}</Typography>
+          <Typography color='text.secondary' variant='body2'>{bookingsText.editor.subtitle}</Typography>
         </Box>
-        <Stack direction='row' spacing={1}>
-          <Button onClick={onCancel}>{commonText.cancel}</Button>
+        <Stack direction='row' spacing={1} sx={{ alignSelf: { xs: 'stretch', sm: 'auto' } }}>
+          <Button fullWidth onClick={onCancel} variant="soft" color="inherit">{commonText.cancel}</Button>
           <Button
+            fullWidth
             variant='contained'
             disabled={saving || !customerId || !lines.length || (hasInitialPayments && !initialPaymentMethodId)}
             onClick={() => void handleSave()}
+            sx={{ px: { sm: 4 } }}
           >
             {bookingsText.editor.save}
           </Button>
@@ -449,14 +213,19 @@ export function BookingDocumentEditor({
       </Stack>
 
       {document ? (
-        <Alert severity='info'>
+        <Alert severity='info' sx={{ borderRadius: 4 }}>
           {`${bookingsText.editor.summaryPrefix}: ${bookingsText.editor.summaryLabels.status} ${bookingStatusLabel(language, document.status)} | ${bookingsText.editor.summaryLabels.total} ${document.total_amount} | ${bookingsText.editor.summaryLabels.paid} ${document.paid_total} | ${bookingsText.editor.summaryLabels.remaining} ${document.remaining_amount}`}
         </Alert>
       ) : null}
 
-      {error ? <Alert severity='error'>{error}</Alert> : null}
+      {error ? <Alert severity='error' sx={{ borderRadius: 4 }}>{error}</Alert> : null}
 
-      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+      <Box sx={{ 
+        display: 'grid', 
+        gridTemplateColumns: { xs: '1fr', md: '1fr auto 1fr 1fr' }, 
+        gap: 2, 
+        alignItems: 'flex-start' 
+      }}>
         <Autocomplete
           fullWidth
           options={customers}
@@ -468,15 +237,20 @@ export function BookingDocumentEditor({
           )}
           noOptionsText={language === 'ar' ? 'لا توجد نتائج' : 'No results'}
         />
-        <Button variant='outlined' startIcon={<PersonAddOutlinedIcon />} onClick={() => setCustomerDialogOpen(true)}>
+        <Button 
+          variant='outlined' 
+          startIcon={<PersonAddOutlinedIcon />} 
+          onClick={() => setCustomerDialogOpen(true)}
+          sx={{ height: 56, borderRadius: 3 }}
+        >
           {bookingsText.editor.addCustomer}
         </Button>
         <TextField
           select
+          fullWidth
           label={bookingsText.editor.initialPaymentMethod}
           value={initialPaymentMethodId}
           onChange={(event) => setInitialPaymentMethodId(event.target.value)}
-          sx={{ minWidth: 220 }}
         >
           {paymentMethods.map((method) => (
             <MenuItem key={method.id} value={method.id}>
@@ -484,8 +258,15 @@ export function BookingDocumentEditor({
             </MenuItem>
           ))}
         </TextField>
-        <TextField label={bookingsText.editor.bookingDate} type='date' InputLabelProps={{ shrink: true }} value={bookingDate} onChange={(event) => setBookingDate(event.target.value)} />
-      </Stack>
+        <TextField 
+          fullWidth 
+          label={bookingsText.editor.bookingDate} 
+          type='date' 
+          InputLabelProps={{ shrink: true }} 
+          value={bookingDate} 
+          onChange={(event) => setBookingDate(event.target.value)} 
+        />
+      </Box>
 
       <TextField label={bookingsText.editor.notes} value={notes} multiline minRows={3} onChange={(event) => setNotes(event.target.value)} />
 

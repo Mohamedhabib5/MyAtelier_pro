@@ -34,14 +34,14 @@ def get_scoped_booking(db: Session, booking_id: str, session: dict) -> Booking:
     branch = ensure_active_branch(db, session)
     booking = BookingsRepository(db).get_booking(booking_id)
     if booking is None or booking.company_id != company.id or booking.branch_id != branch.id:
-        raise NotFoundError("ظ„ظ… ظٹطھظ… ط§ظ„ط¹ط«ظˆط± ط¹ظ„ظ‰ ط§ظ„ط­ط¬ط²")
+        raise NotFoundError("لم يتم العثور على الحجز")
     return booking
 
 
 def reload_booking_or_404(repo: BookingsRepository, booking_id: str) -> Booking:
     booking = repo.get_booking(booking_id)
     if booking is None:
-        raise NotFoundError("ظ„ظ… ظٹطھظ… ط§ظ„ط¹ط«ظˆط± ط¹ظ„ظ‰ ط§ظ„ط­ط¬ط²")
+        raise NotFoundError("لم يتم العثور على الحجز")
     return booking
 
 
@@ -49,4 +49,4 @@ def get_line_or_404(booking: Booking, line_id: str) -> BookingLine:
     for line in booking.lines:
         if line.id == line_id:
             return line
-    raise NotFoundError("ظ„ظ… ظٹطھظ… ط§ظ„ط¹ط«ظˆط± ط¹ظ„ظ‰ ط³ط·ط± ط§ظ„ط­ط¬ط²")
+    raise NotFoundError("لم يتم العثور على سطر الحجز")

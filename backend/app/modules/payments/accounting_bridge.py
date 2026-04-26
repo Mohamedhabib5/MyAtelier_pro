@@ -26,10 +26,13 @@ DIRECT_CUSTODY_REFUND_KINDS = {"refund"}
 
 def auto_post_payment_document(db: Session, actor: User, payment_document: PaymentDocument) -> JournalEntry:
     if payment_document.document_kind in DIRECT_CUSTODY_REVENUE_KINDS:
+        from app.modules.payments.accounting_custody import _auto_post_custody_compensation
         return _auto_post_custody_compensation(db, actor, payment_document)
     if payment_document.document_kind in DIRECT_CUSTODY_DEPOSIT_COLLECTION_KINDS:
+        from app.modules.payments.accounting_custody import _auto_post_custody_deposit_collection
         return _auto_post_custody_deposit_collection(db, actor, payment_document)
     if payment_document.document_kind in DIRECT_CUSTODY_REFUND_KINDS:
+        from app.modules.payments.accounting_custody import _auto_post_custody_deposit_refund
         return _auto_post_custody_deposit_refund(db, actor, payment_document)
     if payment_document.document_kind != "collection":
         raise ValidationAppError("يمكن ترحيل سندات التحصيل فقط تلقائيًا")
@@ -145,153 +148,6 @@ def _allocation_split(payment_document: PaymentDocument) -> tuple[Decimal, Decim
         else:
             advances_amount += amount
     return total_amount, advances_amount, receivables_amount
-
-
-def _auto_post_custody_compensation(db: Session, actor: User, payment_document: PaymentDocument) -> JournalEntry:
-    amount = Decimal(str(payment_document.direct_amount)).quantize(Decimal("0.01"))
-    if amount <= ZERO:
-        raise ValidationAppError("قيمة تعويض العهدة يجب أن تكون أكبر من صفر")
-    repo = AccountingRepository(db)
-    fiscal_period = _resolve_fiscal_period(repo, payment_document.company_id, payment_document.payment_date)
-    cash_account = _get_account(repo, payment_document.company_id, CASH_ACCOUNT_CODE)
-    revenue_account = _get_account(repo, payment_document.company_id, SERVICE_REVENUE_CODE)
-    entry = JournalEntry(
-        company_id=payment_document.company_id,
-        fiscal_period_id=fiscal_period.id,
-        entry_number=repo.reserve_sequence_number(payment_document.company_id, DEFAULT_JOURNAL_SEQUENCE_KEY),
-        entry_date=payment_document.payment_date,
-        status=JournalEntryStatus.POSTED.value,
-        reference=payment_document.payment_number,
-        notes=f"Auto-posted custody compensation {payment_document.payment_number}",
-        posted_at=datetime.now(UTC),
-        posted_by_user_id=actor.id,
-    )
-    entry.lines = [
-        JournalEntryLine(
-            line_number=1,
-            account_id=cash_account.id,
-            description=f"Custody compensation {payment_document.payment_number}",
-            debit_amount=amount,
-            credit_amount=ZERO,
-        ),
-        JournalEntryLine(
-            line_number=2,
-            account_id=revenue_account.id,
-            description=f"Custody compensation {payment_document.payment_number}",
-            debit_amount=ZERO,
-            credit_amount=amount,
-        ),
-    ]
-    repo.add_journal_entry(entry)
-    db.flush()
-    record_audit(
-        db,
-        actor_user_id=actor.id,
-        action="accounting.custody_compensation_auto_posted",
-        target_type="journal_entry",
-        target_id=entry.id,
-        summary=f"Auto-posted custody compensation {payment_document.payment_number} to journal {entry.entry_number}",
-        diff={"payment_document_id": payment_document.id, "total_amount": float(amount)},
-    )
-    return entry
-
-
-def _auto_post_custody_deposit_collection(db: Session, actor: User, payment_document: PaymentDocument) -> JournalEntry:
-    amount = Decimal(str(payment_document.direct_amount)).quantize(Decimal("0.01"))
-    if amount <= ZERO:
-        raise ValidationAppError("قيمة تأمين الحيازة يجب أن تكون أكبر من صفر")
-    repo = AccountingRepository(db)
-    fiscal_period = _resolve_fiscal_period(repo, payment_document.company_id, payment_document.payment_date)
-    cash_account = _get_account(repo, payment_document.company_id, CASH_ACCOUNT_CODE)
-    advances_account = _get_account(repo, payment_document.company_id, CUSTOMER_ADVANCES_CODE)
-    entry = JournalEntry(
-        company_id=payment_document.company_id,
-        fiscal_period_id=fiscal_period.id,
-        entry_number=repo.reserve_sequence_number(payment_document.company_id, DEFAULT_JOURNAL_SEQUENCE_KEY),
-        entry_date=payment_document.payment_date,
-        status=JournalEntryStatus.POSTED.value,
-        reference=payment_document.payment_number,
-        notes=f"Auto-posted custody deposit {payment_document.payment_number}",
-        posted_at=datetime.now(UTC),
-        posted_by_user_id=actor.id,
-    )
-    entry.lines = [
-        JournalEntryLine(
-            line_number=1,
-            account_id=cash_account.id,
-            description=f"Custody deposit {payment_document.payment_number}",
-            debit_amount=amount,
-            credit_amount=ZERO,
-        ),
-        JournalEntryLine(
-            line_number=2,
-            account_id=advances_account.id,
-            description=f"Custody deposit {payment_document.payment_number}",
-            debit_amount=ZERO,
-            credit_amount=amount,
-        ),
-    ]
-    repo.add_journal_entry(entry)
-    db.flush()
-    record_audit(
-        db,
-        actor_user_id=actor.id,
-        action="accounting.custody_deposit_auto_posted",
-        target_type="journal_entry",
-        target_id=entry.id,
-        summary=f"Auto-posted custody deposit {payment_document.payment_number} to journal {entry.entry_number}",
-        diff={"payment_document_id": payment_document.id, "total_amount": float(amount)},
-    )
-    return entry
-
-
-def _auto_post_custody_deposit_refund(db: Session, actor: User, payment_document: PaymentDocument) -> JournalEntry:
-    amount = Decimal(str(payment_document.direct_amount)).quantize(Decimal("0.01"))
-    if amount <= ZERO:
-        raise ValidationAppError("قيمة رد تأمين الحيازة يجب أن تكون أكبر من صفر")
-    repo = AccountingRepository(db)
-    fiscal_period = _resolve_fiscal_period(repo, payment_document.company_id, payment_document.payment_date)
-    cash_account = _get_account(repo, payment_document.company_id, CASH_ACCOUNT_CODE)
-    advances_account = _get_account(repo, payment_document.company_id, CUSTOMER_ADVANCES_CODE)
-    entry = JournalEntry(
-        company_id=payment_document.company_id,
-        fiscal_period_id=fiscal_period.id,
-        entry_number=repo.reserve_sequence_number(payment_document.company_id, DEFAULT_JOURNAL_SEQUENCE_KEY),
-        entry_date=payment_document.payment_date,
-        status=JournalEntryStatus.POSTED.value,
-        reference=payment_document.payment_number,
-        notes=f"Auto-posted custody deposit refund {payment_document.payment_number}",
-        posted_at=datetime.now(UTC),
-        posted_by_user_id=actor.id,
-    )
-    entry.lines = [
-        JournalEntryLine(
-            line_number=1,
-            account_id=advances_account.id,
-            description=f"Custody deposit refund {payment_document.payment_number}",
-            debit_amount=amount,
-            credit_amount=ZERO,
-        ),
-        JournalEntryLine(
-            line_number=2,
-            account_id=cash_account.id,
-            description=f"Custody deposit refund {payment_document.payment_number}",
-            debit_amount=ZERO,
-            credit_amount=amount,
-        ),
-    ]
-    repo.add_journal_entry(entry)
-    db.flush()
-    record_audit(
-        db,
-        actor_user_id=actor.id,
-        action="accounting.custody_deposit_refund_auto_posted",
-        target_type="journal_entry",
-        target_id=entry.id,
-        summary=f"Auto-posted custody deposit refund {payment_document.payment_number} to journal {entry.entry_number}",
-        diff={"payment_document_id": payment_document.id, "total_amount": float(amount)},
-    )
-    return entry
 
 
 def _build_payment_lines(

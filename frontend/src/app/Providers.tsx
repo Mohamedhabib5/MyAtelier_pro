@@ -34,21 +34,28 @@ function DirectionalTheme({ children }: PropsWithChildren) {
 
   return (
     <CacheProvider value={cache}>
-      <ThemeProvider theme={theme}>
+      <ThemeProvider theme={theme} key={`${safePrimary}-${safeSecondary}`}>
         <CssBaseline />
         <GlobalStyles
           styles={{
-            html: { direction },
+            html: { 
+              direction,
+              backgroundColor: safeBgEnd, // Base fallback
+            },
             body: { 
               direction, 
               textAlign,
               margin: 0,
               minHeight: '100vh',
-              background: `radial-gradient(at 0% 0%, ${safeBgStart} 0%, transparent 50%), 
-                           radial-gradient(at 100% 0%, ${safeBgEnd} 0%, transparent 50%),
-                           radial-gradient(at 50% 100%, ${safeBgStart} 0%, transparent 50%)`,
-              backgroundColor: safeBgEnd,
-              backgroundAttachment: 'fixed',
+              backgroundColor: `${safeBgEnd} !important`,
+              backgroundImage: `
+                radial-gradient(circle at 0% 0%, ${safeBgStart} 0%, ${safeBgStart}00 75%), 
+                radial-gradient(circle at 100% 0%, ${safeBgEnd} 0%, ${safeBgEnd}00 75%),
+                radial-gradient(circle at 50% 100%, ${safeBgStart} 0%, ${safeBgStart}00 75%)
+              !important`,
+              backgroundAttachment: 'fixed !important',
+              backgroundSize: 'cover !important',
+              backgroundRepeat: 'no-repeat !important',
             },
             '#root': { direction },
             // Global Table Customization
@@ -69,16 +76,31 @@ function DirectionalTheme({ children }: PropsWithChildren) {
               '& .ag-root-wrapper': {
                 border: 'none !important',
                 background: 'transparent !important',
+              },
+              '@media (max-width: 768px)': {
+                '--ag-font-size': '13px',
+                '--ag-header-height': '48px',
+                '--ag-row-height': '54px',
               }
             },
             // Custom Table Styles
+            '.modern-table-container': {
+              width: '100%',
+              overflowX: 'auto',
+              WebkitOverflowScrolling: 'touch',
+              borderRadius: '24px',
+              '&::-webkit-scrollbar': { height: '4px' },
+              '&::-webkit-scrollbar-thumb': { backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: '4px' }
+            },
             '.modern-table': {
               width: '100%',
               borderCollapse: 'separate',
               borderSpacing: '0 8px',
+              minWidth: { xs: '600px', md: '100%' }, // Ensure content doesn't squash too much
               '& thead th': {
                 backgroundColor: 'rgba(0,0,0,0.03)',
                 padding: '16px',
+                whiteSpace: 'nowrap',
                 textAlign: direction === 'rtl' ? 'right' : 'left',
                 '&:first-of-type': { borderTopLeftRadius: '24px', borderBottomLeftRadius: '24px' },
                 '&:last-of-type': { borderTopRightRadius: '24px', borderBottomRightRadius: '24px' },
@@ -90,6 +112,10 @@ function DirectionalTheme({ children }: PropsWithChildren) {
               '& td': {
                 padding: '16px',
                 borderBottom: '1px solid rgba(0,0,0,0.02)',
+                whiteSpace: 'nowrap',
+                '@media (max-width: 600px)': {
+                  padding: '12px',
+                }
               }
             }
           }}

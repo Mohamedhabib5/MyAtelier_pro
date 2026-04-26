@@ -1,4 +1,4 @@
-import { createTheme, ThemeOptions } from '@mui/material/styles';
+import { createTheme, responsiveFontSizes, ThemeOptions } from '@mui/material/styles';
 import type { Direction } from '../lib/language';
 
 export const DEFAULT_PRIMARY = '#FF2D78'; // Pink
@@ -26,21 +26,24 @@ export function buildAppTheme(direction: Direction, primaryColor = DEFAULT_PRIMA
     },
     typography: {
       fontFamily: "'Inter', 'Segoe UI', Tahoma, sans-serif",
-      h1: { color: NEUTRAL_NAVY, fontWeight: 700 },
-      h2: { color: NEUTRAL_NAVY, fontWeight: 700 },
-      h3: { color: NEUTRAL_NAVY, fontWeight: 600 },
-      h4: { color: NEUTRAL_NAVY, fontWeight: 600 },
-      h5: { color: NEUTRAL_NAVY, fontWeight: 600 },
-      h6: { color: NEUTRAL_NAVY, fontWeight: 600 },
+      h1: { color: NEUTRAL_NAVY, fontWeight: 700, lineHeight: 1.2 },
+      h2: { color: NEUTRAL_NAVY, fontWeight: 700, lineHeight: 1.2 },
+      h3: { color: NEUTRAL_NAVY, fontWeight: 600, lineHeight: 1.3 },
+      h4: { color: NEUTRAL_NAVY, fontWeight: 600, lineHeight: 1.3 },
+      h5: { color: NEUTRAL_NAVY, fontWeight: 600, lineHeight: 1.4 },
+      h6: { color: NEUTRAL_NAVY, fontWeight: 600, lineHeight: 1.4 },
+      body1: { lineHeight: 1.6 },
+      body2: { lineHeight: 1.6 },
     },
     shape: {
-      borderRadius: 12, // Standard base, explicit values used where needed
+      borderRadius: 16, // Slightly more rounded for premium feel
     },
     components: {
       MuiCssBaseline: {
         styleOverrides: {
           body: {
             backgroundColor: '#F8F9FA', // Fallback
+            WebkitTapHighlightColor: 'transparent', // Better mobile touch feel
           },
         },
       },
@@ -60,12 +63,35 @@ export function buildAppTheme(direction: Direction, primaryColor = DEFAULT_PRIMA
             textTransform: 'none',
             borderRadius: 50, // Pill shaped
             fontWeight: 600,
-            padding: '8px 24px',
+            padding: '10px 24px', // Larger touch target
             boxShadow: 'none',
             '&:hover': {
               boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
             },
+            '@media (max-width: 600px)': {
+              padding: '12px 20px', // Even larger on mobile
+            },
           },
+        },
+      },
+      MuiIconButton: {
+        styleOverrides: {
+          root: {
+            padding: 12, // Ensure minimum touch target size
+          },
+        },
+      },
+      MuiInputBase: {
+        styleOverrides: {
+          root: {
+            borderRadius: 12,
+            '@media (max-width: 600px)': {
+              fontSize: '16px', // Prevent iOS zoom on focus
+            },
+          },
+          input: {
+            padding: '12px 14px',
+          }
         },
       },
       MuiCard: {
@@ -73,6 +99,10 @@ export function buildAppTheme(direction: Direction, primaryColor = DEFAULT_PRIMA
           root: {
             borderRadius: 32, // Extra rounded cards
             padding: '16px',
+            '@media (max-width: 600px)': {
+              borderRadius: 24,
+              padding: '12px',
+            },
           },
         },
       },
@@ -97,5 +127,5 @@ export function buildAppTheme(direction: Direction, primaryColor = DEFAULT_PRIMA
     },
   };
 
-  return createTheme(themeOptions);
+  return responsiveFontSizes(createTheme(themeOptions));
 }

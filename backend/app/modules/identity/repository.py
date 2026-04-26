@@ -3,7 +3,7 @@ from __future__ import annotations
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
-from app.modules.identity.models import Permission, Role, User, UserGridPreference
+from app.modules.identity.models import Permission, Role, User, UserGridPreference, UserThemePreference
 
 
 class IdentityRepository:
@@ -57,4 +57,17 @@ class IdentityRepository:
             self.db.add(row)
         else:
             row.state_json = state_json
+        return row
+
+    def get_user_theme_preference(self, user_id: str) -> UserThemePreference | None:
+        stmt = select(UserThemePreference).where(UserThemePreference.user_id == user_id)
+        return self.db.scalars(stmt).first()
+
+    def upsert_user_theme_preference(self, *, user_id: str, theme_json: str) -> UserThemePreference:
+        row = self.get_user_theme_preference(user_id)
+        if row is None:
+            row = UserThemePreference(user_id=user_id, theme_json=theme_json)
+            self.db.add(row)
+        else:
+            row.theme_json = theme_json
         return row
