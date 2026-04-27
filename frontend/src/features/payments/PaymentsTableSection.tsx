@@ -8,6 +8,7 @@ import { useMemo } from 'react';
 import { AppAgGrid } from '../../components/ag-grid';
 import { SectionCard } from '../../components/SectionCard';
 import { getPaymentsExcelUrl, type PaymentExportFilters } from '../exports/api';
+import { downloadFile } from '../../lib/api';
 import { useLanguage } from '../language/LanguageProvider';
 import { joinLocalizedList, paymentDocumentStatusLabel, paymentKindLabel, useCommonText } from '../../text/common';
 import { usePaymentsText } from '../../text/payments';
@@ -188,7 +189,7 @@ export function PaymentsTableSection({
         loading={loading}
         csvFileName='payments.csv'
         onExportXlsx={() => {
-          window.open(getPaymentsExcelUrl(undefined, exportFilters), '_blank', 'noopener,noreferrer');
+          downloadFile(getPaymentsExcelUrl(undefined, exportFilters));
         }}
         getRowId={({ data }) => data.id}
       />

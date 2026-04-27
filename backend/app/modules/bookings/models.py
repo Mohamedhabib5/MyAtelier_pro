@@ -23,6 +23,7 @@ class Booking(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     booking_date: Mapped[str] = mapped_column(Date, nullable=False)
     status: Mapped[str] = mapped_column(String(40), nullable=False)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    external_code: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
     branch = relationship('Branch', lazy='joined')
     customer = relationship('Customer', lazy='joined')

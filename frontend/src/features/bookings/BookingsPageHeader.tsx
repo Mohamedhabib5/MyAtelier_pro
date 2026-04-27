@@ -15,7 +15,7 @@ export function BookingsPageHeader({ title, subtitle, createLabel, onCreate }: P
         <Typography variant='h4'>{title}</Typography>
         <Typography color='text.secondary'>{subtitle}</Typography>
       </Box>
-      <Button variant='contained' startIcon={<EventAvailableOutlinedIcon />} onClick={onCreate}>
+      <Button variant='contained' startIcon={<EventAvailableOutlinedIcon />} onClick={onCreate} sx={{ gap: 1 }}>
         {createLabel}
       </Button>
     </Stack>

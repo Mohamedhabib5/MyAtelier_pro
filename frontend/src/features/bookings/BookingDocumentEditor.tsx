@@ -60,6 +60,7 @@ export function BookingDocumentEditor({
   const [initialPaymentMethodId, setInitialPaymentMethodId] = useState('');
   const [bookingDate, setBookingDate] = useState('');
   const [notes, setNotes] = useState('');
+  const [externalCode, setExternalCode] = useState('');
   const [lines, setLines] = useState<EditableLine[]>([]);
 
   const documentId = document?.id;
@@ -73,6 +74,7 @@ export function BookingDocumentEditor({
       setInitialPaymentMethodId(paymentMethods[0]?.id ?? '');
       setBookingDate(document.booking_date);
       setNotes(document.notes ?? '');
+      setExternalCode(document.external_code ?? '');
       setLines(document.lines.map(lineFromRecord));
       return;
     }
@@ -81,6 +83,7 @@ export function BookingDocumentEditor({
     setInitialPaymentMethodId(paymentMethods[0]?.id ?? '');
     setBookingDate(new Date().toISOString().slice(0, 10));
     setNotes('');
+    setExternalCode('');
     setLines([buildEmptyLine(departments, services, new Date().toISOString().slice(0, 10))]);
   }, [documentId]); // Only depend on documentId to trigger a full reset
 
@@ -150,6 +153,7 @@ export function BookingDocumentEditor({
       initial_payment_method_id: initialPaymentMethodId || null,
       booking_date: bookingDate,
       notes: notes || null,
+      external_code: externalCode || null,
       lines: lines.map(
         (line): BookingLinePayload => ({
           id: line.id,
@@ -265,6 +269,12 @@ export function BookingDocumentEditor({
           InputLabelProps={{ shrink: true }} 
           value={bookingDate} 
           onChange={(event) => setBookingDate(event.target.value)} 
+        />
+        <TextField 
+          fullWidth 
+          label={bookingsText.editor.externalCode} 
+          value={externalCode} 
+          onChange={(event) => setExternalCode(event.target.value)} 
         />
       </Box>
 

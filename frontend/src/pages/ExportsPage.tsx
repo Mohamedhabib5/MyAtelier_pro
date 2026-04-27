@@ -24,6 +24,7 @@ import {
   type BookingExportFilters,
   type PaymentExportFilters,
 } from '../features/exports/api';
+import { downloadFile } from '../lib/api';
 import { useLanguage } from '../features/language/LanguageProvider';
 import { ExportSchedulesSection } from '../features/exports/ExportSchedulesSection';
 import { EMPTY_VALUE } from '../text/common';
@@ -31,10 +32,6 @@ import { useExportsText } from '../text/exports';
 
 function openUrl(url: string) {
   window.open(url, '_blank', 'noopener,noreferrer');
-}
-
-function downloadFile(url: string) {
-  window.location.assign(url);
 }
 
 export function ExportsPage() {

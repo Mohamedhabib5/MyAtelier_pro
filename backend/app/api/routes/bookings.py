@@ -11,12 +11,16 @@ from app.modules.bookings.schemas import (
     BookingDocumentUpdateRequest,
     BookingSummaryPageResponse,
     BookingSummaryResponse,
+    CalendarEventResponse,
+)
+from app.modules.bookings.query_service import (
+    get_calendar_events,
+    list_booking_page,
+    list_bookings,
 )
 from app.modules.bookings.service import (
     create_booking,
     get_booking_document,
-    list_booking_page,
-    list_bookings,
     update_booking,
 )
 from app.modules.bookings.lifecycle import (
@@ -68,6 +72,31 @@ def list_bookings_table_route(
         sort_dir=sort_dir,
     )
     return BookingSummaryPageResponse.model_validate(payload)
+
+
+@router.get('/calendar/events', response_model=list[CalendarEventResponse])
+def list_calendar_events_route(
+    request: Request,
+    branch_id: str | None = Query(default=None),
+    date_from: str | None = Query(default=None),
+    date_to: str | None = Query(default=None),
+    department_id: list[str] | None = Query(default=None),
+    service_id: list[str] | None = Query(default=None),
+    date_mode: str = Query(default="service"),
+    db: Session = Depends(get_db),
+    _: User = Depends(require_bookings_view),
+) -> list[CalendarEventResponse]:
+    events = get_calendar_events(
+        db,
+        request.session,
+        branch_id=branch_id,
+        date_from=date_from,
+        date_to=date_to,
+        department_ids=department_id,
+        service_ids=service_id,
+        date_mode=date_mode,
+    )
+    return [CalendarEventResponse.model_validate(event) for event in events]
 
 
 @router.get('/{booking_id}', response_model=BookingDocumentResponse)

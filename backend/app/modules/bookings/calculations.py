@@ -128,6 +128,7 @@ def serialize_booking_summary(booking: Booking) -> dict:
         'paid_total': float(booking_paid_total(booking)),
         'remaining_amount': float(booking_remaining_amount(booking)),
         'notes': booking.notes,
+        'external_code': booking.external_code,
     }
 
 

@@ -24,14 +24,11 @@ import {
   type BookingExportFilters,
   type PaymentExportFilters,
 } from '../api';
+import { downloadFile } from '../../../lib/api';
 import { useLanguage } from '../../language/LanguageProvider';
 import { ExportSchedulesSection } from '../ExportSchedulesSection';
 import { EMPTY_VALUE } from '../../../text/common';
 import { useExportsText } from '../../../text/exports';
-
-function downloadFile(url: string) {
-  window.location.assign(url);
-}
 
 function openUrl(url: string) {
   window.open(url, '_blank', 'noopener,noreferrer');

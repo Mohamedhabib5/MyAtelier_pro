@@ -52,7 +52,7 @@ export function BookingEditorDialog({
   onReverseRevenueLine,
 }: Props) {
   return (
-    <AppDialogShell open={open} onClose={onClose} title={title} subtitle={subtitle} maxWidth='xl'>
+    <AppDialogShell open={open} onClose={onClose} title={title} subtitle={subtitle} maxWidth='xl' fullWidth>
       {loading && !creatingNew ? (
         <Stack alignItems='center' justifyContent='center' sx={{ minHeight: 240 }}>
           <CircularProgress />

@@ -61,6 +61,7 @@ class BookingsRepository:
                     Customer.full_name.ilike(pattern),
                     Customer.phone.ilike(pattern),
                     Booking.notes.ilike(pattern),
+                    Booking.external_code.ilike(pattern),
                     ServiceCatalogItem.name.ilike(pattern),
                 )
             )
@@ -95,6 +96,45 @@ class BookingsRepository:
         order_map = {booking_id: index for index, booking_id in enumerate(ids)}
         rows.sort(key=lambda row: order_map.get(row.id, len(order_map)))
         return rows, total
+
+    def list_calendar_lines(
+        self,
+        company_id: str,
+        *,
+        branch_id: str | None = None,
+        date_from: date | None = None,
+        date_to: date | None = None,
+        department_ids: list[str] | None = None,
+        service_ids: list[str] | None = None,
+        date_mode: str = "service",
+    ) -> list[BookingLine]:
+        stmt = (
+            select(BookingLine)
+            .join(BookingLine.booking)
+            .join(BookingLine.department)
+            .join(BookingLine.service)
+            .join(Booking.customer)
+            .where(Booking.company_id == company_id)
+        )
+        if branch_id:
+            stmt = stmt.where(Booking.branch_id == branch_id)
+        if department_ids:
+            stmt = stmt.where(BookingLine.department_id.in_(department_ids))
+        if service_ids:
+            stmt = stmt.where(BookingLine.service_id.in_(service_ids))
+        
+        date_col = BookingLine.service_date if date_mode == "service" else Booking.booking_date
+        if date_from:
+            stmt = stmt.where(date_col >= date_from)
+        if date_to:
+            stmt = stmt.where(date_col <= date_to)
+
+        stmt = stmt.options(
+            joinedload(BookingLine.booking).joinedload(Booking.customer),
+            joinedload(BookingLine.department),
+            joinedload(BookingLine.service),
+        )
+        return list(self.db.scalars(stmt))
 
     def get_booking(self, booking_id: str) -> Booking | None:
         stmt = self._booking_query().where(Booking.id == booking_id)

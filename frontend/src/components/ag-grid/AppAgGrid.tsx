@@ -231,18 +231,22 @@ export function AppAgGrid<Row>({
               {toolbarActions}
               <Button 
                 variant='outlined' 
-                startIcon={<ViewColumnOutlinedIcon size={18} />} 
                 onClick={(event) => setColumnsAnchor(event.currentTarget)}
-                sx={{ whiteSpace: 'nowrap', borderRadius: 3 }}
+                sx={{ 
+                  whiteSpace: 'nowrap', 
+                  borderRadius: 3,
+                }}
               >
                 {columnsLabel}
               </Button>
               <Button 
                 variant='contained' 
                 color='inherit' 
-                startIcon={<DownloadOutlinedIcon size={18} />} 
                 onClick={(event) => setExportAnchor(event.currentTarget)}
-                sx={{ whiteSpace: 'nowrap', borderRadius: 3 }}
+                sx={{ 
+                  whiteSpace: 'nowrap', 
+                  borderRadius: 3,
+                }}
               >
                 {exportLabel}
               </Button>

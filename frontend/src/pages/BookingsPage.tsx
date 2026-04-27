@@ -14,7 +14,9 @@ import {
 import { listDepartments, listServices } from '../features/catalog/api';
 import { listCustomers } from '../features/customers/api';
 import { listDresses } from '../features/dresses/api';
+import { getBookingsExcelUrl } from '../features/exports/api';
 import { useLanguage } from '../features/language/LanguageProvider';
+import { downloadFile } from '../lib/api';
 import { listPaymentMethods } from '../features/paymentMethods/api';
 import { useBookingsText } from '../text/bookings';
 
@@ -151,6 +153,16 @@ export function BookingsPage() {
         onOpenEdit={(record) => {
           setCreatingNew(false);
           setEditingBookingId(record.id);
+        }}
+        onExportXlsx={() => {
+          downloadFile(getBookingsExcelUrl(undefined, {
+            search: deferredSearch || undefined,
+            status: statusFilter || undefined,
+            dateFrom: dateFrom || undefined,
+            dateTo: dateTo || undefined,
+            sortBy,
+            sortDir,
+          }));
         }}
       />
 

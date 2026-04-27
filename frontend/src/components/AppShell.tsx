@@ -1,6 +1,7 @@
 import { 
   LayoutDashboard, 
   CalendarRange, 
+  CalendarDays,
   Users, 
   Shirt, 
   Banknote,
@@ -65,6 +66,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const navItems = [
     { to: '/dashboard', label: navigationText.dashboard, icon: <LayoutDashboard size={20} /> },
     { to: '/bookings', label: navigationText.pages.bookings, icon: <CalendarRange size={20} /> },
+    { to: '/calendar', label: navigationText.pages.calendar, icon: <CalendarDays size={20} /> },
     { to: '/customers', label: navigationText.pages.customers, icon: <Users size={20} /> },
     { to: '/dresses', label: navigationText.pages.dresses, icon: <Shirt size={20} /> },
     { to: '/payments', label: navigationText.pages.payments, icon: <Banknote size={20} /> },

@@ -42,6 +42,7 @@ export type BookingSummaryRecord = {
   paid_total: number;
   remaining_amount: number;
   notes: string | null;
+  external_code: string | null;
 };
 
 export type BookingDocumentRecord = BookingSummaryRecord & {
@@ -66,6 +67,27 @@ export type BookingTableQuery = {
   sortDir?: 'asc' | 'desc';
 };
 
+export type CalendarEventRecord = {
+  id: string;
+  booking_id: string;
+  title: string;
+  start: string;
+  end: string;
+  status: string;
+  department_name: string;
+  service_name: string;
+  customer_name: string;
+  booking_number: string;
+};
+
+export type CalendarQuery = {
+  dateFrom?: string;
+  dateTo?: string;
+  departmentIds?: string[];
+  serviceIds?: string[];
+  dateMode?: 'service' | 'reservation';
+};
+
 export type BookingLinePayload = {
   id?: string | null;
   department_id: string;
@@ -81,9 +103,10 @@ export type BookingLinePayload = {
 
 export type BookingDocumentPayload = {
   customer_id: string;
-  initial_payment_method_id?: string | null;
-  booking_date?: string | null;
-  notes?: string | null;
+  initial_payment_method_id: string | null;
+  booking_date: string | null;
+  notes: string | null;
+  external_code: string | null;
   lines: BookingLinePayload[];
 };
 
@@ -135,4 +158,19 @@ export function reverseBookingLineRevenue(
   if (options?.overrideReason?.trim()) params.set('override_reason', options.overrideReason.trim());
   const suffix = params.toString() ? `?${params.toString()}` : '';
   return apiRequest<BookingDocumentRecord>(`/api/bookings/${bookingId}/lines/${lineId}/reverse-revenue${suffix}`, { method: 'POST' });
+}
+
+export function listCalendarEvents(query: CalendarQuery): Promise<CalendarEventRecord[]> {
+  const params = new URLSearchParams();
+  if (query.dateFrom) params.set('date_from', query.dateFrom);
+  if (query.dateTo) params.set('date_to', query.dateTo);
+  if (query.departmentIds?.length) {
+    query.departmentIds.forEach(id => params.append('department_id', id));
+  }
+  if (query.serviceIds?.length) {
+    query.serviceIds.forEach(id => params.append('service_id', id));
+  }
+  if (query.dateMode) params.set('date_mode', query.dateMode);
+  const suffix = params.toString() ? `?${params.toString()}` : '';
+  return apiRequest<CalendarEventRecord[]>(`/api/bookings/calendar/events${suffix}`, { method: 'GET' });
 }
