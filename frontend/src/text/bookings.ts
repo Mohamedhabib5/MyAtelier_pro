@@ -14,6 +14,7 @@ const bookingsText = {
     },
     table: {
       bookingNumber: 'رقم الحجز',
+      externalCode: 'كود خارجي',
       customer: 'العميل',
       lineCount: 'عدد السطور',
       nextServiceDate: 'أقرب تاريخ خدمة',
@@ -27,6 +28,7 @@ const bookingsText = {
       addCustomer: 'إضافة عميل',
       addLine: 'إضافة سطر',
       bookingDate: 'تاريخ الحجز',
+      externalCode: 'كود خارجي',
       cancelLine: 'إلغاء السطر',
       completeLine: 'إكمال',
       createTitle: 'وثيقة حجز جديدة',
@@ -86,6 +88,7 @@ const bookingsText = {
     },
     table: {
       bookingNumber: 'Booking #',
+      externalCode: 'External Code',
       customer: 'Customer',
       lineCount: 'Lines',
       nextServiceDate: 'Next service date',
@@ -99,6 +102,7 @@ const bookingsText = {
       addCustomer: 'Add customer',
       addLine: 'Add line',
       bookingDate: 'Booking date',
+      externalCode: 'External Code',
       cancelLine: 'Cancel line',
       completeLine: 'Complete',
       createTitle: 'New booking document',

@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
@@ -34,7 +34,9 @@ def test_admin_can_download_customers_booking_and_payment_exports(app_client: Te
     custody_xlsx = app_client.get('/api/exports/custody.xlsx')
 
     assert customers_export.status_code == 200
-    assert 'attachment; filename=' in customers_export.headers['content-disposition']
+    disposition = customers_export.headers['content-disposition']
+    assert 'attachment; filename="customers_' in disposition
+    assert '; filename*=UTF-8\'\'customers_' in disposition
     assert 'full_name,phone' in customers_export.text
     assert 'Bride One' in customers_export.text
 

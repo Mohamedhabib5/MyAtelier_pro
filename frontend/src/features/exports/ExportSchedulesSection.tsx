@@ -8,16 +8,13 @@ import { useMemo, useState } from 'react';
 
 import { AppDataTable } from '../../components/data-table/AppDataTable';
 import { SectionCard } from '../../components/SectionCard';
+import { downloadFile } from '../../lib/api';
 import { queryClient } from '../../lib/queryClient';
 import { cadenceLabel, exportTypeLabel, useExportsText } from '../../text/exports';
 import { useLanguage } from '../language/LanguageProvider';
 import { createExportSchedule, listExportSchedules, runExportSchedule, toggleExportSchedule } from './api';
 
 const branchScopedTypes = new Set(['bookings_csv', 'booking_lines_csv', 'payments_csv', 'payment_allocations_csv', 'finance_print', 'reports_print']);
-
-function openUrl(url: string) {
-  window.open(url, '_blank', 'noopener,noreferrer');
-}
 
 export function ExportSchedulesSection({ activeBranchName }: { activeBranchName?: string | null }) {
   const { language } = useLanguage();
@@ -39,7 +36,11 @@ export function ExportSchedulesSection({ activeBranchName }: { activeBranchName?
     mutationFn: runExportSchedule,
     onSuccess: async (result) => {
       await queryClient.invalidateQueries({ queryKey: ['exports', 'schedules'] });
-      openUrl(result.run_url);
+      if (result.run_url.startsWith('/api/')) {
+        downloadFile(result.run_url);
+      } else {
+        window.open(result.run_url, '_blank', 'noopener,noreferrer');
+      }
     },
     onError: (mutationError: Error) => setError(mutationError.message),
   });

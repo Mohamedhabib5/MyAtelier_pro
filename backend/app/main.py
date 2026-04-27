@@ -118,7 +118,14 @@ def create_app(settings_obj: Settings | None = None) -> FastAPI:
 
     allow_origins = settings_obj.cors_origins()
     if allow_origins:
-        app.add_middleware(CORSMiddleware, allow_origins=allow_origins, allow_credentials=True, allow_methods=['*'], allow_headers=['*'])
+        app.add_middleware(
+            CORSMiddleware, 
+            allow_origins=allow_origins, 
+            allow_credentials=True, 
+            allow_methods=['*'], 
+            allow_headers=['*'],
+            expose_headers=['Content-Disposition']
+        )
 
     trusted_hosts = settings_obj.trusted_hosts()
     if trusted_hosts:

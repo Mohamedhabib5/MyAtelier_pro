@@ -9,6 +9,7 @@ const LoginPage = lazy(() => import('../pages/LoginPage').then((module) => ({ de
 const FinanceDashboardPage = lazy(() => import('../pages/FinanceDashboardPage').then((module) => ({ default: module.FinanceDashboardPage })));
 const FinancePrintPage = lazy(() => import('../pages/FinancePrintPage').then((module) => ({ default: module.FinancePrintPage })));
 const BookingsPage = lazy(() => import('../pages/BookingsPage').then((module) => ({ default: module.BookingsPage })));
+const CalendarPage = lazy(() => import('../pages/CalendarPage').then((module) => ({ default: module.CalendarPage })));
 const CustomersPage = lazy(() => import('../pages/CustomersPage').then((module) => ({ default: module.CustomersPage })));
 const DressesPage = lazy(() => import('../pages/DressesPage').then((module) => ({ default: module.DressesPage })));
 const PaymentsPage = lazy(() => import('../pages/PaymentsPage').then((module) => ({ default: module.PaymentsPage })));
@@ -46,6 +47,7 @@ export const router = createBrowserRouter([
           { index: true, element: <Navigate to='/dashboard' replace /> },
           { path: 'dashboard', element: <FinanceDashboardPage /> },
           { path: 'bookings', element: <BookingsPage /> },
+          { path: 'calendar', element: <CalendarPage /> },
           { path: 'customers', element: <CustomersPage /> },
           { path: 'dresses', element: <DressesPage /> },
           { path: 'payments', element: <PaymentsPage /> },

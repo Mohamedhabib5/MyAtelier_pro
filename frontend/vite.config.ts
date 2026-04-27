@@ -23,6 +23,17 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
         ws: true,
+        configure: (proxy) => {
+          proxy.on('proxyRes', (proxyRes) => {
+            // Ensure Content-Disposition is exposed so the browser can read it
+            const existing = proxyRes.headers['access-control-expose-headers'] ?? '';
+            if (!String(existing).toLowerCase().includes('content-disposition')) {
+              proxyRes.headers['access-control-expose-headers'] = existing
+                ? `${existing}, Content-Disposition`
+                : 'Content-Disposition';
+            }
+          });
+        },
       },
     },
   },

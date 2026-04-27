@@ -35,6 +35,7 @@ type Props = {
   onSortChange: (sortBy: BookingSortField, sortDir: 'asc' | 'desc') => void;
   exportFilters: BookingExportFilters;
   onOpenEdit: (record: BookingSummaryRecord) => void;
+  onExportXlsx: () => void;
 };
 
 export function BookingsTableSection({
@@ -59,12 +60,14 @@ export function BookingsTableSection({
   onSortChange,
   exportFilters,
   onOpenEdit,
+  onExportXlsx,
 }: Props) {
   const commonText = useCommonText();
   const bookingsText = useBookingsText();
   const columns = useMemo<ColDef<BookingSummaryRecord>[]>(
     () => [
       { colId: 'booking_number', field: 'booking_number', headerName: bookingsText.table.bookingNumber, pinned: language === 'ar' ? 'right' : 'left', sort: sortBy === 'booking_number' ? sortDir : null },
+      { colId: 'external_code', field: 'external_code', headerName: bookingsText.table.externalCode, valueFormatter: ({ value }) => value ?? EMPTY_VALUE },
       { colId: 'customer_name', field: 'customer_name', headerName: bookingsText.table.customer, sort: sortBy === 'customer_name' ? sortDir : null },
       { colId: 'line_count', field: 'line_count', headerName: bookingsText.table.lineCount, filter: 'agNumberColumnFilter' },
       { colId: 'service_summary', field: 'service_summary', headerName: bookingsText.table.serviceSummary, flex: 1.3 },
@@ -88,7 +91,7 @@ export function BookingsTableSection({
         pinned: language === 'ar' ? 'left' : 'right',
         cellRenderer: ({ data }: { data: BookingSummaryRecord | undefined }) =>
           data ? (
-            <Button startIcon={<EditOutlinedIcon />} onClick={() => onOpenEdit(data)}>
+            <Button startIcon={<EditOutlinedIcon />} onClick={() => onOpenEdit(data)} sx={{ gap: 1 }}>
               {bookingsText.page.openDocument}
             </Button>
           ) : null,
@@ -132,9 +135,7 @@ export function BookingsTableSection({
         externalPagination={{ total, page, pageSize, onPageChange, onPageSizeChange }}
         loading={loading}
         csvFileName='bookings.csv'
-        onExportXlsx={() => {
-          window.open(getBookingsExcelUrl(undefined, exportFilters), '_blank', 'noopener,noreferrer');
-        }}
+        onExportXlsx={onExportXlsx}
         getRowId={({ data }) => data.id}
       />
     </SectionCard>

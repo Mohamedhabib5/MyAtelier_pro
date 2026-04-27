@@ -41,6 +41,7 @@ def create_booking(db: Session, actor: User, payload: BookingDocumentCreateReque
         booking_date=parse_date(payload.booking_date, default_today=True),
         status="draft",
         notes=clean_optional(payload.notes),
+        external_code=clean_optional(payload.external_code),
     )
     line_entries = [
         materialize_line(db, company.id, actor.id, payload_line, None, index)
@@ -82,6 +83,7 @@ def update_booking(db: Session, actor: User, booking_id: str, payload: BookingDo
     booking.customer_id = get_customer_or_404(db, company_id, payload.customer_id).id
     booking.booking_date = parse_date(payload.booking_date, default_today=False, current_value=booking.booking_date)
     booking.notes = clean_optional(payload.notes)
+    booking.external_code = clean_optional(payload.external_code)
     booking.updated_by_user_id = actor.id
     booking.entity_version += 1
 

@@ -57,6 +57,7 @@ class BookingSummaryResponse(BaseModel):
     paid_total: float
     remaining_amount: float
     notes: str | None
+    external_code: str | None
 
 
 class BookingDocumentResponse(BookingSummaryResponse):
@@ -88,8 +89,23 @@ class BookingDocumentCreateRequest(BaseModel):
     initial_payment_method_id: str | None = None
     booking_date: str | None = None
     notes: str | None = None
+    external_code: str | None = None
     lines: list[BookingLineInput] = Field(min_length=1)
 
 
 class BookingDocumentUpdateRequest(BookingDocumentCreateRequest):
     pass
+
+
+class CalendarEventResponse(BaseModel):
+    id: str
+    booking_id: str
+    title: str
+    start: str
+    end: str
+    status: str
+    department_name: str
+    service_name: str
+    customer_name: str
+    booking_number: str
+    external_code: str | None

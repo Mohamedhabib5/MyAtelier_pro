@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from urllib.parse import quote
 from fastapi import APIRouter, Depends, Query, Request, Response
 from sqlalchemy.orm import Session
 
@@ -245,15 +246,31 @@ def download_reports_pdf(
 
 
 def _csv_response(filename: str, content: str) -> Response:
-    disposition = f'attachment; filename="{filename}"'
-    return Response(content=content, media_type='text/csv; charset=utf-8', headers={'Content-Disposition': disposition})
+    # RFC 6266 compliant Content-Disposition
+    encoded_filename = quote(filename)
+    disposition = f'attachment; filename="{filename}"; filename*=UTF-8\'\'{encoded_filename}'
+    headers = {
+        'Content-Disposition': disposition,
+        'Access-Control-Expose-Headers': 'Content-Disposition'
+    }
+    return Response(content=content, media_type='text/csv; charset=utf-8', headers=headers)
 
 
 def _pdf_response(filename: str, content: bytes) -> Response:
-    disposition = f'attachment; filename="{filename}"'
-    return Response(content=content, media_type='application/pdf', headers={'Content-Disposition': disposition})
+    encoded_filename = quote(filename)
+    disposition = f'attachment; filename="{filename}"; filename*=UTF-8\'\'{encoded_filename}'
+    headers = {
+        'Content-Disposition': disposition,
+        'Access-Control-Expose-Headers': 'Content-Disposition'
+    }
+    return Response(content=content, media_type='application/pdf', headers=headers)
 
 
 def _xlsx_response(filename: str, content: bytes) -> Response:
-    disposition = f'attachment; filename="{filename}"'
-    return Response(content=content, media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', headers={'Content-Disposition': disposition})
+    encoded_filename = quote(filename)
+    disposition = f'attachment; filename="{filename}"; filename*=UTF-8\'\'{encoded_filename}'
+    headers = {
+        'Content-Disposition': disposition,
+        'Access-Control-Expose-Headers': 'Content-Disposition'
+    }
+    return Response(content=content, media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', headers=headers)
