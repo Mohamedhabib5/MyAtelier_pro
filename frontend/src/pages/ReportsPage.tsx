@@ -1,56 +1,226 @@
+import { useState } from 'react';
 import AssessmentOutlinedIcon from '@mui/icons-material/AssessmentOutlined';
-import { Alert, Box, Button, Grid, Stack, Typography } from '@mui/material';
+import DownloadOutlinedIcon from '@mui/icons-material/DownloadOutlined';
+import PictureAsPdfOutlinedIcon from '@mui/icons-material/PictureAsPdfOutlined';
+import { Alert, Box, Button, Divider, Stack, Tab, Tabs, Typography } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 
-import { SectionCard } from '../components/SectionCard';
-import { MetricCard } from '../features/dashboard/MetricCard';
-import { MetricsList } from '../features/dashboard/MetricsList';
+import {
+  getBookingsExcelUrl,
+  getBookingsExportUrl,
+  getPaymentsExcelUrl,
+  getPaymentsExportUrl,
+  getReportsPrintUrl,
+} from '../features/exports/api';
 import { useLanguage } from '../features/language/LanguageProvider';
-import { UpcomingBookingsTable } from '../features/reports/UpcomingBookingsTable';
-import { getReportsOverview } from '../features/reports/api';
-import { reportStatusLabel, useReportsText } from '../text/reports';
+import { BookingStatusGrid } from '../features/reports/BookingStatusGrid';
+import { ComprehensiveKpiRow } from '../features/reports/ComprehensiveKpiRow';
+import { ReportChartsRow } from '../features/reports/ReportChartsRow';
+import { ReportDateRangeFilter } from '../features/reports/ReportDateRangeFilter';
+import { TopClientsTable } from '../features/reports/TopClientsTable';
+import { DetailedReportGrid } from '../features/reports/DetailedReportGrid';
+import { getComprehensiveReport, getDetailedLinesReport } from '../features/reports/api';
+import { useReportFilters } from '../features/reports/useReportFilters';
 import { useLanguageFormatters } from '../text/common';
+import { reportStatusLabel, useReportsText } from '../text/reports';
+import { downloadFile } from '../lib/api';
+
+function openUrl(url: string) {
+  window.open(url, '_blank', 'noopener,noreferrer');
+}
 
 export function ReportsPage() {
   const { language } = useLanguage();
   const formatters = useLanguageFormatters();
   const reportsText = useReportsText();
-  const reportsQuery = useQuery({ queryKey: ['reports', 'overview'], queryFn: () => getReportsOverview() });
-  const report = reportsQuery.data;
-  const bookingStatuses = (report?.booking_status_counts ?? []).map((item) => ({ label: reportStatusLabel(language, item.key), value: `${formatters.formatCount(item.count)} ${reportsText.subtitles.itemsSuffix}` }));
-  const paymentMix = (report?.payment_type_totals ?? []).map((item) => ({ label: reportStatusLabel(language, item.key), value: formatters.formatCurrency(item.value) }));
-  const dressStatuses = (report?.dress_status_counts ?? []).map((item) => ({ label: reportStatusLabel(language, item.key), value: `${formatters.formatCount(item.count)} ${reportsText.subtitles.itemsSuffix}` }));
-  const departmentServices = (report?.department_service_counts ?? []).map((item) => ({ label: item.label, value: `${formatters.formatCount(item.count)} ${reportsText.subtitles.servicesCountSuffix}` }));
+  const ct = reportsText.comprehensive;
+
+  const {
+    dateFrom,
+    dateTo,
+    activePreset,
+    customFrom,
+    customTo,
+    selectPreset,
+    setCustomFrom,
+    setCustomTo,
+  } = useReportFilters();
+
+  const canFetch = Boolean(dateFrom && dateTo);
+
+  const reportQuery = useQuery({
+    queryKey: ['reports', 'comprehensive', dateFrom, dateTo],
+    queryFn: () => getComprehensiveReport({ date_from: dateFrom, date_to: dateTo }),
+    enabled: canFetch,
+    staleTime: 60_000,
+  });
+
+  const [currentTab, setCurrentTab] = useState(0);
+
+  const detailedQuery = useQuery({
+    queryKey: ['reports', 'detailed', dateFrom, dateTo],
+    queryFn: () => getDetailedLinesReport({ date_from: dateFrom, date_to: dateTo }),
+    enabled: canFetch && currentTab === 1,
+    staleTime: 60_000,
+  });
+
+  const report = reportQuery.data;
+
+  const kpis = [
+    {
+      label: ct.totalCollected,
+      value: formatters.formatCurrency(report?.total_collected ?? 0),
+      helper: ct.totalCollectedHelper,
+      color: '#2e7d32',
+    },
+    {
+      label: ct.totalRecognized,
+      value: formatters.formatCurrency(report?.total_recognized ?? 0),
+      helper: ct.totalRecognizedHelper,
+      color: '#1565c0',
+    },
+    {
+      label: ct.totalRemaining,
+      value: formatters.formatCurrency(report?.total_remaining ?? 0),
+      helper: ct.totalRemainingHelper,
+      color: '#ef6c00',
+    },
+    {
+      label: ct.totalBookings,
+      value: formatters.formatCount(report?.total_bookings ?? 0),
+      helper: ct.totalBookingsHelper,
+      color: '#6a1b9a',
+    },
+    {
+      label: ct.cancellationRate,
+      value: `${report?.cancellation_rate ?? 0}%`,
+      helper: ct.cancellationRateHelper,
+      color: '#c62828',
+    },
+  ];
+
+  const bookingExportFilters = {
+    dateFrom: dateFrom || undefined,
+    dateTo: dateTo || undefined,
+  };
+
+  const paymentExportFilters = {
+    dateFrom: dateFrom || undefined,
+    dateTo: dateTo || undefined,
+  };
 
   return (
     <Stack spacing={3}>
-      <Stack direction='row' justifyContent='space-between' alignItems='center'>
+      {/* Header */}
+      <Stack direction="row" justifyContent="space-between" alignItems="flex-start" flexWrap="wrap" gap={2}>
         <Box>
-          <Typography variant='h4'>{reportsText.page.title}</Typography>
-          <Typography color='text.secondary'>{reportsText.page.description}</Typography>
+          <Typography variant="h4">{ct.pageTitle}</Typography>
+          <Typography color="text.secondary">{ct.pageSubtitle}</Typography>
         </Box>
-        <Button variant='outlined' startIcon={<AssessmentOutlinedIcon />} disabled>{reportsText.page.button}</Button>
+        <Stack direction="row" spacing={1} flexWrap="wrap" gap={1}>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<DownloadOutlinedIcon />}
+            onClick={() => downloadFile(getBookingsExportUrl(undefined, bookingExportFilters))}
+          >
+            {ct.exportCSV}
+          </Button>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<DownloadOutlinedIcon />}
+            onClick={() => downloadFile(getBookingsExcelUrl(undefined, bookingExportFilters))}
+          >
+            {ct.exportExcel}
+          </Button>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<PictureAsPdfOutlinedIcon />}
+            onClick={() => openUrl(getReportsPrintUrl())}
+          >
+            {ct.exportPDF}
+          </Button>
+        </Stack>
       </Stack>
 
-      {reportsQuery.error instanceof Error ? <Alert severity='error'>{reportsQuery.error.message}</Alert> : null}
+      {/* Date range filter */}
+      <ReportDateRangeFilter
+        text={ct}
+        activePreset={activePreset}
+        customFrom={customFrom}
+        customTo={customTo}
+        dateFrom={dateFrom}
+        dateTo={dateTo}
+        onSelectPreset={selectPreset}
+        onCustomFromChange={setCustomFrom}
+        onCustomToChange={setCustomTo}
+      />
 
-      <Grid container spacing={2}>
-        <Grid size={{ xs: 12, md: 3 }}><MetricCard label={reportsText.metrics.activeCustomers} value={formatters.formatCount(report?.active_customers ?? 0)} helper={reportsText.helpers.activeCustomers} /></Grid>
-        <Grid size={{ xs: 12, md: 3 }}><MetricCard label={reportsText.metrics.activeServices} value={formatters.formatCount(report?.active_services ?? 0)} helper={reportsText.helpers.activeServices} /></Grid>
-        <Grid size={{ xs: 12, md: 3 }}><MetricCard label={reportsText.metrics.availableDresses} value={formatters.formatCount(report?.available_dresses ?? 0)} helper={reportsText.helpers.availableDresses} /></Grid>
-        <Grid size={{ xs: 12, md: 3 }}><MetricCard label={reportsText.metrics.upcomingBookings} value={formatters.formatCount(report?.upcoming_bookings ?? 0)} helper={reportsText.helpers.upcomingBookings} /></Grid>
-      </Grid>
+      {/* Tabs */}
+      <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+        <Tabs value={currentTab} onChange={(_, v) => setCurrentTab(v)} aria-label="report tabs">
+          <Tab label={ct.tabs?.overview ?? 'Overview'} />
+          <Tab label={ct.tabs?.detailed ?? 'Detailed Data'} />
+        </Tabs>
+      </Box>
 
-      <Grid container spacing={2}>
-        <Grid size={{ xs: 12, md: 3 }}><SectionCard title={reportsText.sections.bookingStatuses} subtitle={reportsText.subtitles.bookingStatuses}><MetricsList items={bookingStatuses} emptyLabel={reportsText.subtitles.empty} /></SectionCard></Grid>
-        <Grid size={{ xs: 12, md: 3 }}><SectionCard title={reportsText.sections.paymentMix} subtitle={reportsText.subtitles.paymentMix}><MetricsList items={paymentMix} emptyLabel={reportsText.subtitles.empty} /></SectionCard></Grid>
-        <Grid size={{ xs: 12, md: 3 }}><SectionCard title={reportsText.sections.dressStatuses} subtitle={reportsText.subtitles.dressStatuses}><MetricsList items={dressStatuses} emptyLabel={reportsText.subtitles.empty} /></SectionCard></Grid>
-        <Grid size={{ xs: 12, md: 3 }}><SectionCard title={reportsText.sections.departmentServices} subtitle={reportsText.subtitles.departmentServices}><MetricsList items={departmentServices} emptyLabel={reportsText.subtitles.empty} /></SectionCard></Grid>
-      </Grid>
+      {currentTab === 0 && (
+        <Stack spacing={3}>
+          {reportQuery.error instanceof Error ? (
+            <Alert severity="error">{reportQuery.error.message}</Alert>
+          ) : null}
 
-      <SectionCard title={reportsText.sections.upcoming} subtitle={reportsText.subtitles.upcoming}>
-        <UpcomingBookingsTable items={report?.upcoming_booking_items ?? []} />
-      </SectionCard>
+          {/* KPI row */}
+          <ComprehensiveKpiRow kpis={kpis} loading={reportQuery.isLoading} />
+
+          <Divider />
+
+          {/* Charts */}
+          <ReportChartsRow
+            dailyIncome={report?.daily_income ?? []}
+            departmentIncome={report?.department_income ?? []}
+            topServices={report?.top_services ?? []}
+            text={ct}
+            formatCurrency={formatters.formatCurrency}
+            formatCount={formatters.formatCount}
+          />
+
+          <Divider />
+
+          {/* Top clients */}
+          <TopClientsTable
+            clients={report?.top_clients ?? []}
+            text={ct}
+            formatCurrency={formatters.formatCurrency}
+            formatCount={formatters.formatCount}
+          />
+
+          <Divider />
+
+          {/* Booking statuses AG Grid */}
+          <BookingStatusGrid
+            statuses={report?.booking_status_counts ?? []}
+            language={language}
+            text={ct}
+            statusLabel={(key) => reportStatusLabel(language, key)}
+          />
+        </Stack>
+      )}
+
+      {currentTab === 1 && (
+        <Stack spacing={3}>
+          {detailedQuery.error instanceof Error ? (
+            <Alert severity="error">{detailedQuery.error.message}</Alert>
+          ) : null}
+          <DetailedReportGrid 
+            language={language} 
+            rows={detailedQuery.data ?? []} 
+            loading={detailedQuery.isLoading} 
+          />
+        </Stack>
+      )}
     </Stack>
   );
 }

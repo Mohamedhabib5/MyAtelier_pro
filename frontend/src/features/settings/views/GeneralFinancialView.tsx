@@ -6,6 +6,7 @@ import { NightlyStatusSection } from '../NightlyStatusSection';
 import { PaymentMethodsSection } from '../PaymentMethodsSection';
 import { PeriodLockSection } from '../PeriodLockSection';
 import { FiscalPeriodsSection } from '../FiscalPeriodsSection';
+import { CompensationTypesSettingsSection } from '../CompensationTypesSettingsSection';
 
 export function GeneralFinancialView() {
   const { language } = useLanguage();
@@ -43,6 +44,18 @@ export function GeneralFinancialView() {
 
       <FiscalPeriodsSection language={language} />
       
+      <CompensationTypesSettingsSection 
+        language={language}
+        onError={(nextError) => {
+          setError(nextError);
+          if (nextError) setMessage(null);
+        }}
+        onSuccess={(nextMessage) => {
+          setMessage(nextMessage);
+          setError(null);
+        }}
+      />
+
       <NightlyStatusSection language={language} />
     </Stack>
   );

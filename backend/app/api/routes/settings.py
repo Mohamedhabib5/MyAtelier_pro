@@ -28,6 +28,14 @@ from app.modules.organization.service import (
     get_company_settings,
     update_company_settings,
 )
+from app.modules.catalog.schemas import ServiceCreateRequest, ServiceResponse, ServiceUpdateRequest
+from app.modules.catalog.compensation_types import (
+    CompensationTypeCreateRequest,
+    CompensationTypeUpdateRequest,
+    create_compensation_type,
+    list_compensation_types,
+    update_compensation_type,
+)
 
 router = APIRouter(prefix='/settings', tags=['settings'])
 
@@ -131,6 +139,33 @@ def set_active_branch_route(
     )
     db.commit()
     return ActiveBranchResponse.model_validate(branch)
+
+
+@router.get('/compensation-types', response_model=list[ServiceResponse])
+def get_compensation_types_route(
+    db: Session = Depends(get_db),
+    _: User = Depends(require_settings_manage),
+) -> list[ServiceResponse]:
+    return [ServiceResponse.model_validate(item) for item in list_compensation_types(db)]
+
+
+@router.post('/compensation-types', response_model=ServiceResponse, status_code=201)
+def add_compensation_type_route(
+    payload: CompensationTypeCreateRequest,
+    current_user: User = Depends(require_settings_manage),
+    db: Session = Depends(get_db),
+) -> ServiceResponse:
+    return ServiceResponse.model_validate(create_compensation_type(db, current_user, payload))
+
+
+@router.patch('/compensation-types/{service_id}', response_model=ServiceResponse)
+def modify_compensation_type_route(
+    service_id: str,
+    payload: CompensationTypeUpdateRequest,
+    current_user: User = Depends(require_settings_manage),
+    db: Session = Depends(get_db),
+) -> ServiceResponse:
+    return ServiceResponse.model_validate(update_compensation_type(db, current_user, service_id, payload))
 
 
 @router.post('/backups', response_model=BackupRecordResponse)

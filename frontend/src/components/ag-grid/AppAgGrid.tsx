@@ -68,6 +68,9 @@ type Props<Row> = {
   onSortChange?: (sortBy: string | null, sortDir: 'asc' | 'desc' | null) => void;
   hideToolbar?: boolean;
   pagination?: boolean;
+  getRowStyle?: (params: any) => any;
+  getRowClass?: (params: any) => string | string[] | undefined;
+  pinnedBottomRowData?: Row[];
 };
 
 export function AppAgGrid<Row>({
@@ -100,6 +103,9 @@ export function AppAgGrid<Row>({
   onSortChange,
   hideToolbar = false,
   pagination = true,
+  getRowStyle,
+  getRowClass,
+  pinnedBottomRowData,
 }: Props<Row>) {
   const [internalSearch, setInternalSearch] = useState('');
   const [columnsAnchor, setColumnsAnchor] = useState<HTMLElement | null>(null);
@@ -300,6 +306,9 @@ export function AppAgGrid<Row>({
                   handleGridStateChanged(event);
                 }
               }}
+              getRowStyle={getRowStyle}
+              getRowClass={getRowClass}
+              pinnedBottomRowData={pinnedBottomRowData}
             />
           )}
           {!loading && !rows.length && emptyState ? (

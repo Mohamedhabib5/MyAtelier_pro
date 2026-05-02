@@ -110,6 +110,13 @@ export type BookingDocumentPayload = {
   lines: BookingLinePayload[];
 };
 
+export type BookingCompensationRequest = {
+  department_id: string;
+  service_id: string;
+  amount: number;
+  notes?: string;
+};
+
 export function listBookings(): Promise<BookingSummaryRecord[]> {
   return apiRequest<BookingSummaryRecord[]>('/api/bookings', { method: 'GET' });
 }
@@ -146,6 +153,10 @@ export function completeBookingLine(bookingId: string, lineId: string): Promise<
 
 export function cancelBookingLine(bookingId: string, lineId: string): Promise<BookingDocumentRecord> {
   return apiRequest<BookingDocumentRecord>(`/api/bookings/${bookingId}/lines/${lineId}/cancel`, { method: 'POST' });
+}
+
+export function createCompensationBooking(bookingId: string, payload: BookingCompensationRequest): Promise<BookingDocumentRecord> {
+  return apiRequest<BookingDocumentRecord>(`/api/bookings/${bookingId}/compensate`, { method: 'POST', body: JSON.stringify(payload) });
 }
 
 export function reverseBookingLineRevenue(

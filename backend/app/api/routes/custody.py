@@ -83,6 +83,7 @@ def collect_custody_compensation_route(
             current_user,
             request.session,
             case_id,
+            compensation_type_id=payload.compensation_type_id,
             amount=payload.amount,
             payment_date=payload.payment_date,
             note=payload.note,

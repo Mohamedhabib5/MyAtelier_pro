@@ -9,6 +9,7 @@ from app.modules.bookings.schemas import (
     BookingDocumentCreateRequest,
     BookingDocumentResponse,
     BookingDocumentUpdateRequest,
+    BookingCompensationCreateRequest,
     BookingSummaryPageResponse,
     BookingSummaryResponse,
     CalendarEventResponse,
@@ -20,6 +21,7 @@ from app.modules.bookings.query_service import (
 )
 from app.modules.bookings.service import (
     create_booking,
+    create_compensation_booking,
     get_booking_document,
     update_booking,
 )
@@ -173,3 +175,17 @@ def reverse_booking_line_revenue_route(
             override_reason=override_reason,
         )
     )
+
+
+@router.post('/{booking_id}/compensate', response_model=BookingDocumentResponse, status_code=status.HTTP_201_CREATED)
+def create_compensation_booking_route(
+    booking_id: str,
+    payload: BookingCompensationCreateRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_bookings_manage),
+) -> BookingDocumentResponse:
+    return BookingDocumentResponse.model_validate(
+        create_compensation_booking(db, current_user, booking_id, payload, request.session)
+    )
+

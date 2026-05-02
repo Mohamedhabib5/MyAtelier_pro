@@ -8,6 +8,7 @@ import { queryClient } from '../../lib/queryClient';
 import type { PaymentMethodRecord } from '../paymentMethods/api';
 import { collectCustodyCompensation, type CustodyCaseRecord } from './api';
 import { buildCustodyCaseOptionLabel } from './presentation';
+import { listCompensationTypes } from '../settings/api';
 
 type CustodyCompensationSectionProps = {
   caseOptions: CustodyCaseRecord[];
@@ -42,10 +43,13 @@ export function CustodyCompensationSection({
   text,
 }: CustodyCompensationSectionProps) {
   const [compCaseId, setCompCaseId] = useState('');
+  const [compTypeId, setCompTypeId] = useState('');
   const [compAmount, setCompAmount] = useState('');
   const [compPaymentMethodId, setCompPaymentMethodId] = useState('');
   const [compDate, setCompDate] = useState(new Date().toISOString().slice(0, 10));
   const [compNote, setCompNote] = useState('');
+  
+  const typesQuery = useQuery({ queryKey: ['settings', 'compensation-types'], queryFn: listCompensationTypes });
   useEffect(() => {
     if (!paymentMethods.length) return;
     if (compPaymentMethodId && paymentMethods.some((item) => item.id === compPaymentMethodId)) return;
@@ -54,18 +58,21 @@ export function CustodyCompensationSection({
   const compensationMutation = useMutation({
     mutationFn: ({
       caseId,
+      typeId,
       amountValue,
       dateValue,
       noteValue,
       paymentMethodId,
     }: {
       caseId: string;
+      typeId: string;
       amountValue: number;
       dateValue: string;
       noteValue: string;
       paymentMethodId: string;
     }) =>
       collectCustodyCompensation(caseId, {
+        compensation_type_id: typeId,
         amount: amountValue,
         payment_date: dateValue,
         note: noteValue || null,
@@ -95,7 +102,29 @@ export function CustodyCompensationSection({
         ))}
       </TextField>
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+        <TextField 
+          select 
+          label={language === 'ar' ? 'نوع التعويض' : 'Compensation Type'} 
+          value={compTypeId} 
+          onChange={(event) => {
+            const val = event.target.value;
+            setCompTypeId(val);
+            const found = typesQuery.data?.find((t) => t.id === val);
+            if (found && found.default_price > 0) {
+              setCompAmount(found.default_price.toString());
+            }
+          }}
+          fullWidth
+        >
+          {(typesQuery.data ?? []).map((item) => (
+            <MenuItem key={item.id} value={item.id}>
+              {item.name}
+            </MenuItem>
+          ))}
+        </TextField>
         <StableNumericField label={text.amount} value={compAmount} onValueChange={setCompAmount} fullWidth />
+      </Stack>
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
         <TextField select label={text.paymentMethod} value={compPaymentMethodId} onChange={(event) => setCompPaymentMethodId(event.target.value)} fullWidth>
           {paymentMethods.map((method) => (
             <MenuItem key={method.id} value={method.id}>
@@ -116,11 +145,12 @@ export function CustodyCompensationSection({
       <Button
         variant='outlined'
         fullWidth
-        disabled={!compCaseId || !compAmount || Number(compAmount) <= 0 || !compPaymentMethodId || compensationMutation.isPending}
+        disabled={!compCaseId || !compTypeId || !compAmount || Number(compAmount) <= 0 || !compPaymentMethodId || compensationMutation.isPending}
         onClick={() => {
-          if (!compCaseId || !compAmount || Number(compAmount) <= 0) return;
+          if (!compCaseId || !compTypeId || !compAmount || Number(compAmount) <= 0) return;
           void compensationMutation.mutateAsync({
             caseId: compCaseId,
+            typeId: compTypeId,
             amountValue: Number(compAmount),
             dateValue: compDate,
             noteValue: compNote,

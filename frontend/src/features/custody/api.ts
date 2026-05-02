@@ -1,4 +1,4 @@
-﻿import { apiRequest } from '../../lib/api';
+import { apiRequest } from '../../lib/api';
 
 export type CustodyCaseView = 'open' | 'settled' | 'all';
 
@@ -56,6 +56,7 @@ export type CustodyCaseActionPayload = {
 };
 
 export type CustodyCompensationCollectPayload = {
+  compensation_type_id: string;
   amount: number;
   payment_date: string;
   note?: string | null;
