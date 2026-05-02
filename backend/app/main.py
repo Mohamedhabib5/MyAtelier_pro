@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.middleware.sessions import SessionMiddleware
@@ -182,6 +184,14 @@ def create_app(settings_obj: Settings | None = None) -> FastAPI:
             except Exception:
                 pass
         return JSONResponse(status_code=exc.status_code, content={'detail': exc.detail})
+
+    @app.exception_handler(RequestValidationError)
+    async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+        print(f"Validation error for {request.url}: {exc.errors()}", file=sys.stderr)
+        return JSONResponse(
+            status_code=422,
+            content={"detail": exc.errors()},
+        )
 
     app.include_router(health.router, prefix='/api')
     app.include_router(auth.router, prefix='/api')

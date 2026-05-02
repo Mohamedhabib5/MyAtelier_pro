@@ -118,6 +118,24 @@ export type PeriodLockExceptionRecord = {
   override_reason: string | null;
 };
 
+export type CompensationTypeRecord = {
+  id: string;
+  name: string;
+  default_price: number;
+  duration_minutes: number | null;
+  notes: string | null;
+  display_order: number;
+  is_active: boolean;
+};
+
+export type CompensationTypePayload = {
+  name: string;
+  default_price: number;
+  duration_minutes?: number | null;
+  notes?: string | null;
+  display_order: number;
+};
+
 export type NightlyRunSnapshotRecord = {
   available: boolean;
   event: string | null;
@@ -224,6 +242,24 @@ export function updatePeriodLock(payload: PeriodLockUpdatePayload): Promise<Peri
 
 export function listPeriodLockExceptions(limit = 100): Promise<PeriodLockExceptionRecord[]> {
   return apiRequest<PeriodLockExceptionRecord[]>(`/api/settings/period-lock/exceptions?limit=${limit}`, { method: 'GET' });
+}
+
+export function listCompensationTypes(): Promise<CompensationTypeRecord[]> {
+  return apiRequest<CompensationTypeRecord[]>('/api/settings/compensation-types', { method: 'GET' });
+}
+
+export function createCompensationType(payload: CompensationTypePayload): Promise<CompensationTypeRecord> {
+  return apiRequest<CompensationTypeRecord>('/api/settings/compensation-types', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateCompensationType(id: string, payload: CompensationTypePayload): Promise<CompensationTypeRecord> {
+  return apiRequest<CompensationTypeRecord>(`/api/settings/compensation-types/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
 }
 
 export function getLatestNightlySnapshot(): Promise<NightlyRunSnapshotRecord> {

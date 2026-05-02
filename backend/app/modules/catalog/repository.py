@@ -11,7 +11,10 @@ class CatalogRepository:
         self.db = db
 
     def list_departments(self, company_id: str, *, is_active: bool | None = None) -> list[Department]:
-        stmt = select(Department).where(Department.company_id == company_id)
+        stmt = select(Department).where(
+            Department.company_id == company_id,
+            Department.code != 'SYS-COMPENSATIONS'
+        )
         if is_active is not None:
             stmt = stmt.where(Department.is_active == is_active)
         stmt = stmt.order_by(Department.display_order.asc(), Department.name.asc())
@@ -35,8 +38,12 @@ class CatalogRepository:
     def list_services(self, company_id: str, *, is_active: bool | None = None) -> list[ServiceCatalogItem]:
         stmt = (
             select(ServiceCatalogItem)
+            .join(Department, ServiceCatalogItem.department_id == Department.id)
             .options(joinedload(ServiceCatalogItem.department))
-            .where(ServiceCatalogItem.company_id == company_id)
+            .where(
+                ServiceCatalogItem.company_id == company_id,
+                Department.code != 'SYS-COMPENSATIONS'
+            )
         )
         if is_active is not None:
             stmt = stmt.where(ServiceCatalogItem.is_active == is_active)

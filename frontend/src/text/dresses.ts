@@ -16,7 +16,8 @@ const dressesText = {
       imageRef: 'مرجع الصورة',
       purchaseDate: 'تاريخ الشراء',
       status: 'الحالة',
-      type: 'النوع',
+      type: 'اسم الفستان',
+      description: 'وصف الفستان',
     },
     dialog: {
       code: 'كود الفستان',
@@ -57,7 +58,8 @@ const dressesText = {
       imageRef: 'Image reference',
       purchaseDate: 'Purchase date',
       status: 'Status',
-      type: 'Type',
+      type: 'Dress Name',
+      description: 'Description',
     },
     dialog: {
       code: 'Dress code',

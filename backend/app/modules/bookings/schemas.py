@@ -109,3 +109,10 @@ class CalendarEventResponse(BaseModel):
     customer_name: str
     booking_number: str
     external_code: str | None
+
+
+class BookingCompensationCreateRequest(BaseModel):
+    department_id: str
+    service_id: str
+    amount: float = Field(gt=0)
+    notes: str | None = None

@@ -24,6 +24,7 @@ class Booking(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     status: Mapped[str] = mapped_column(String(40), nullable=False)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     external_code: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    parent_booking_id: Mapped[str | None] = mapped_column(ForeignKey('bookings.id', ondelete='SET NULL'), nullable=True)
 
     branch = relationship('Branch', lazy='joined')
     customer = relationship('Customer', lazy='joined')
@@ -34,6 +35,9 @@ class Booking(Base, UUIDPrimaryKeyMixin, TimestampMixin):
         cascade='all, delete-orphan',
         order_by='BookingLine.line_number',
     )
+    created_by = relationship('User', foreign_keys=[created_by_user_id], lazy='select')
+    updated_by = relationship('User', foreign_keys=[updated_by_user_id], lazy='select')
+    parent = relationship('Booking', remote_side='Booking.id', primaryjoin='Booking.parent_booking_id == Booking.id', lazy='select')
 
 
 class BookingLine(Base, UUIDPrimaryKeyMixin, TimestampMixin):
@@ -64,3 +68,5 @@ class BookingLine(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     dress = relationship('DressResource', lazy='joined')
     revenue_journal_entry = relationship('JournalEntry', lazy='joined')
     payment_allocations = relationship('PaymentAllocation', back_populates='booking_line', lazy='selectin')
+    created_by = relationship('User', foreign_keys=[created_by_user_id], lazy='select')
+    updated_by = relationship('User', foreign_keys=[updated_by_user_id], lazy='select')

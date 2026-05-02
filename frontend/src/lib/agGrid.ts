@@ -15,6 +15,9 @@ import {
   RenderApiModule,
   RowAutoHeightModule,
   RowSelectionModule,
+  RowStyleModule,
+  CellStyleModule,
+  PinnedRowModule,
   TextFilterModule,
   ValidationModule,
 } from 'ag-grid-community';
@@ -40,6 +43,9 @@ export function ensureAgGridModulesRegistered() {
     RenderApiModule,
     RowAutoHeightModule,
     RowSelectionModule,
+    RowStyleModule,
+    CellStyleModule,
+    PinnedRowModule,
     TextFilterModule,
     ValidationModule,
   ]);

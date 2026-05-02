@@ -135,3 +135,64 @@ def update_booking(db: Session, actor: User, booking_id: str, payload: BookingDo
     )
     db.commit()
     return serialize_booking_document(reload_booking_or_404(BookingsRepository(db), booking.id))
+
+
+def create_compensation_booking(db: Session, actor: User, original_booking_id: str, payload: BookingCompensationCreateRequest, session: dict) -> dict:
+    original = get_scoped_booking(db, original_booking_id, session)
+    company = get_company_settings(db)
+    branch = ensure_active_branch(db, session)
+    repo = BookingsRepository(db)
+    
+    compensation_number = f"{original.booking_number}-C"
+    
+    # Check if already exists (unlikely but safe)
+    existing = db.query(Booking).filter_by(company_id=company.id, booking_number=compensation_number).first()
+    if existing:
+        # If multiple compensations, add index
+        count = db.query(Booking).filter(Booking.booking_number.like(f"{compensation_number}%")).count()
+        compensation_number = f"{compensation_number}{count + 1}"
+
+    booking = Booking(
+        company_id=company.id,
+        branch_id=branch.id,
+        created_by_user_id=actor.id,
+        updated_by_user_id=actor.id,
+        entity_version=1,
+        booking_number=compensation_number,
+        customer_id=original.customer_id,
+        booking_date=parse_date(None, default_today=True),
+        status="active",
+        parent_booking_id=original.id,
+        notes=f"سند تعويض مرتبط بالحجز {original.booking_number}. {clean_optional(payload.notes) or ''}",
+    )
+    
+    line = BookingLine(
+        booking=booking,
+        created_by_user_id=actor.id,
+        updated_by_user_id=actor.id,
+        department_id=payload.department_id,
+        service_id=payload.service_id,
+        line_number=1,
+        service_date=booking.booking_date,
+        suggested_price=Decimal(str(payload.amount)),
+        line_price=Decimal(str(payload.amount)),
+        status="active"
+    )
+    booking.lines = [line]
+    
+    repo.add_booking(booking)
+    db.flush()
+    record_audit(
+        db,
+        actor_user_id=actor.id,
+        action="booking.compensation_created",
+        target_type="booking",
+        target_id=booking.id,
+        summary=f"Created compensation booking {booking.booking_number} from {original.booking_number}",
+        diff={
+            "parent_id": original.id,
+            "amount": float(line.line_price)
+        },
+    )
+    db.commit()
+    return serialize_booking_document(reload_booking_or_404(repo, booking.id))

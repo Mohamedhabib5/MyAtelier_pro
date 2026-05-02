@@ -114,6 +114,7 @@ def collect_custody_compensation(
     session: dict,
     case_id: str,
     *,
+    compensation_type_id: str,
     amount: float,
     payment_date: str,
     note: str | None = None,
@@ -122,26 +123,83 @@ def collect_custody_compensation(
     override_reason: str | None = None,
 ) -> dict:
     from app.modules.custody.service import _get_scoped_case_or_404, _serialize_case
+    from app.modules.catalog.repository import CatalogRepository
+    from app.modules.bookings.repository import BookingsRepository
+    from app.modules.bookings.models import Booking, BookingLine
+    from app.modules.bookings.rules import parse_date
+    from app.modules.bookings.service import clean_optional
+    from app.modules.payments.booking_bridge import create_payment_document_from_lines
+    from decimal import Decimal
 
     custody_case = _get_scoped_case_or_404(db, session, case_id)
     if custody_case.customer_id is None:
         raise ValidationAppError("لا يمكن تسجيل تعويض العهدة بدون عميل مرتبط بالحالة")
     if custody_case.compensation_payment_document_id:
         raise ValidationAppError("تم تسجيل تعويض لهذه الحالة مسبقًا")
+    if not custody_case.booking_id:
+        raise ValidationAppError("لا يمكن تسجيل تعويض على عهدة غير مرتبطة بحجز")
 
-    payment_document = create_custody_compensation_payment(
+    service = CatalogRepository(db).get_service(compensation_type_id)
+    if not service:
+        raise ValidationAppError("نوع التعويض غير صالح")
+
+    repo = BookingsRepository(db)
+    original_booking = repo.get_booking(custody_case.booking_id)
+
+    # 1. Create Compensation Booking
+    compensation_number = f"{original_booking.booking_number}-C"
+    existing = db.query(Booking).filter_by(company_id=original_booking.company_id, booking_number=compensation_number).first()
+    if existing:
+        count = db.query(Booking).filter(Booking.booking_number.like(f"{compensation_number}%")).count()
+        compensation_number = f"{compensation_number}{count + 1}"
+
+    parsed_payment_date = parse_date(payment_date)
+
+    booking = Booking(
+        company_id=original_booking.company_id,
+        branch_id=custody_case.branch_id,
+        created_by_user_id=actor.id,
+        updated_by_user_id=actor.id,
+        entity_version=1,
+        booking_number=compensation_number,
+        customer_id=original_booking.customer_id,
+        booking_date=parsed_payment_date,
+        status="active",
+        parent_booking_id=original_booking.id,
+        notes=f"سند تعويض مرتبط بالحجز {original_booking.booking_number}. {clean_optional(note) or ''}",
+    )
+    
+    line = BookingLine(
+        booking=booking,
+        created_by_user_id=actor.id,
+        updated_by_user_id=actor.id,
+        entity_version=1,
+        department_id=service.department_id,
+        service_id=service.id,
+        line_number=1,
+        service_date=booking.booking_date,
+        suggested_price=Decimal(str(amount)),
+        line_price=Decimal(str(amount)),
+        tax_rate_percent=Decimal("0.00"),
+        tax_amount=Decimal("0.00"),
+        status="active"
+    )
+    booking.lines = [line]
+    repo.add_booking(booking)
+    db.flush()
+
+    # 2. Create Payment Document linked to this line
+    payment_document = create_payment_document_from_lines(
         db,
         actor,
-        session,
-        customer_id=custody_case.customer_id,
-        payment_date=payment_date,
-        amount=amount,
-        source_case_id=custody_case.id,
-        note=note,
+        booking,
+        [(line, Decimal(str(amount)))],
+        parsed_payment_date,
         payment_method_id=payment_method_id,
         override_lock=override_lock,
         override_reason=override_reason,
     )
+
     previous_status = custody_case.status
     custody_case.status = "settled"
     custody_case.updated_by_user_id = actor.id
@@ -164,6 +222,7 @@ def collect_custody_compensation(
             "compensation_amount": float(payment_document.direct_amount),
             "payment_document_id": payment_document.id,
             "entity_version": custody_case.entity_version,
+            "compensation_booking_id": booking.id,
         },
     )
     db.commit()

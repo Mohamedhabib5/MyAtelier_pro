@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -59,6 +59,7 @@ class CustodyCaseActionRequest(BaseModel):
 
 
 class CustodyCompensationCollectRequest(BaseModel):
+    compensation_type_id: str = Field(min_length=3, max_length=64)
     amount: float = Field(gt=0)
     payment_date: str
     note: str | None = Field(default=None, max_length=1000)

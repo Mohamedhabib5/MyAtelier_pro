@@ -163,6 +163,7 @@ export function DressesPage() {
           columns={[
             { key: 'code', header: dressesText.table.code, searchValue: (row) => row.code, render: (row) => row.code },
             { key: 'type', header: dressesText.table.type, searchValue: (row) => row.dress_type, render: (row) => row.dress_type },
+            { key: 'description', header: dressesText.table.description, searchValue: (row) => row.description ?? '', render: (row) => row.description ?? EMPTY_VALUE },
             {
               key: 'status',
               header: dressesText.table.status,
