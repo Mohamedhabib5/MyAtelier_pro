@@ -45,8 +45,8 @@ def get_scoped_payment_document(db: Session, payment_document_id: str, session: 
 def ensure_payment_document_is_editable(payment_document: PaymentDocument) -> None:
     if payment_document.status == PaymentReceiptStatus.VOIDED.value:
         raise ValidationAppError("لا يمكن تعديل سندات الدفع المبطلة")
-    if payment_document.document_kind != "collection":
-        raise ValidationAppError("سندات الاسترداد التاريخية للقراءة فقط في هذه المرحلة")
+    if payment_document.document_kind not in ("collection", "refund"):
+        raise ValidationAppError("هذا النوع من السندات للقراءة فقط في هذه المرحلة")
 
 
 def load_document_or_404(repo: PaymentsRepository, payment_document_id: str, *, include_allocations: bool) -> dict:

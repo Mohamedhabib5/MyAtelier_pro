@@ -11,6 +11,7 @@ from decimal import Decimal, ROUND_HALF_UP
 
 from sqlalchemy.orm import Session
 
+from app.modules.bookings.calculations import line_paid_total
 from app.modules.bookings.models import Booking, BookingLine
 from app.modules.bookings.repository import BookingsRepository
 from app.modules.customers.models import Customer
@@ -77,9 +78,7 @@ def get_comprehensive_report(
         for line in booking.lines:
             if line.status == 'cancelled':
                 continue
-            paid_for_line = sum(
-                Decimal(str(a.allocated_amount)) for a in line.payment_allocations
-            )
+            paid_for_line = line_paid_total(line)
             remaining = Decimal(str(line.line_price)) - paid_for_line
             if remaining > ZERO:
                 total_remaining += remaining.quantize(PRICE_QUANT, rounding=ROUND_HALF_UP)

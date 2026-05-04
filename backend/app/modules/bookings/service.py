@@ -4,12 +4,12 @@ from decimal import Decimal
 
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import ValidationAppError
+from app.core.exceptions import ValidationAppError, ConflictError
 from app.modules.bookings.calculations import derive_booking_status, line_paid_total, serialize_booking_document
 from app.modules.bookings.document_access import BOOKING_SEQUENCE_KEY, ensure_booking_sequence, get_scoped_booking, reload_booking_or_404
 from app.modules.bookings.line_mutations import create_initial_payment_document, materialize_line
 from app.modules.bookings.models import Booking, BookingLine
-from app.modules.bookings.query_service import list_booking_page, list_bookings
+from app.modules.bookings.query_service import get_calendar_events, list_booking_page, list_bookings
 from app.modules.bookings.reference_data import get_customer_or_404
 from app.modules.bookings.repository import BookingsRepository
 from app.modules.bookings.rules import clean_optional, parse_date
@@ -79,6 +79,10 @@ def create_booking(db: Session, actor: User, payload: BookingDocumentCreateReque
 
 def update_booking(db: Session, actor: User, booking_id: str, payload: BookingDocumentUpdateRequest, session: dict) -> dict:
     booking = get_scoped_booking(db, booking_id, session)
+    
+    if booking.status == "cancelled":
+        raise ValidationAppError("لا يمكن تعديل وثيقة حجز ملغاة")
+
     company_id = booking.company_id
     booking.customer_id = get_customer_or_404(db, company_id, payload.customer_id).id
     booking.booking_date = parse_date(payload.booking_date, default_today=False, current_value=booking.booking_date)
@@ -196,3 +200,66 @@ def create_compensation_booking(db: Session, actor: User, original_booking_id: s
     )
     db.commit()
     return serialize_booking_document(reload_booking_or_404(repo, booking.id))
+
+def delete_booking(db: Session, actor: User, booking_id: str, session: dict) -> None:
+    booking = get_scoped_booking(db, booking_id, session)
+    
+    # Financial Integrity Check
+    for line in booking.lines:
+        if line_paid_total(line) > ZERO:
+            raise ConflictError(f"لا يمكن حذف الحجز {booking.booking_number} لوجود مبالغ مدفوعة. يجب حذف سندات القبض المرتبطة أولاً.")
+        if line.revenue_journal_entry_id:
+            raise ConflictError(f"لا يمكن حذف الحجز {booking.booking_number} لوجود قيود إيرادات معترف بها.")
+
+    record_audit(
+        db,
+        actor_user_id=actor.id,
+        action="booking.deleted",
+        target_type="booking",
+        target_id=booking.id,
+        summary=f"Permanently deleted booking {booking.booking_number}",
+        diff={
+            "booking_number": booking.booking_number,
+            "customer_id": booking.customer_id,
+            "line_count": len(booking.lines)
+        },
+    )
+    db.delete(booking)
+    db.commit()
+
+
+def delete_booking_line(db: Session, actor: User, booking_id: str, line_id: str, session: dict) -> dict:
+    booking = get_scoped_booking(db, booking_id, session)
+    line = next((l for l in booking.lines if l.id == line_id), None)
+    if not line:
+        raise ValidationAppError("سطر الحجز غير موجود")
+
+    # Financial Integrity Check
+    if line_paid_total(line) > ZERO:
+        raise ConflictError("لا يمكن حذف السطر لوجود مبالغ مدفوعة مرتبطة به.")
+    if line.revenue_journal_entry_id:
+        raise ConflictError("لا يمكن حذف السطر لوجود قيد إيراد معترف به.")
+
+    record_audit(
+        db,
+        actor_user_id=actor.id,
+        action="booking_line.deleted",
+        target_type="booking_line",
+        target_id=line.id,
+        summary=f"Permanently deleted line {line.line_number} from booking {booking.booking_number}",
+        diff={
+            "booking_id": booking.id,
+            "line_number": line.line_number,
+            "service_name": line.service.name
+        },
+    )
+    db.delete(line)
+    db.flush()
+    
+    # Re-index remaining lines to prevent gaps if needed, or just keep them
+    # For now, we'll just derive the status again
+    booking.status = derive_booking_status(booking.lines)
+    db.commit()
+    return serialize_booking_document(reload_booking_or_404(BookingsRepository(db), booking.id))
+ 
+ 

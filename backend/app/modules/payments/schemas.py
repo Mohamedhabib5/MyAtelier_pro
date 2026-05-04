@@ -102,11 +102,18 @@ class PaymentDocumentCreateRequest(BaseModel):
     customer_id: str
     payment_method_id: str | None = None
     payment_date: str
+    document_kind: str = "collection"
     notes: str | None = None
     allocations: list[PaymentAllocationInput] = Field(min_length=1)
 
 
-class PaymentDocumentUpdateRequest(PaymentDocumentCreateRequest):
+class PaymentDocumentUpdateRequest(BaseModel):
+    customer_id: str
+    payment_method_id: str | None = None
+    payment_date: str
+    document_kind: str = "collection"
+    notes: str | None = None
+    allocations: list[PaymentAllocationInput] = Field(min_length=1)
     reason_code: str | None = None
     override_lock: bool = False
     override_reason: str | None = Field(default=None, max_length=500)

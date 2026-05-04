@@ -4,10 +4,11 @@ const paymentsText = {
   ar: {
     page: {
       accountingChip: 'سندات دفع متعددة التوزيع',
-      addMultiAction: 'إضافة سند دفع متعدد',
+      addMultiAction: 'إضافة سند قبض متعدد',
+      addRefundAction: 'إضافة سند دفع متعدد',
       edit: 'تعديل',
-      listSubtitle: 'كل صف يمثل سند دفع واحدًا مع ملخص التوزيع والحالة والقيد المحاسبي المرتبط.',
-      listTitle: 'قائمة سندات الدفع',
+      listSubtitle: 'كل صف يمثل سندًا واحدًا مع ملخص التوزيع والحالة والقيد المحاسبي المرتبط.',
+      listTitle: 'قائمة السندات الماليه',
       searchHint: 'اكتب حرفين على الأقل لبدء البحث.',
       searchLoading: 'جاري تحميل نتائج البحث...',
       searchLabel: 'ابحث باسم العميل أو رقم الحجز',
@@ -18,8 +19,8 @@ const paymentsText = {
       searchTitle: 'بحث الدفع',
       subtitle: 'ابحث باسم العميل أو رقم الحجز لإنشاء سند دفع واحد يوزع على أكثر من سطر خدمة.',
       targetSubtitle: 'اختر عميلًا أو حجزًا لفتح سند دفع واحد وتوزيع المبلغ على السطور المفتوحة.',
-      targetTitle: 'محرر سند الدفع',
-      title: 'سندات الدفع',
+      targetTitle: 'محرر السندات الماليه',
+      title: 'سندات القبض والدفع',
       void: 'إبطال',
       voidedState: 'تم الإبطال',
     },
@@ -44,6 +45,10 @@ const paymentsText = {
       status: 'الحالة',
       total: 'الإجمالي',
       type: 'النوع',
+      kind: {
+        collection: 'سند قبض',
+        refund: 'سند دفع',
+      },
     },
     builder: {
       allocationAmount: 'مبلغ التخصيص',
@@ -90,10 +95,11 @@ const paymentsText = {
   en: {
     page: {
       accountingChip: 'Multi-allocation payment documents',
-      addMultiAction: 'Add multi-allocation payment',
+      addMultiAction: 'Add multi-receipt',
+      addRefundAction: 'Add multi-payment (refund)',
       edit: 'Edit',
-      listSubtitle: 'Each row represents one payment document with allocation summary, status, and linked journal entry.',
-      listTitle: 'Payment documents',
+      listSubtitle: 'Each row represents one document with allocation summary, status, and linked journal entry.',
+      listTitle: 'Receipts & Payments list',
       searchHint: 'Type at least two characters to start searching.',
       searchLoading: 'Loading search results...',
       searchLabel: 'Search by customer name or booking number',
@@ -104,8 +110,8 @@ const paymentsText = {
       searchTitle: 'Payment search',
       subtitle: 'Search by customer or booking number to create one payment document allocated across multiple service lines.',
       targetSubtitle: 'Choose a customer or booking to open one payment document and distribute the amount across open lines.',
-      targetTitle: 'Payment document editor',
-      title: 'Payment documents',
+      targetTitle: 'Receipt & Payment editor',
+      title: 'Receipts & Payments',
       void: 'Void',
       voidedState: 'Voided',
     },
@@ -130,6 +136,10 @@ const paymentsText = {
       status: 'Status',
       total: 'Total',
       type: 'Type',
+      kind: {
+        collection: 'Receipt',
+        refund: 'Payment',
+      },
     },
     builder: {
       allocationAmount: 'Allocation amount',

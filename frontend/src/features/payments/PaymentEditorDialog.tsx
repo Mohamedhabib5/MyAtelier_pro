@@ -31,6 +31,7 @@ type Props = {
   onSelectTarget: (target: PaymentTargetSearchRecord) => void;
   onClose: () => void;
   onSave: (payload: PaymentDocumentPayload) => Promise<void>;
+  initialKind?: string;
 };
 
 export function PaymentEditorDialog({
@@ -58,6 +59,7 @@ export function PaymentEditorDialog({
   onSelectTarget,
   onClose,
   onSave,
+  initialKind,
 }: Props) {
   return (
     <AppDialogShell open={open} onClose={onClose} title={title} subtitle={subtitle} maxWidth='xl'>
@@ -66,7 +68,7 @@ export function PaymentEditorDialog({
           <CircularProgress />
         </Stack>
       ) : target ? (
-        <PaymentDocumentBuilder target={target} document={document} paymentMethods={paymentMethods} saving={saving} onSave={onSave} onCancel={onClose} />
+        <PaymentDocumentBuilder target={target} document={document} paymentMethods={paymentMethods} saving={saving} onSave={onSave} onCancel={onClose} initialKind={initialKind} />
       ) : (
         <PaymentTargetSearchSection
           title={searchTitle}

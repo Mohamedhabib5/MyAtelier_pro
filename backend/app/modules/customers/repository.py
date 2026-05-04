@@ -1,6 +1,6 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
-from sqlalchemy import select
+from sqlalchemy import select, or_
 from sqlalchemy.orm import Session
 
 from app.modules.customers.models import Customer
@@ -27,3 +27,21 @@ class CustomersRepository:
     def add_customer(self, customer: Customer) -> Customer:
         self.db.add(customer)
         return customer
+
+    def search_customers(self, company_id: str, query: str, limit: int = 20) -> list[Customer]:
+        if not query:
+            return []
+        pattern = f"%{query.strip()}%"
+        stmt = (
+            select(Customer)
+            .where(
+                Customer.company_id == company_id,
+                or_(
+                    Customer.full_name.ilike(pattern),
+                    Customer.phone.ilike(pattern)
+                )
+            )
+            .order_by(Customer.full_name.asc())
+            .limit(limit)
+        )
+        return list(self.db.scalars(stmt))

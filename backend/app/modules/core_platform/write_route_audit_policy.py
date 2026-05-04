@@ -66,6 +66,10 @@ WRITE_ROUTE_AUDIT_POLICY: dict[WriteRouteKey, tuple[str, ...]] = {
     ("PUT", "/api/users/me/grid-preferences/{table_key}"): ("user.grid_preferences_updated",),
     ("PATCH", "/api/users/me"): ("user.updated_self",),
     ("PATCH", "/api/users/{user_id}"): ("user.updated_by_admin",),
+    ("POST", "/api/settings/compensation-types"): ("compensation_type.created",),
+    ("PATCH", "/api/settings/compensation-types/{service_id}"): ("compensation_type.updated",),
+    ("POST", "/api/bookings/{booking_id}/compensate"): ("booking.compensation_created",),
+    ("PUT", "/api/users/me/theme-preferences"): ("user.theme_preferences_updated",),
 }
 
 

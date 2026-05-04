@@ -102,7 +102,7 @@ export function CompensationDialog({ open, bookingId, bookingNumber, language, o
               onChange={(e) => {
                 setServiceId(e.target.value);
                 const s = filteredServices.find(x => x.id === e.target.value);
-                if (s) setAmount(s.price);
+                if (s) setAmount(s.default_price);
               }}
             >
               {filteredServices.map(s => (

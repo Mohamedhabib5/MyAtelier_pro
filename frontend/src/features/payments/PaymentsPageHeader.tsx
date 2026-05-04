@@ -6,9 +6,11 @@ type Props = {
   subtitle: string;
   createLabel: string;
   onCreate: () => void;
+  secondCreateLabel?: string;
+  onSecondCreate?: () => void;
 };
 
-export function PaymentsPageHeader({ title, subtitle, createLabel, onCreate }: Props) {
+export function PaymentsPageHeader({ title, subtitle, createLabel, onCreate, secondCreateLabel, onSecondCreate }: Props) {
   return (
     <Stack 
       direction={{ xs: 'column', sm: 'row' }} 
@@ -21,6 +23,17 @@ export function PaymentsPageHeader({ title, subtitle, createLabel, onCreate }: P
         <Typography color='text.secondary' sx={{ fontSize: { xs: '0.875rem', md: '1rem' } }}>{subtitle}</Typography>
       </Box>
       <Stack direction='row' spacing={1} alignItems='center' sx={{ width: { xs: '100%', sm: 'auto' } }}>
+        {secondCreateLabel && onSecondCreate && (
+          <Button
+            variant='outlined'
+            fullWidth={{ xs: true, sm: false } as any}
+            startIcon={<PostAddOutlinedIcon />}
+            onClick={onSecondCreate}
+            sx={{ py: 1.25, px: 3, borderRadius: 3 }}
+          >
+            {secondCreateLabel}
+          </Button>
+        )}
         <Button
           variant='contained'
           fullWidth={{ xs: true, sm: false } as any}

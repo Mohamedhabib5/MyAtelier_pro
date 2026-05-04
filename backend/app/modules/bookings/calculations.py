@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from decimal import Decimal, ROUND_HALF_UP
 
+from app.core.enums import PaymentDocumentKind
 from app.modules.bookings.models import Booking, BookingLine
 
 PRICE_QUANT = Decimal('0.01')
@@ -20,7 +21,10 @@ def line_paid_total(line: BookingLine, *, ignore_payment_document_id: str | None
             continue
         if ignore_payment_document_id and document.id == ignore_payment_document_id:
             continue
-        total += quantize_amount(allocation.allocated_amount)
+        if document.document_kind == PaymentDocumentKind.REFUND.value:
+            total -= quantize_amount(allocation.allocated_amount)
+        else:
+            total += quantize_amount(allocation.allocated_amount)
     return quantize_amount(total)
 
 
@@ -57,15 +61,15 @@ def derive_booking_status(lines: list[BookingLine]) -> str:
 
 
 def booking_total_amount(booking: Booking) -> Decimal:
-    return quantize_amount(sum((quantize_amount(line.line_price) for line in booking.lines if line.status != 'cancelled'), start=ZERO))
+    return quantize_amount(sum((quantize_amount(line.line_price) for line in booking.lines), start=ZERO))
 
 
 def booking_paid_total(booking: Booking) -> Decimal:
-    return quantize_amount(sum((line_paid_total(line) for line in booking.lines if line.status != 'cancelled'), start=ZERO))
+    return quantize_amount(sum((line_paid_total(line) for line in booking.lines), start=ZERO))
 
 
 def booking_remaining_amount(booking: Booking) -> Decimal:
-    return quantize_amount(sum((line_remaining_amount(line) for line in booking.lines if line.status != 'cancelled'), start=ZERO))
+    return quantize_amount(sum((line_remaining_amount(line) for line in booking.lines), start=ZERO))
 
 
 def serialize_booking_line(line: BookingLine) -> dict:

@@ -31,6 +31,7 @@ export function usePaymentsPageState() {
   const [sortBy, setSortBy] = useState<PaymentSortField>('payment_date');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [pendingUpdateOverridePayload, setPendingUpdateOverridePayload] = useState<PaymentDocumentPayload | null>(null);
+  const [initialKind, setInitialKind] = useState<string>('collection');
   
   const deferredTargetSearch = useDeferredValue(searchText);
   const deferredTableSearch = useDeferredValue(tableSearchInput.trim());
@@ -96,6 +97,7 @@ export function usePaymentsPageState() {
     sortBy, setSortBy,
     sortDir, setSortDir,
     pendingUpdateOverridePayload, setPendingUpdateOverridePayload,
+    initialKind, setInitialKind,
     deferredTableSearch,
     editorOpen,
     paymentsQuery,

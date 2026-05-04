@@ -67,14 +67,14 @@ const paymentDocumentStatusLabels = {
 
 const paymentKindLabels = {
   ar: {
-    collection: 'تحصيل',
-    refund: 'استرداد',
+    collection: 'سند قبض',
+    refund: 'سند دفع',
     custody_deposit: 'تأمين حيازة',
     custody_compensation: 'تعويض عهدة',
   },
   en: {
-    collection: 'Collection',
-    refund: 'Refund',
+    collection: 'Receipt',
+    refund: 'Payment',
     custody_deposit: 'Custody deposit',
     custody_compensation: 'Custody compensation',
   },

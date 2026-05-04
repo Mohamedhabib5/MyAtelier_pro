@@ -33,3 +33,8 @@ class ValidationAppError(AppError):
 class RateLimitError(AppError):
     status_code = 429
     detail = "عدد المحاولات كبير جداً. يرجى المحاولة لاحقاً."
+
+
+class ConflictError(AppError):
+    status_code = 409
+    detail = "Conflict occurred"

@@ -21,6 +21,11 @@ class PaymentReceiptStatus(StrEnum):
     VOIDED = "voided"
 
 
+class PaymentDocumentKind(StrEnum):
+    COLLECTION = "collection"
+    REFUND = "refund"
+
+
 class ExportTypeKey(StrEnum):
     CUSTOMERS_CSV = "customers_csv"
     BOOKINGS_CSV = "bookings_csv"

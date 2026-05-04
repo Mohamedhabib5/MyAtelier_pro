@@ -20,6 +20,8 @@ import { buildEmptyLine, lineFromRecord, type EditableLine } from './editorLineM
 import { NumericCell } from './NumericCell';
 import { QuickCustomerDialog } from './QuickCustomerDialog';
 import { useBookingEditorColumns } from './useBookingEditorColumns';
+import { BookingCancellationDialog } from './BookingCancellationDialog';
+import { bulkCancelBookings, type BookingCancellationPayload } from './api';
 
 export function BookingDocumentEditor({
   customers,
@@ -36,6 +38,10 @@ export function BookingDocumentEditor({
   onCompleteLine,
   onCancelLine,
   onReverseRevenueLine,
+  onDeleteLine,
+  onUndoCancellation,
+  onCancelFull,
+  mode = 'edit',
 }: {
   customers: CustomerRecord[];
   departments: DepartmentRecord[];
@@ -51,6 +57,10 @@ export function BookingDocumentEditor({
   onCompleteLine: (lineId: string) => Promise<void>;
   onCancelLine: (lineId: string) => Promise<void>;
   onReverseRevenueLine: (lineId: string) => Promise<void>;
+  onDeleteLine: (lineId: string) => Promise<void>;
+  onUndoCancellation: (lineIds: string[]) => Promise<void>;
+  onCancelFull?: () => void;
+  mode?: 'edit' | 'cancel';
 }) {
   const { language } = useLanguage();
   const bookingsText = useBookingsText();
@@ -61,7 +71,10 @@ export function BookingDocumentEditor({
   const [bookingDate, setBookingDate] = useState('');
   const [notes, setNotes] = useState('');
   const [externalCode, setExternalCode] = useState('');
+  const [cancellationDate, setCancellationDate] = useState(new Date().toISOString().slice(0, 10));
   const [lines, setLines] = useState<EditableLine[]>([]);
+  const [pendingCancellations, setPendingCancellations] = useState<Record<string, BookingCancellationPayload>>({});
+  const [showCancelDialogFor, setShowCancelDialogFor] = useState<{ id: string; isFull?: boolean } | null>(null);
 
   const documentId = document?.id;
 
@@ -148,6 +161,14 @@ export function BookingDocumentEditor({
   }
 
   async function handleSave() {
+    if (mode === 'cancel' && document) {
+      const requests = Object.values(pendingCancellations);
+      if (requests.length === 0) return;
+      await bulkCancelBookings(document.id, requests);
+      onCancel(); // Close editor on success
+      return;
+    }
+
     const payload: BookingDocumentPayload = {
       customer_id: customerId,
       initial_payment_method_id: initialPaymentMethodId || null,
@@ -173,6 +194,42 @@ export function BookingDocumentEditor({
     await onSave(payload);
   }
 
+  function handleMarkLineForCancellation(lineId: string) {
+    setShowCancelDialogFor({ id: lineId, isFull: false });
+  }
+
+  function handleUnmarkLineForCancellation(lineId: string) {
+    setPendingCancellations(curr => {
+      const copy = { ...curr };
+      delete copy[lineId];
+      delete copy['__full__']; 
+      return copy;
+    });
+  }
+
+  function handleMarkFullForCancellation() {
+    setShowCancelDialogFor({ id: document?.id || '', isFull: true });
+  }
+
+  function handleConfirmPendingCancellation(payload: BookingCancellationPayload) {
+    if (!showCancelDialogFor) return;
+
+    if (showCancelDialogFor.isFull) {
+      // Clear existing individual ones and set one "Full" marker
+      setPendingCancellations({
+        '__full__': { ...payload, line_ids: null } 
+      });
+    } else {
+      setPendingCancellations(curr => {
+        const copy = { ...curr };
+        delete copy['__full__']; // Remove full marker if individual line is being handled
+        copy[showCancelDialogFor.id] = { ...payload, line_ids: [showCancelDialogFor.id] };
+        return copy;
+      });
+    }
+    setShowCancelDialogFor(null);
+  }
+
   const lineColumns = useBookingEditorColumns({
     language,
     bookingsText,
@@ -185,9 +242,14 @@ export function BookingDocumentEditor({
     handleDepartmentChange,
     handleServiceChange,
     onCompleteLine,
-    onCancelLine,
+    onCancelLine: handleMarkLineForCancellation, // Intercept to mark as pending
     onReverseRevenueLine,
+    onDeleteLine,
+    onUndoCancellation,
+    onUnmarkPendingCancellation: handleUnmarkLineForCancellation,
     setLines,
+    mode,
+    pendingCancellations,
   });
 
   const gridHeight = Math.min(720, Math.max(260, lines.length * 84 + 110));
@@ -198,20 +260,23 @@ export function BookingDocumentEditor({
       <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent='space-between' alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={2}>
         <Box>
           <Typography variant='h5' sx={{ fontWeight: 800, fontSize: { xs: '1.25rem', md: '1.5rem' } }}>
-            {document ? `${bookingsText.editor.updateTitlePrefix} ${document.booking_number}` : bookingsText.editor.createTitle}
+            {document 
+              ? (mode === 'cancel' ? `${bookingsText.editor.cancelTitlePrefix} ${document.booking_number}` : `${bookingsText.editor.updateTitlePrefix} ${document.booking_number}`)
+              : bookingsText.editor.createTitle}
           </Typography>
           <Typography color='text.secondary' variant='body2'>{bookingsText.editor.subtitle}</Typography>
         </Box>
         <Stack direction='row' spacing={1} sx={{ alignSelf: { xs: 'stretch', sm: 'auto' } }}>
-          <Button fullWidth onClick={onCancel} variant="soft" color="inherit">{commonText.cancel}</Button>
+          <Button fullWidth onClick={onCancel} variant="outlined" color="inherit">{commonText.cancel}</Button>
           <Button
             fullWidth
             variant='contained'
-            disabled={saving || !customerId || !lines.length || (hasInitialPayments && !initialPaymentMethodId)}
+            color={mode === 'cancel' ? 'warning' : 'primary'}
+            disabled={saving || (mode === 'edit' && (!customerId || !lines.length)) || (mode === 'cancel' && Object.keys(pendingCancellations).length === 0) || (hasInitialPayments && !initialPaymentMethodId)}
             onClick={() => void handleSave()}
-            sx={{ px: { sm: 4 } }}
+            sx={{ px: { sm: 4 }, fontWeight: 800 }}
           >
-            {bookingsText.editor.save}
+            {mode === 'cancel' ? bookingsText.editor.confirmCancellation : bookingsText.editor.save}
           </Button>
         </Stack>
       </Stack>
@@ -240,21 +305,25 @@ export function BookingDocumentEditor({
             <TextField {...params} label={bookingsText.editor.customer} placeholder={bookingsText.editor.selectCustomer} />
           )}
           noOptionsText={language === 'ar' ? 'لا توجد نتائج' : 'No results'}
+          disabled={mode === 'cancel'}
         />
-        <Button 
-          variant='outlined' 
-          startIcon={<PersonAddOutlinedIcon />} 
-          onClick={() => setCustomerDialogOpen(true)}
-          sx={{ height: 56, borderRadius: 3 }}
-        >
-          {bookingsText.editor.addCustomer}
-        </Button>
+        {mode === 'edit' && (
+          <Button 
+            variant='outlined' 
+            startIcon={<PersonAddOutlinedIcon />} 
+            onClick={() => setCustomerDialogOpen(true)}
+            sx={{ height: 56, borderRadius: 3 }}
+          >
+            {bookingsText.editor.addCustomer}
+          </Button>
+        )}
         <TextField
           select
           fullWidth
           label={bookingsText.editor.initialPaymentMethod}
           value={initialPaymentMethodId}
           onChange={(event) => setInitialPaymentMethodId(event.target.value)}
+          disabled={mode === 'cancel'}
         >
           {paymentMethods.map((method) => (
             <MenuItem key={method.id} value={method.id}>
@@ -269,22 +338,56 @@ export function BookingDocumentEditor({
           InputLabelProps={{ shrink: true }} 
           value={bookingDate} 
           onChange={(event) => setBookingDate(event.target.value)} 
+          disabled={mode === 'cancel'}
         />
         <TextField 
           fullWidth 
           label={bookingsText.editor.externalCode} 
           value={externalCode} 
           onChange={(event) => setExternalCode(event.target.value)} 
+          disabled={mode === 'cancel'}
         />
+        {mode === 'cancel' && (
+          <TextField 
+            fullWidth 
+            label={language === 'ar' ? 'تاريخ الإلغاء' : 'Cancellation Date'} 
+            type='date' 
+            InputLabelProps={{ shrink: true }} 
+            value={cancellationDate} 
+            onChange={(event) => setCancellationDate(event.target.value)} 
+            sx={{ 
+              '& .MuiInputBase-root': { bgcolor: 'rgba(211, 47, 47, 0.05)', fontWeight: 'bold' } 
+            }}
+          />
+        )}
+        {mode === 'cancel' && document && document.status !== 'cancelled' && (
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleMarkFullForCancellation}
+            sx={{ height: 56, borderRadius: 3, fontWeight: 800 }}
+          >
+            {bookingsText.editor.cancelFullDocument}
+          </Button>
+        )}
       </Box>
 
-      <TextField label={bookingsText.editor.notes} value={notes} multiline minRows={3} onChange={(event) => setNotes(event.target.value)} />
+      <TextField 
+        label={bookingsText.editor.notes} 
+        value={notes} 
+        multiline 
+        minRows={3} 
+        onChange={(event) => setNotes(event.target.value)} 
+        disabled={mode === 'cancel'}
+      />
 
       <Stack direction='row' justifyContent='space-between' alignItems='center'>
         <Typography variant='h6'>{bookingsText.editor.linesTitle}</Typography>
-        <Button variant='outlined' startIcon={<AddCircleOutlineIcon />} onClick={() => setLines((current) => [...current, buildEmptyLine(departments, services, bookingDate)])}>
-          {bookingsText.editor.addLine}
-        </Button>
+        {mode === 'edit' && (
+          <Button variant='outlined' startIcon={<AddCircleOutlineIcon />} onClick={() => setLines((current) => [...current, buildEmptyLine(departments, services, bookingDate)])}>
+            {bookingsText.editor.addLine}
+          </Button>
+        )}
       </Stack>
 
       <AppAgGrid
@@ -301,12 +404,33 @@ export function BookingDocumentEditor({
         noRowsLabel={language === 'ar' ? 'لا توجد سطور بعد' : 'No lines yet'}
         rowsPerPageLabel={language === 'ar' ? 'عدد الصفوف' : 'Rows per page'}
         getRowId={(params) => params.data.local_id}
+        getRowStyle={(params) => {
+          const isFullPending = Boolean(pendingCancellations['__full__']);
+          const isLinePending = params.data?.id && Boolean(pendingCancellations[params.data.id]);
+          if (isFullPending || isLinePending) {
+            return { backgroundColor: 'rgba(211, 47, 47, 0.08)' };
+          }
+          return undefined;
+        }}
         hideToolbar
         pagination={false}
         height={gridHeight}
       />
 
       <QuickCustomerDialog open={customerDialogOpen} onClose={() => setCustomerDialogOpen(false)} onSubmit={handleQuickCustomerSubmit} />
+
+      {showCancelDialogFor && document && (
+        <BookingCancellationDialog
+          open={true}
+          onClose={() => setShowCancelDialogFor(null)}
+          onConfirm={handleConfirmPendingCancellation}
+          booking={document}
+          paymentMethods={paymentMethods}
+          lineId={showCancelDialogFor.isFull ? undefined : showCancelDialogFor.id}
+          isSaving={false}
+          initialDate={cancellationDate}
+        />
+      )}
     </Stack>
   );
 }

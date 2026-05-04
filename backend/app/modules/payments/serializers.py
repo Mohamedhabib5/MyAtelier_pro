@@ -10,11 +10,11 @@ DIRECT_AMOUNT_DOCUMENT_KINDS = {"custody_compensation", "custody_deposit", "refu
 
 
 def document_total(payment_document: PaymentDocument) -> Decimal:
-    if payment_document.document_kind in DIRECT_AMOUNT_DOCUMENT_KINDS:
-        return quantize_amount(payment_document.direct_amount)
-    return quantize_amount(
-        sum((quantize_amount(allocation.allocated_amount) for allocation in payment_document.allocations), start=ZERO)
-    )
+    if payment_document.allocations:
+        return quantize_amount(
+            sum((quantize_amount(allocation.allocated_amount) for allocation in payment_document.allocations), start=ZERO)
+        )
+    return quantize_amount(payment_document.direct_amount)
 
 
 def serialize_allocation(allocation: PaymentAllocation) -> dict:
@@ -41,6 +41,8 @@ def serialize_allocation(allocation: PaymentAllocation) -> dict:
 
 def serialize_document(payment_document: PaymentDocument, *, include_allocations: bool = False) -> dict:
     booking_numbers = sorted({allocation.booking.booking_number for allocation in payment_document.allocations})
+    if not booking_numbers and payment_document.compensation_custody_case and payment_document.compensation_custody_case.booking:
+        booking_numbers = [payment_document.compensation_custody_case.booking.booking_number]
     payload = {
         "id": payment_document.id,
         "company_id": payment_document.company_id,

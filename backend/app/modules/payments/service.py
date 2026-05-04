@@ -4,6 +4,7 @@ from decimal import Decimal
 
 from sqlalchemy.orm import Session
 
+from app.core.exceptions import ValidationAppError, ConflictError
 from app.core.enums import PaymentReceiptStatus
 from app.modules.core_platform.destructive_reasons import normalize_destructive_reason_code
 from app.modules.core_platform.period_lock import enforce_not_locked_with_override, record_period_lock_override
@@ -11,7 +12,7 @@ from app.modules.core_platform.service import record_audit
 from app.modules.identity.models import User
 from app.modules.organization.branch_context import ensure_active_branch, resolve_branch_scope
 from app.modules.organization.service import get_company_settings
-from app.modules.payments.accounting_bridge import auto_post_payment_document, reverse_linked_payment_document_entry
+from app.modules.payments.accounting_bridge import auto_post_payment_document, reverse_linked_payment_document_entry, delete_linked_payment_document_entry
 from app.modules.payments.allocation_builder import build_allocations
 from app.modules.payments.document_access import (
     PAYMENT_SEQUENCE_KEY,
@@ -93,7 +94,7 @@ def create_payment(db: Session, actor: User, payload: PaymentDocumentCreateReque
         entity_version=1,
         payment_number=repo.reserve_sequence_number(company.id, PAYMENT_SEQUENCE_KEY),
         payment_date=parse_payment_date(payload.payment_date),
-        document_kind="collection",
+        document_kind=payload.document_kind,
         direct_amount=Decimal("0.00"),
         status=PaymentReceiptStatus.ACTIVE.value,
         notes=clean_optional_text(payload.notes),
@@ -104,6 +105,7 @@ def create_payment(db: Session, actor: User, payload: PaymentDocumentCreateReque
         branch.id,
         payload.customer_id,
         payload.allocations,
+        document_kind=payload.document_kind,
         actor_user_id=actor.id,
     )
     repo.add_payment_document(payment_document)
@@ -154,6 +156,7 @@ def update_payment(db: Session, actor: User, payment_document_id: str, payload: 
     payment_document.customer_id = payload.customer_id
     payment_document.payment_method_id = payment_method.id
     payment_document.payment_date = reverse_date
+    payment_document.document_kind = payload.document_kind
     payment_document.notes = clean_optional_text(payload.notes)
     payment_document.updated_by_user_id = actor.id
     payment_document.entity_version += 1
@@ -163,6 +166,7 @@ def update_payment(db: Session, actor: User, payment_document_id: str, payload: 
         payment_document.branch_id,
         payload.customer_id,
         payload.allocations,
+        document_kind=payload.document_kind,
         ignore_payment_document_id=payment_document.id,
         actor_user_id=actor.id,
     )
@@ -200,3 +204,43 @@ def update_payment(db: Session, actor: User, payment_document_id: str, payload: 
     )
     db.commit()
     return load_document_or_404(PaymentsRepository(db), payment_document.id, include_allocations=True)
+
+
+def delete_payment(db: Session, actor: User, payment_document_id: str, session: dict) -> None:
+    payment_document = get_scoped_booking_payment_document(db, payment_document_id, session)
+    
+    # Check Period Lock
+    enforce_not_locked_with_override(
+        db,
+        action_date=payment_document.payment_date,
+        action_key="payment.delete",
+        actor=actor,
+    )
+
+    # Handle Accounting
+    if payment_document.journal_entry_id:
+        # For Hard Delete, we reverse the entry to maintain audit trail of the previous state
+        # then we delete the document itself.
+        reverse_linked_payment_document_entry(db, actor, payment_document, payment_document.payment_date)
+
+    record_audit(
+        db,
+        actor_user_id=actor.id,
+        action="payment_document.deleted",
+        target_type="payment_document",
+        target_id=payment_document.id,
+        summary=f"Permanently deleted payment document {payment_document.payment_number}",
+        diff={
+            "payment_number": payment_document.payment_number,
+            "amount": float(document_total(payment_document)),
+            "customer_id": payment_document.customer_id
+        },
+    )
+    db.delete(payment_document)
+    db.commit()
+
+
+def get_scoped_booking_payment_document(db: Session, payment_document_id: str, session: dict) -> PaymentDocument:
+    # Helper to get payment and ensure it belongs to the branch
+    payment = get_scoped_payment_document(db, payment_document_id, session)
+    return payment

@@ -1,7 +1,7 @@
 import { useMutation } from '@tanstack/react-query';
 
 import { queryClient } from '../../lib/queryClient';
-import { createPayment, updatePayment, voidPayment, type PaymentDocumentPayload, type PaymentDocumentSummaryRecord, type PaymentTargetSearchRecord } from './api';
+import { createPayment, updatePayment, voidPayment, deletePayment, type PaymentDocumentPayload, type PaymentDocumentSummaryRecord, type PaymentTargetSearchRecord } from './api';
 
 async function invalidatePaymentViews() {
   await Promise.all([
@@ -68,6 +68,14 @@ export function usePaymentActions({
     },
     onError: (mutationError: Error) => setError(mutationError.message),
   });
+  const deleteMutation = useMutation({
+    mutationFn: deletePayment,
+    onSuccess: async () => {
+      await invalidatePaymentViews();
+      closeBuilder();
+    },
+    onError: (mutationError: Error) => setError(mutationError.message),
+  });
 
   function startNewFromTarget(target: PaymentTargetSearchRecord) {
     setError(null);
@@ -128,12 +136,18 @@ export function usePaymentActions({
     setPendingUpdateOverridePayload(null);
   }
 
+  async function handleDeletePayment(paymentId: string) {
+    setError(null);
+    await deleteMutation.mutateAsync(paymentId);
+  }
+
   return {
     startNewFromTarget,
     openEditDocument,
     handleSave,
     submitVoid,
     confirmUpdateOverride,
-    saving: createMutation.isPending || updateMutation.isPending,
+    handleDeletePayment,
+    saving: createMutation.isPending || updateMutation.isPending || deleteMutation.isPending,
   };
 }

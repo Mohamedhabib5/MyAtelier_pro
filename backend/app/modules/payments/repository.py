@@ -10,6 +10,7 @@ from app.modules.catalog.models import ServiceCatalogItem
 from app.modules.customers.models import Customer
 from app.modules.organization.models import DocumentSequence
 from app.modules.payments.models import PaymentAllocation, PaymentDocument, PaymentMethod
+from app.modules.custody.models import CustodyCase
 
 
 class PaymentsRepository:
@@ -160,5 +161,6 @@ class PaymentsRepository:
                 .joinedload(PaymentAllocation.booking_line)
                 .joinedload(BookingLine.service)
                 .joinedload(ServiceCatalogItem.department),
+                joinedload(PaymentDocument.compensation_custody_case).joinedload(CustodyCase.booking),
             )
         )

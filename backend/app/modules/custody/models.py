@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date
 
 from sqlalchemy import Date, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 
@@ -44,3 +44,10 @@ class CustodyCase(Base, UUIDPrimaryKeyMixin, TimestampMixin):
         ForeignKey("payment_documents.id", ondelete="SET NULL"),
         nullable=True,
     )
+
+    compensation_payment_document = relationship(
+        "PaymentDocument",
+        back_populates="compensation_custody_case",
+        foreign_keys=[compensation_payment_document_id],
+    )
+    booking = relationship("Booking", lazy="joined")

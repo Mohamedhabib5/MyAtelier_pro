@@ -22,6 +22,7 @@ export function PaymentDocumentBuilder({
   saving,
   onSave,
   onCancel,
+  initialKind,
 }: {
   target: PaymentTargetDetailRecord;
   document: PaymentDocumentRecord | null;
@@ -29,25 +30,28 @@ export function PaymentDocumentBuilder({
   saving: boolean;
   onSave: (payload: PaymentDocumentPayload) => Promise<void>;
   onCancel: () => void;
+  initialKind?: string;
 }) {
   const { language } = useLanguage();
   const commonText = useCommonText();
   const paymentsText = usePaymentsText();
   const [paymentDate, setPaymentDate] = useState(todayIso());
   const [paymentMethodId, setPaymentMethodId] = useState('');
+  const [documentKind, setDocumentKind] = useState(initialKind || 'collection');
   const [notes, setNotes] = useState('');
   const [allocationValues, setAllocationValues] = useState<Record<string, string>>({});
-
+ 
   useEffect(() => {
     setPaymentDate(document?.payment_date ?? todayIso());
     setPaymentMethodId(document?.payment_method_id ?? paymentMethods[0]?.id ?? '');
+    setDocumentKind((document?.document_kind ?? initialKind) || 'collection');
     setNotes(document?.notes ?? '');
     const seeded: Record<string, string> = {};
     for (const allocation of document?.allocations ?? []) {
       seeded[allocation.booking_line_id] = String(allocation.allocated_amount);
     }
     setAllocationValues(seeded);
-  }, [document, paymentMethods, target]);
+  }, [document, paymentMethods, target, initialKind]);
 
   const selectedTotal = useMemo(
     () => Object.values(allocationValues).reduce((sum, value) => sum + Number(value || 0), 0),
@@ -69,6 +73,7 @@ export function PaymentDocumentBuilder({
       customer_id: target.customer_id,
       payment_method_id: paymentMethodId || null,
       payment_date: paymentDate,
+      document_kind: documentKind,
       notes: notes || null,
       allocations,
     });
@@ -90,16 +95,19 @@ export function PaymentDocumentBuilder({
       },
       {
         colId: 'department_name',
+        field: 'department_name',
         headerName: paymentsText.allocationTable.department,
         minWidth: 150,
       },
       {
         colId: 'service_name',
+        field: 'service_name',
         headerName: paymentsText.allocationTable.service,
         minWidth: 170,
       },
       {
         colId: 'service_date',
+        field: 'service_date',
         headerName: paymentsText.allocationTable.serviceDate,
         minWidth: 145,
       },
@@ -111,6 +119,7 @@ export function PaymentDocumentBuilder({
       },
       {
         colId: 'line_price',
+        field: 'line_price',
         headerName: paymentsText.allocationTable.price,
         minWidth: 115,
       },
@@ -122,6 +131,7 @@ export function PaymentDocumentBuilder({
       },
       {
         colId: 'remaining_amount',
+        field: 'remaining_amount',
         headerName: paymentsText.allocationTable.remaining,
         minWidth: 115,
       },
@@ -153,7 +163,11 @@ export function PaymentDocumentBuilder({
     <Stack spacing={2}>
       <Box>
         <Typography variant='h5'>
-          {document ? `${paymentsText.builder.updateTitlePrefix} ${document.payment_number}` : paymentsText.builder.title}
+          {document
+            ? `${paymentsText.builder.updateTitlePrefix} ${document.payment_number}`
+            : documentKind === 'refund'
+              ? paymentsText.table.kind.refund
+              : paymentsText.table.kind.collection}
         </Typography>
         <Typography color='text.secondary'>{paymentsText.builder.subtitle}</Typography>
       </Box>
@@ -164,6 +178,10 @@ export function PaymentDocumentBuilder({
       {document ? <Alert severity='info'>{paymentsText.builder.editNotice}</Alert> : null}
 
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+        <TextField select label={paymentsText.table.type} value={documentKind} onChange={(event) => setDocumentKind(event.target.value)} sx={{ minWidth: 160 }}>
+          <MenuItem value='collection'>{paymentsText.table.kind.collection}</MenuItem>
+          <MenuItem value='refund'>{paymentsText.table.kind.refund}</MenuItem>
+        </TextField>
         <TextField label={paymentsText.builder.paymentDate} type='date' InputLabelProps={{ shrink: true }} value={paymentDate} onChange={(event) => setPaymentDate(event.target.value)} />
         <TextField select label={paymentsText.builder.paymentMethod} value={paymentMethodId} onChange={(event) => setPaymentMethodId(event.target.value)} sx={{ minWidth: 220 }}>
           {paymentMethods.map((item) => (

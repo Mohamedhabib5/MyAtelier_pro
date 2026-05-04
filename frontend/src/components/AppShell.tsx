@@ -92,7 +92,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Typography variant='subtitle1' sx={{ fontWeight: 800 }}>{user?.full_name}</Typography>
               <Typography variant='caption' sx={{ opacity: 0.6 }}>{user?.username}</Typography>
             </Box>
-            <BranchSelector fullWidth />
+            <BranchSelector />
           </Stack>
         </Box>
       )}
@@ -167,7 +167,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <Button 
             fullWidth
             color='error' 
-            variant="soft"
+            variant="outlined"
             startIcon={<LogOut size={18} />} 
             onClick={() => void logoutAction()}
             sx={{ borderRadius: 3, py: 1.5, textTransform: 'none' }}

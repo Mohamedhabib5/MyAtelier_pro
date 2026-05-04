@@ -1,11 +1,12 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from fastapi import Depends, Request
 from sqlalchemy.orm import Session
 
 from app.core.enums import RoleKey
-from app.core.exceptions import AuthenticationError, AuthorizationError, NotFoundError
+from app.core.exceptions import AuthenticationError, AuthorizationError, NotFoundError, RateLimitError
 from app.core.messages import ACTIVE_ACCOUNT_REQUIRED, ADMIN_ACCESS_REQUIRED
+from app.core.rate_limiter import api_rate_limiter, sensitive_ops_rate_limiter
 from app.db.session import get_db
 from app.modules.identity.access import ensure_permission
 from app.modules.identity.models import User
@@ -151,3 +152,15 @@ def require_custody_view(current_user: User = Depends(get_current_user)) -> User
 def require_custody_manage(current_user: User = Depends(get_current_user)) -> User:
     ensure_permission(current_user, "custody.manage")
     return current_user
+
+
+def limit_api_usage(request: Request) -> None:
+    client_ip = request.client.host if request.client else "unknown"
+    if not api_rate_limiter.is_allowed(f"api:{client_ip}"):
+        raise RateLimitError()
+
+
+def limit_sensitive_ops(request: Request) -> None:
+    client_ip = request.client.host if request.client else "unknown"
+    if not sensitive_ops_rate_limiter.is_allowed(f"sensitive:{client_ip}"):
+        raise RateLimitError()

@@ -16,7 +16,7 @@ from app.modules.payments.schemas import (
     PaymentDocumentUpdateRequest,
     PaymentVoidRequest,
 )
-from app.modules.payments.service import create_payment, get_payment_document, list_payment_page, list_payments, update_payment
+from app.modules.payments.service import create_payment, get_payment_document, list_payment_page, list_payments, update_payment, delete_payment
 from app.modules.payments.lifecycle import void_payment
 
 router = APIRouter(prefix='/payments', tags=['payments'])
@@ -78,3 +78,12 @@ def update_payment_route(payment_document_id: str, payload: PaymentDocumentUpdat
 @router.post('/{payment_document_id}/void', response_model=PaymentDocumentResponse)
 def void_payment_route(payment_document_id: str, payload: PaymentVoidRequest, request: Request, db: Session = Depends(get_db), current_user: User = Depends(require_payments_manage)) -> PaymentDocumentResponse:
     return PaymentDocumentResponse.model_validate(void_payment(db, current_user, payment_document_id, payload, request.session))
+
+@router.delete('/{payment_document_id}')
+def delete_payment_route(
+    payment_document_id: str,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_payments_manage),
+) -> None:
+    delete_payment(db, current_user, payment_document_id, request.session)

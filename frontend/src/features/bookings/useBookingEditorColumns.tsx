@@ -1,4 +1,6 @@
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import DeleteForeverOutlinedIcon from '@mui/icons-material/DeleteForeverOutlined';
+import RestoreOutlinedIcon from '@mui/icons-material/RestoreOutlined';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { Chip, Stack, TextField, Typography, Button } from '@mui/material';
 import type { ICellRendererParams, SuppressKeyboardEventParams } from 'ag-grid-community';
@@ -23,10 +25,11 @@ interface UseBookingEditorColumnsProps {
   updateLine: (localId: string, patch: Partial<EditableLine>) => void;
   handleDepartmentChange: (localId: string, departmentId: string) => void;
   handleServiceChange: (localId: string, serviceId: string) => void;
-  onCompleteLine: (lineId: string) => Promise<void>;
-  onCancelLine: (lineId: string) => Promise<void>;
-  onReverseRevenueLine: (lineId: string) => Promise<void>;
+  onUndoCancellation: (lineIds: string[]) => void;
+  onUnmarkPendingCancellation: (lineId: string) => void;
   setLines: React.Dispatch<React.SetStateAction<EditableLine[]>>;
+  mode?: 'edit' | 'cancel';
+  pendingCancellations: Record<string, any>;
 }
 
 export function useBookingEditorColumns({
@@ -43,7 +46,12 @@ export function useBookingEditorColumns({
   onCompleteLine,
   onCancelLine,
   onReverseRevenueLine,
+  onDeleteLine,
+  onUndoCancellation,
+  onUnmarkPendingCancellation,
   setLines,
+  mode = 'edit',
+  pendingCancellations,
 }: UseBookingEditorColumnsProps) {
   function suppressGridKeyboardEvent(params: SuppressKeyboardEventParams<EditableLine>) {
     const target = params.event?.target;
@@ -257,6 +265,9 @@ export function useBookingEditorColumns({
               {data.revenue_journal_entry_number ? (
                 <Chip size='small' color='success' label={`${bookingsText.editor.revenueEntryPrefix} ${data.revenue_journal_entry_number}`} />
               ) : null}
+              {(data.id && pendingCancellations[data.id]) || pendingCancellations['__full__'] ? (
+                <Chip size='small' color='warning' variant="outlined" label={bookingsText.lineTable.pendingCancellation} sx={{ fontWeight: 'bold' }} />
+              ) : null}
             </Stack>
           ) : null,
       },
@@ -271,38 +282,111 @@ export function useBookingEditorColumns({
         cellRenderer: ({ data }: ICellRendererParams<EditableLine>) => {
           if (!data) return null;
 
+          const isCancelled = data.status === 'cancelled';
+          const isCompleted = data.status === 'completed';
+          const hasPayments = data.paid_total > 0;
+          const isFullPending = Boolean(pendingCancellations['__full__']);
+          const isLinePending = data.id ? Boolean(pendingCancellations[data.id]) : false;
+          const isAnyPending = isFullPending || isLinePending;
+
           return (
             <Stack spacing={1} sx={{ py: 1 }}>
-              {data.id && data.status !== 'completed' && data.status !== 'cancelled' ? (
-                <Button size='small' color='success' startIcon={<CheckCircleOutlineIcon />} onClick={() => void onCompleteLine(data.id!)}>
-                  {bookingsText.editor.completeLine}
+              {/* Only show Cancel actions if the line exists in DB and we are in cancel mode */}
+              {data.id && mode === 'cancel' && (
+                <>
+                  {!isCancelled && (
+                    <Button 
+                      size='small' 
+                      variant='contained'
+                      color="warning"
+                      onClick={() => data.id && void onCancelLine(data.id)}
+                      disabled={isAnyPending}
+                    >
+                      {bookingsText.editor.cancelLine}
+                    </Button>
+                  )}
+
+                  {isAnyPending && (
+                    <Button 
+                      size='small' 
+                      variant='contained'
+                      color='info' 
+                      startIcon={<RestoreOutlinedIcon />} 
+                      onClick={() => void onUnmarkPendingCancellation(isFullPending ? '__full__' : data.id!)}
+                    >
+                      {bookingsText.editor.unmarkCancellation}
+                    </Button>
+                  )}
+
+                  {isCancelled && (
+                    <Button 
+                      size='small' 
+                      variant='text'
+                      color='info' 
+                      startIcon={<RestoreOutlinedIcon />} 
+                      onClick={() => void onUndoCancellation([data.id!])}
+                    >
+                      {bookingsText.editor.undoCancel}
+                    </Button>
+                  )}
+                </>
+              )}
+
+              {/* Edit Mode Actions (Only for existing lines) */}
+              {data.id && mode === 'edit' && (
+                <>
+                  {!isCompleted && !isCancelled && (
+                    <Button 
+                      size='small' 
+                      color='success' 
+                      startIcon={<CheckCircleOutlineIcon />} 
+                      onClick={() => void onCompleteLine(data.id!)}
+                      disabled={isAnyPending}
+                    >
+                      {bookingsText.editor.completeLine}
+                    </Button>
+                  )}
+                  {isCompleted && data.is_locked && (
+                    <Button 
+                      size='small' 
+                      color='warning' 
+                      onClick={() => void onReverseRevenueLine(data.id!)}
+                      disabled={isAnyPending}
+                    >
+                      {bookingsText.editor.reverseRevenue}
+                    </Button>
+                  )}
+                </>
+              )}
+
+              {/* Delete is ALWAYS shown for new lines, and restricted for existing lines with payments */}
+              {data.id ? (
+                <Button 
+                  size='small' 
+                  color='error' 
+                  startIcon={<DeleteForeverOutlinedIcon />} 
+                  onClick={() => void onDeleteLine(data.id!)}
+                  disabled={hasPayments || isAnyPending}
+                  title={hasPayments ? bookingsText.editor.deleteDisabledReason : ""}
+                >
+                  {bookingsText.editor.deleteLine}
                 </Button>
-              ) : null}
-              {data.id && data.status !== 'cancelled' && !data.is_locked ? (
-                <Button size='small' onClick={() => void onCancelLine(data.id!)}>
-                  {bookingsText.editor.cancelLine}
-                </Button>
-              ) : null}
-              {data.id && data.status === 'completed' && data.is_locked ? (
-                <Button size='small' color='warning' onClick={() => void onReverseRevenueLine(data.id!)}>
-                  {language === 'ar' ? 'عكس الإيراد' : 'Reverse revenue'}
-                </Button>
-              ) : null}
-              {!data.id && !data.is_locked ? (
+              ) : (
                 <Button
                   size='small'
                   color='error'
+                  variant='outlined'
                   startIcon={<DeleteOutlineIcon />}
                   onClick={() => setLines((current) => current.filter((item) => item.local_id !== data.local_id))}
                 >
                   {bookingsText.editor.deleteLine}
                 </Button>
-              ) : null}
+              )}
             </Stack>
           );
         },
       },
     ],
-    [bookingsText, commonText.actions, departments, dresses, language, lineStatusOptions, onCancelLine, onCompleteLine, onReverseRevenueLine, services, updateLine, handleDepartmentChange, handleServiceChange, setLines],
-  );
+  [bookingsText, commonText.actions, departments, dresses, language, lineStatusOptions, onCancelLine, onCompleteLine, onDeleteLine, onReverseRevenueLine, onUndoCancellation, onUnmarkPendingCancellation, services, updateLine, handleDepartmentChange, handleServiceChange, setLines, mode, pendingCancellations],
+);
 }

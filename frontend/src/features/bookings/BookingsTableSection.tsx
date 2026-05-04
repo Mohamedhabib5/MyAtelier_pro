@@ -1,5 +1,7 @@
+import BlockOutlinedIcon from '@mui/icons-material/BlockOutlined';
+import DeleteForeverOutlinedIcon from '@mui/icons-material/DeleteForeverOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
-import { Button, Chip } from '@mui/material';
+import { Button, Chip, Stack } from '@mui/material';
 import type { ColDef } from 'ag-grid-community';
 import { useMemo } from 'react';
 
@@ -35,6 +37,8 @@ type Props = {
   onSortChange: (sortBy: BookingSortField, sortDir: 'asc' | 'desc') => void;
   exportFilters: BookingExportFilters;
   onOpenEdit: (record: BookingSummaryRecord) => void;
+  onOpenCancel: (record: BookingSummaryRecord) => void;
+  onDelete: (record: BookingSummaryRecord) => void;
   onExportXlsx: () => void;
 };
 
@@ -60,6 +64,8 @@ export function BookingsTableSection({
   onSortChange,
   exportFilters,
   onOpenEdit,
+   onOpenCancel,
+  onDelete,
   onExportXlsx,
 }: Props) {
   const commonText = useCommonText();
@@ -91,13 +97,23 @@ export function BookingsTableSection({
         pinned: language === 'ar' ? 'left' : 'right',
         cellRenderer: ({ data }: { data: BookingSummaryRecord | undefined }) =>
           data ? (
-            <Button startIcon={<EditOutlinedIcon />} onClick={() => onOpenEdit(data)} sx={{ gap: 1 }}>
-              {bookingsText.page.openDocument}
-            </Button>
+            <Stack direction='row' spacing={1}>
+              <Button startIcon={<EditOutlinedIcon />} onClick={() => onOpenEdit(data)}>
+                {bookingsText.page.openDocument}
+              </Button>
+              {data.status !== 'cancelled' && (
+                <Button color='error' startIcon={<BlockOutlinedIcon />} onClick={() => onOpenCancel(data)}>
+                  {commonText.cancel}
+                </Button>
+              )}
+              <Button color='error' startIcon={<DeleteForeverOutlinedIcon />} onClick={() => onDelete(data)}>
+                {commonText.delete}
+              </Button>
+            </Stack>
           ) : null,
       },
     ],
-    [bookingsText.page.openDocument, bookingsText.table.bookingNumber, bookingsText.table.customer, bookingsText.table.lineCount, bookingsText.table.nextServiceDate, bookingsText.table.paid, bookingsText.table.remaining, bookingsText.table.serviceSummary, bookingsText.table.status, bookingsText.table.total, commonText.actions, language, onOpenEdit, sortBy, sortDir],
+    [bookingsText.page.openDocument, bookingsText.table.bookingNumber, bookingsText.table.customer, bookingsText.table.lineCount, bookingsText.table.nextServiceDate, bookingsText.table.paid, bookingsText.table.remaining, bookingsText.table.serviceSummary, bookingsText.table.status, bookingsText.table.total, commonText.actions, commonText.cancel, commonText.delete, language, onDelete, onOpenCancel, onOpenEdit, sortBy, sortDir],
   );
 
   return (

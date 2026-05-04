@@ -1,4 +1,5 @@
 import BlockOutlinedIcon from '@mui/icons-material/BlockOutlined';
+import DeleteForeverOutlinedIcon from '@mui/icons-material/DeleteForeverOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
 import { Button, Chip, MenuItem, Stack, TextField, Typography } from '@mui/material';
@@ -40,6 +41,7 @@ type PaymentsTableSectionProps = {
   exportFilters: PaymentExportFilters;
   onOpenEdit: (row: PaymentDocumentSummaryRecord) => void;
   onOpenVoid: (row: PaymentDocumentSummaryRecord) => void;
+  onDelete: (row: PaymentDocumentSummaryRecord) => void;
 };
 
 export function PaymentsTableSection({
@@ -66,6 +68,7 @@ export function PaymentsTableSection({
   exportFilters,
   onOpenEdit,
   onOpenVoid,
+  onDelete,
 }: PaymentsTableSectionProps) {
   const { language } = useLanguage();
   const commonText = useCommonText();
@@ -127,17 +130,20 @@ export function PaymentsTableSection({
             </Typography>
           ) : (
             <Stack direction='row' spacing={1}>
-              <Button startIcon={<EditOutlinedIcon />} disabled={data.document_kind !== 'collection'} onClick={() => onOpenEdit(data)}>
+              <Button startIcon={<EditOutlinedIcon />} disabled={data.document_kind !== 'collection' && data.document_kind !== 'refund'} onClick={() => onOpenEdit(data)}>
                 {paymentsText.page.edit}
               </Button>
               <Button color='warning' startIcon={<BlockOutlinedIcon />} onClick={() => onOpenVoid(data)}>
                 {paymentsText.page.void}
               </Button>
+              <Button color='error' startIcon={<DeleteForeverOutlinedIcon />} onClick={() => onDelete(data)}>
+                {commonText.delete}
+              </Button>
             </Stack>
           ),
       },
     ],
-    [commonText.actions, language, onOpenEdit, onOpenVoid, paymentsText.page.edit, paymentsText.page.void, paymentsText.page.voidedState, paymentsText.table.bookings, paymentsText.table.customer, paymentsText.table.date, paymentsText.table.journal, paymentsText.table.number, paymentsText.table.paymentMethod, paymentsText.table.status, paymentsText.table.total, paymentsText.table.type, sortBy, sortDir],
+    [commonText.actions, commonText.delete, language, onDelete, onOpenEdit, onOpenVoid, paymentsText.page.edit, paymentsText.page.void, paymentsText.page.voidedState, paymentsText.table.bookings, paymentsText.table.customer, paymentsText.table.date, paymentsText.table.journal, paymentsText.table.number, paymentsText.table.paymentMethod, paymentsText.table.status, paymentsText.table.total, paymentsText.table.type, sortBy, sortDir],
   );
 
   return (

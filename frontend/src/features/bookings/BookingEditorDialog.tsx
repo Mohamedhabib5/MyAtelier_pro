@@ -28,6 +28,10 @@ type Props = {
   onCompleteLine: (lineId: string) => Promise<void>;
   onCancelLine: (lineId: string) => Promise<void>;
   onReverseRevenueLine: (lineId: string) => Promise<void>;
+  onDeleteLine: (lineId: string) => Promise<void>;
+  onUndoCancellation: (lineIds: string[]) => Promise<void>;
+  onCancelFull?: () => void;
+  mode?: 'edit' | 'cancel';
 };
 
 export function BookingEditorDialog({
@@ -50,9 +54,13 @@ export function BookingEditorDialog({
   onCompleteLine,
   onCancelLine,
   onReverseRevenueLine,
+  onDeleteLine,
+  onUndoCancellation,
+  onCancelFull,
+  mode,
 }: Props) {
   return (
-    <AppDialogShell open={open} onClose={onClose} title={title} subtitle={subtitle} maxWidth='xl' fullWidth>
+    <AppDialogShell open={open} onClose={onClose} title={title} subtitle={subtitle} maxWidth='xl'>
       {loading && !creatingNew ? (
         <Stack alignItems='center' justifyContent='center' sx={{ minHeight: 240 }}>
           <CircularProgress />
@@ -73,6 +81,10 @@ export function BookingEditorDialog({
           onCompleteLine={onCompleteLine}
           onCancelLine={onCancelLine}
           onReverseRevenueLine={onReverseRevenueLine}
+          onDeleteLine={onDeleteLine}
+          onUndoCancellation={onUndoCancellation}
+          onCancelFull={onCancelFull}
+          mode={mode}
         />
       )}
     </AppDialogShell>

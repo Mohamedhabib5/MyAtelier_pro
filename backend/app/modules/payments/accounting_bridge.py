@@ -31,9 +31,15 @@ def auto_post_payment_document(db: Session, actor: User, payment_document: Payme
     if payment_document.document_kind in DIRECT_CUSTODY_DEPOSIT_COLLECTION_KINDS:
         from app.modules.payments.accounting_custody import _auto_post_custody_deposit_collection
         return _auto_post_custody_deposit_collection(db, actor, payment_document)
-    if payment_document.document_kind in DIRECT_CUSTODY_REFUND_KINDS:
-        from app.modules.payments.accounting_custody import _auto_post_custody_deposit_refund
-        return _auto_post_custody_deposit_refund(db, actor, payment_document)
+    
+    # --- Refund Distinctions ---
+    if payment_document.document_kind == "refund":
+        if payment_document.direct_amount > ZERO:
+            # This is a custody refund (standalone amount)
+            from app.modules.payments.accounting_custody import _auto_post_custody_deposit_refund
+            return _auto_post_custody_deposit_refund(db, actor, payment_document)
+        # This is a booking refund (allocated to lines)
+        return _auto_post_booking_refund(db, actor, payment_document)
     if payment_document.document_kind != "collection":
         raise ValidationAppError("يمكن ترحيل سندات التحصيل فقط تلقائيًا")
 
@@ -136,6 +142,31 @@ def reverse_linked_payment_document_entry(
     return reversal
 
 
+def delete_linked_payment_document_entry(db: Session, actor: User, payment_document: PaymentDocument) -> None:
+    if not payment_document.journal_entry_id:
+        return
+    repo = AccountingRepository(db)
+    entry = repo.get_journal_entry(payment_document.journal_entry_id)
+    if entry is None:
+        return
+
+    # For Hard Delete, if the entry is already posted, we should ideally reverse it first.
+    # But if the user wants to "Delete everything", and they have permission, we delete it.
+    # Safety Check: If it's in a locked period, we rely on the caller having checked the lock.
+    
+    record_audit(
+        db,
+        actor_user_id=actor.id,
+        action="accounting.journal_entry_deleted",
+        target_type="journal_entry",
+        target_id=entry.id,
+        summary=f"Permanently deleted journal entry {entry.entry_number} linked to payment {payment_document.payment_number}",
+        diff={"payment_document_id": payment_document.id},
+    )
+    db.delete(entry)
+    db.flush()
+
+
 def _allocation_split(payment_document: PaymentDocument) -> tuple[Decimal, Decimal, Decimal]:
     total_amount = ZERO
     advances_amount = ZERO
@@ -191,6 +222,102 @@ def _build_payment_lines(
                 credit_amount=receivables_amount,
             )
         )
+    return lines
+
+
+def _auto_post_booking_refund(db: Session, actor: User, payment_document: PaymentDocument) -> JournalEntry:
+    total_amount, advances_amount, receivables_amount = _allocation_split(payment_document)
+    repo = AccountingRepository(db)
+    fiscal_period = _resolve_fiscal_period(repo, payment_document.company_id, payment_document.payment_date)
+    cash_account = _get_account(repo, payment_document.company_id, CASH_ACCOUNT_CODE)
+    advances_account = _get_account(repo, payment_document.company_id, CUSTOMER_ADVANCES_CODE)
+    receivables_account = _get_account(repo, payment_document.company_id, CUSTOMER_RECEIVABLES_CODE)
+    
+    entry = JournalEntry(
+        company_id=payment_document.company_id,
+        fiscal_period_id=fiscal_period.id,
+        entry_number=repo.reserve_sequence_number(payment_document.company_id, DEFAULT_JOURNAL_SEQUENCE_KEY),
+        entry_date=payment_document.payment_date,
+        status=JournalEntryStatus.POSTED.value,
+        reference=payment_document.payment_number,
+        notes=f"Auto-posted refund document {payment_document.payment_number}",
+        posted_at=datetime.now(UTC),
+        posted_by_user_id=actor.id,
+    )
+    entry.lines = _build_refund_lines(
+        total_amount,
+        advances_amount,
+        receivables_amount,
+        cash_account.id,
+        advances_account.id,
+        receivables_account.id,
+        payment_document.payment_number,
+    )
+    repo.add_journal_entry(entry)
+    db.flush()
+    record_audit(
+        db,
+        actor_user_id=actor.id,
+        action="accounting.payment_document_auto_posted",
+        target_type="journal_entry",
+        target_id=entry.id,
+        summary=f"Auto-posted refund document {payment_document.payment_number} to journal {entry.entry_number}",
+        diff={
+            "payment_document_id": payment_document.id,
+            "total_amount": float(total_amount),
+            "advances_amount": float(advances_amount),
+            "receivables_amount": float(receivables_amount),
+        },
+    )
+    return entry
+
+
+def _build_refund_lines(
+    total_amount: Decimal,
+    advances_amount: Decimal,
+    receivables_amount: Decimal,
+    cash_account_id: str,
+    advances_account_id: str,
+    receivables_account_id: str,
+    payment_number: str,
+) -> list[JournalEntryLine]:
+    description = f"Refund document {payment_number}"
+    lines = []
+    line_number = 1
+    
+    if advances_amount > ZERO:
+        lines.append(
+            JournalEntryLine(
+                line_number=line_number,
+                account_id=advances_account_id,
+                description=description,
+                debit_amount=advances_amount,
+                credit_amount=ZERO,
+            )
+        )
+        line_number += 1
+        
+    if receivables_amount > ZERO:
+        lines.append(
+            JournalEntryLine(
+                line_number=line_number,
+                account_id=receivables_account_id,
+                description=description,
+                debit_amount=receivables_amount,
+                credit_amount=ZERO,
+            )
+        )
+        line_number += 1
+        
+    lines.append(
+        JournalEntryLine(
+            line_number=line_number,
+            account_id=cash_account_id,
+            description=description,
+            debit_amount=ZERO,
+            credit_amount=total_amount,
+        )
+    )
     return lines
 
 

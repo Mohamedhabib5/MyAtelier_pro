@@ -64,12 +64,19 @@ def get_detailed_lines_report(
         types = set()
         
         for alloc in line.payment_allocations:
-            paid_amount += Decimal(str(alloc.allocated_amount))
-            if alloc.payment_document:
-                if alloc.payment_document.payment_method:
-                    methods.add(alloc.payment_document.payment_method.name)
-                refs.add(alloc.payment_document.payment_number)
-                types.add(alloc.payment_document.document_kind)
+            doc = alloc.payment_document
+            if not doc or doc.status == 'voided':
+                continue
+            amt = Decimal(str(alloc.allocated_amount))
+            if doc.document_kind == 'refund':
+                paid_amount -= amt
+            else:
+                paid_amount += amt
+            
+            if doc.payment_method:
+                methods.add(doc.payment_method.name)
+            refs.add(doc.payment_number)
+            types.add(doc.document_kind)
         
         line_price = Decimal(str(line.line_price))
         remaining = line_price - paid_amount

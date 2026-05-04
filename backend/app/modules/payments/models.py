@@ -6,7 +6,7 @@ from decimal import Decimal
 from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.core.enums import PaymentReceiptStatus
+from app.core.enums import PaymentReceiptStatus, PaymentDocumentKind
 from app.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 
 
@@ -37,7 +37,7 @@ class PaymentDocument(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     entity_version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     payment_number: Mapped[str] = mapped_column(String(40), nullable=False)
     payment_date: Mapped[str] = mapped_column(Date, nullable=False)
-    document_kind: Mapped[str] = mapped_column(String(20), default='collection', nullable=False)
+    document_kind: Mapped[str] = mapped_column(String(20), default=PaymentDocumentKind.COLLECTION.value, nullable=False)
     direct_amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=Decimal('0.00'), nullable=False)
     status: Mapped[str] = mapped_column(String(30), default=PaymentReceiptStatus.ACTIVE.value, nullable=False)
     journal_entry_id: Mapped[str | None] = mapped_column(ForeignKey('journal_entries.id', ondelete='SET NULL'), nullable=True)
@@ -57,6 +57,13 @@ class PaymentDocument(Base, UUIDPrimaryKeyMixin, TimestampMixin):
         lazy='selectin',
         cascade='all, delete-orphan',
         order_by='PaymentAllocation.line_number',
+    )
+    compensation_custody_case = relationship(
+        "CustodyCase",
+        back_populates="compensation_payment_document",
+        uselist=False,
+        primaryjoin="PaymentDocument.id == foreign(CustodyCase.compensation_payment_document_id)",
+        overlaps="compensation_payment_document",
     )
 
 

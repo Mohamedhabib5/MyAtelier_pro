@@ -131,7 +131,7 @@ export function CalendarPage() {
             </ButtonGroup>
           </Stack>
 
-          <ButtonGroup variant="soft" color="primary">
+          <ButtonGroup variant="outlined" color="primary">
             <Button 
               onClick={() => setViewMode('day')} 
               variant={viewMode === 'day' ? 'contained' : 'text'}

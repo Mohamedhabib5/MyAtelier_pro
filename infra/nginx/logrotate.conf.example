@@ -1,0 +1,16 @@
+# MyAtelier Pro - Nginx Log Rotation Configuration
+# Place in /etc/logrotate.d/myatelier
+
+/path/to/your/app/logs/nginx/*.log {
+    daily
+    missingok
+    rotate 14
+    compress
+    delaycompress
+    notifempty
+    create 0640 www-data adm
+    sharedscripts
+    postrotate
+        docker kill -s USR1 myatelier-nginx
+    endscript
+}

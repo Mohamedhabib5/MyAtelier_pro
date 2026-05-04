@@ -53,29 +53,6 @@ def complete_booking_line(db: Session, actor: User, booking_id: str, line_id: st
     return serialize_booking_document(reload_booking_or_404(BookingsRepository(db), booking.id))
 
 
-def cancel_booking_line(db: Session, actor: User, booking_id: str, line_id: str, session: dict) -> dict:
-    booking = get_scoped_booking(db, booking_id, session)
-    line = get_line_or_404(booking, line_id)
-    if line.revenue_journal_entry_id:
-        raise ValidationAppError("لا يمكن إلغاء السطور المكتملة")
-    if line_paid_total(line) > ZERO:
-        raise ValidationAppError("لا يمكن إلغاء سطر له مدفوعات محصلة قبل معالجة الدفع")
-    line.status = "cancelled"
-    line.updated_by_user_id = actor.id
-    line.entity_version += 1
-    booking.status = derive_booking_status(booking.lines)
-    booking.updated_by_user_id = actor.id
-    booking.entity_version += 1
-    db.flush()
-    record_audit(
-        db,
-        actor_user_id=actor.id,
-        action="booking.line_cancelled",
-        target_type="booking_line",
-        target_id=line.id,
-        summary=f"Cancelled booking line {booking.booking_number} / {line.line_number}",
-        diff={"booking_status": booking.status, "entity_version": line.entity_version},
-    )
     db.commit()
     return serialize_booking_document(reload_booking_or_404(BookingsRepository(db), booking.id))
 

@@ -222,6 +222,7 @@ export function FiscalPeriodsSection({ language }: FiscalPeriodsSectionProps) {
               }
             ]}
             searchLabel={labels.search}
+            searchPlaceholder={labels.search}
             resetColumnsLabel={labels.reset}
             noRowsLabel={labels.noRows}
             rowsPerPageLabel={labels.rows}

@@ -1,5 +1,5 @@
 import { Button, MenuItem, Stack, TextField } from '@mui/material';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 
 import { StableNumericField } from '../../components/inputs/StableNumericField';
@@ -109,14 +109,14 @@ export function CustodyCompensationSection({
           onChange={(event) => {
             const val = event.target.value;
             setCompTypeId(val);
-            const found = typesQuery.data?.find((t) => t.id === val);
+            const found = typesQuery.data?.find((t: any) => t.id === val);
             if (found && found.default_price > 0) {
               setCompAmount(found.default_price.toString());
             }
           }}
           fullWidth
         >
-          {(typesQuery.data ?? []).map((item) => (
+          {(typesQuery.data ?? []).map((item: any) => (
             <MenuItem key={item.id} value={item.id}>
               {item.name}
             </MenuItem>

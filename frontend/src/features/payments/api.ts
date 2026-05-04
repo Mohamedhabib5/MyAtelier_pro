@@ -74,6 +74,7 @@ export type PaymentDocumentPayload = {
   customer_id: string;
   payment_method_id?: string | null;
   payment_date: string;
+  document_kind: string;
   notes?: string | null;
   allocations: PaymentAllocationPayload[];
   override_lock?: boolean;
@@ -180,4 +181,8 @@ export function getCustomerPaymentTarget(customerId: string, ignorePaymentDocume
 export function getBookingPaymentTarget(bookingId: string, ignorePaymentDocumentId?: string | null): Promise<PaymentTargetDetailRecord> {
   const suffix = ignorePaymentDocumentId ? `?ignore_payment_document_id=${encodeURIComponent(ignorePaymentDocumentId)}` : '';
   return apiRequest<PaymentTargetDetailRecord>(`/api/payment-targets/booking/${bookingId}${suffix}`, { method: 'GET' });
+}
+
+export function deletePayment(paymentDocumentId: string): Promise<void> {
+  return apiRequest<void>(`/api/payments/${paymentDocumentId}`, { method: 'DELETE' });
 }

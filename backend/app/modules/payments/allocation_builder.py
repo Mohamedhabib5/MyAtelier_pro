@@ -17,6 +17,7 @@ def build_allocations(
     customer_id: str,
     items: list[PaymentAllocationInput],
     *,
+    document_kind: str = "collection",
     ignore_payment_document_id: str | None = None,
     actor_user_id: str,
 ) -> list[PaymentAllocation]:
@@ -35,13 +36,21 @@ def build_allocations(
         )
         if line.id in seen_lines:
             raise ValidationAppError("لا يمكن تكرار سطر الحجز نفسه داخل سند الدفع الواحد")
-        remaining_amount = line_remaining_amount(
-            line,
-            ignore_payment_document_id=ignore_payment_document_id,
-        )
+        
         amount = quantize_amount(item.allocated_amount)
-        if amount > remaining_amount:
-            raise ValidationAppError("لا يمكن أن يتجاوز مبلغ التخصيص المتبقي على السطر")
+        if document_kind == "refund":
+            from app.modules.bookings.calculations import line_paid_total
+            paid_total = line_paid_total(line, ignore_payment_document_id=ignore_payment_document_id)
+            if amount > paid_total:
+                raise ValidationAppError(f"لا يمكن استرداد مبلغ أكبر من المدفوع على السطر ({paid_total})")
+        else:
+            remaining_amount = line_remaining_amount(
+                line,
+                ignore_payment_document_id=ignore_payment_document_id,
+            )
+            if amount > remaining_amount:
+                raise ValidationAppError(f"لا يمكن أن يتجاوز مبلغ التخصيص المتبقي على السطر ({remaining_amount})")
+        
         allocations.append(
             PaymentAllocation(
                 created_by_user_id=actor_user_id,

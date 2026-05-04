@@ -117,6 +117,18 @@ export type BookingCompensationRequest = {
   notes?: string;
 };
 
+export type BookingCancellationPayload = {
+  reason: string;
+  cancellation_date?: string | null;
+  refund_amount: number;
+  transfer_amount: number;
+  payment_method_id?: string | null;
+  line_ids?: string[] | null;
+  transfer_to_line_id?: string | null;
+  override_lock?: boolean;
+  override_reason?: string | null;
+};
+
 export function listBookings(): Promise<BookingSummaryRecord[]> {
   return apiRequest<BookingSummaryRecord[]>('/api/bookings', { method: 'GET' });
 }
@@ -151,8 +163,12 @@ export function completeBookingLine(bookingId: string, lineId: string): Promise<
   return apiRequest<BookingDocumentRecord>(`/api/bookings/${bookingId}/lines/${lineId}/complete`, { method: 'POST' });
 }
 
-export function cancelBookingLine(bookingId: string, lineId: string): Promise<BookingDocumentRecord> {
-  return apiRequest<BookingDocumentRecord>(`/api/bookings/${bookingId}/lines/${lineId}/cancel`, { method: 'POST' });
+export function cancelBookingLine(bookingId: string, lineId: string, payload: BookingCancellationPayload): Promise<BookingDocumentRecord> {
+  return apiRequest<BookingDocumentRecord>(`/api/bookings/${bookingId}/lines/${lineId}/cancel`, { method: 'POST', body: JSON.stringify(payload) });
+}
+
+export function cancelBooking(bookingId: string, payload: BookingCancellationPayload): Promise<BookingDocumentRecord> {
+  return apiRequest<BookingDocumentRecord>(`/api/bookings/${bookingId}/cancel`, { method: 'POST', body: JSON.stringify(payload) });
 }
 
 export function createCompensationBooking(bookingId: string, payload: BookingCompensationRequest): Promise<BookingDocumentRecord> {
@@ -184,4 +200,23 @@ export function listCalendarEvents(query: CalendarQuery): Promise<CalendarEventR
   if (query.dateMode) params.set('date_mode', query.dateMode);
   const suffix = params.toString() ? `?${params.toString()}` : '';
   return apiRequest<CalendarEventRecord[]>(`/api/bookings/calendar/events${suffix}`, { method: 'GET' });
+}
+
+export function deleteBooking(bookingId: string): Promise<void> {
+  return apiRequest<void>(`/api/bookings/${bookingId}`, { method: 'DELETE' });
+}
+
+export function deleteBookingLine(bookingId: string, lineId: string): Promise<BookingDocumentRecord> {
+  return apiRequest<BookingDocumentRecord>(`/api/bookings/${bookingId}/lines/${lineId}`, { method: 'DELETE' });
+}
+
+export function undoCancellation(bookingId: string, lineIds?: string[]): Promise<BookingDocumentRecord> {
+  const params = new URLSearchParams();
+  if (lineIds?.length) lineIds.forEach(id => params.append('line_ids', id));
+  const suffix = params.toString() ? `?${params.toString()}` : '';
+  return apiRequest<BookingDocumentRecord>(`/api/bookings/${bookingId}/undo-cancellation${suffix}`, { method: 'POST' });
+}
+
+export function bulkCancelBookings(bookingId: string, requests: BookingCancellationPayload[]): Promise<BookingDocumentRecord> {
+  return apiRequest<BookingDocumentRecord>(`/api/bookings/${bookingId}/bulk-cancel`, { method: 'POST', body: JSON.stringify({ requests }) });
 }

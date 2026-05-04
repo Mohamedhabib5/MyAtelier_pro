@@ -36,6 +36,7 @@ export function PaymentsPage() {
     sortBy, setSortBy,
     sortDir, setSortDir,
     pendingUpdateOverridePayload, setPendingUpdateOverridePayload,
+    initialKind, setInitialKind,
     deferredTableSearch,
     editorOpen,
     paymentsQuery,
@@ -62,7 +63,7 @@ export function PaymentsPage() {
     setPendingUpdateOverridePayload(null);
   }
 
-  const { startNewFromTarget, openEditDocument, handleSave, submitVoid, confirmUpdateOverride, saving } = usePaymentActions({
+  const { startNewFromTarget, openEditDocument, handleSave, submitVoid, confirmUpdateOverride, handleDeletePayment, saving } = usePaymentActions({
     editingPaymentId,
     voidingPayment,
     voidDate,
@@ -104,6 +105,18 @@ export function PaymentsPage() {
           setSelectedTarget(null);
           setEditingPaymentId(null);
           setSearchText('');
+          setInitialKind('collection');
+          setPendingUpdateOverridePayload(null);
+          setTimeout(() => document.querySelector<HTMLInputElement>('input[data-payment-target-search-input="true"]')?.focus(), 0);
+        }}
+        secondCreateLabel={paymentsText.page.addRefundAction}
+        onSecondCreate={() => {
+          setError(null);
+          setCreatingNew(true);
+          setSelectedTarget(null);
+          setEditingPaymentId(null);
+          setSearchText('');
+          setInitialKind('refund');
           setPendingUpdateOverridePayload(null);
           setTimeout(() => document.querySelector<HTMLInputElement>('input[data-payment-target-search-input="true"]')?.focus(), 0);
         }}
@@ -138,6 +151,7 @@ export function PaymentsPage() {
         onSelectTarget={startNewFromTarget}
         onClose={closePaymentEditor}
         onSave={handleSave}
+        initialKind={state.initialKind}
       />
 
       <PaymentsTableSection
@@ -164,6 +178,11 @@ export function PaymentsPage() {
         onSortChange={(b, d) => { setSortBy(b as PaymentSortField); setSortDir(d); setPage(0); }}
         onOpenEdit={(row) => { setCreatingNew(false); openEditDocument(row); }}
         onOpenVoid={setVoidingPayment}
+        onDelete={async (row) => {
+          if (window.confirm(`هل أنت متأكد من حذف السند ${row.payment_number} نهائياً؟ سيتم إلغاء القيود المحاسبية المرتبطة أيضاً.`)) {
+            await handleDeletePayment(row.id);
+          }
+        }}
       />
 
       <PaymentVoidDialog

@@ -1,4 +1,4 @@
-import { Box, Grid2 as Grid, Typography, alpha, useTheme, Tooltip, Chip, Stack, Paper } from '@mui/material';
+import { Box, Grid, Typography, alpha, useTheme, Tooltip, Chip, Stack, Paper } from '@mui/material';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import type { CalendarEventRecord } from '../../features/bookings/api';
 import type { CalendarViewMode } from '../CalendarPage';
@@ -50,7 +50,7 @@ function MonthView({ currentDate, events, onEventClick, onDayClick, language, is
   const firstDayOfMonth = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   
-  const days = [];
+  const days: any[] = [];
   // Fill empty slots for previous month
   const prevMonthLastDay = new Date(year, month, 0).getDate();
   for (let i = firstDayOfMonth - 1; i >= 0; i--) {
@@ -187,7 +187,7 @@ function DayView({ currentDate, events, onEventClick, language }: any) {
                 <Chip 
                   label={event.status} 
                   color={event.status === 'completed' ? 'success' : 'primary'} 
-                  variant="soft" 
+                  variant="outlined" 
                   sx={{ fontWeight: 800, borderRadius: 2 }}
                 />
               </Stack>
@@ -204,7 +204,7 @@ function WeekView({ currentDate, events, onEventClick, onDayClick, language, isR
   const startOfWeek = new Date(currentDate);
   startOfWeek.setDate(currentDate.getDate() - currentDate.getDay());
   
-  const days = [];
+  const days: Date[] = [];
   for (let i = 0; i < 7; i++) {
     const d = new Date(startOfWeek);
     d.setDate(startOfWeek.getDate() + i);

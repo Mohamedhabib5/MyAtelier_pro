@@ -4,7 +4,7 @@ import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Depends
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -12,6 +12,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.staticfiles import StaticFiles
 
+from app.api.deps import limit_api_usage, limit_sensitive_ops
 from app.api.routes import (
     accounting,
     audit,
@@ -113,7 +114,19 @@ def create_app(settings_obj: Settings | None = None) -> FastAPI:
             app.state.engine.dispose()
 
     _ensure_storage_dirs(settings_obj)
-    app = FastAPI(title=settings_obj.app_name, debug=settings_obj.app_debug, lifespan=lifespan)
+    
+    # Security: Disable docs in production
+    docs_url = "/docs" if not settings_obj.is_production() else None
+    redoc_url = "/redoc" if not settings_obj.is_production() else None
+
+    app = FastAPI(
+        title=settings_obj.app_name, 
+        debug=settings_obj.app_debug, 
+        lifespan=lifespan,
+        docs_url=docs_url,
+        redoc_url=redoc_url,
+        dependencies=[Depends(limit_api_usage)]
+    )
     app.state.settings = settings_obj
     app.state.engine = build_engine(settings_obj.database_url)
     app.state.session_factory = build_session_factory(app.state.engine)
@@ -187,7 +200,12 @@ def create_app(settings_obj: Settings | None = None) -> FastAPI:
 
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
-        print(f"Validation error for {request.url}: {exc.errors()}", file=sys.stderr)
+        # Security: Don't log the full exception detail to stderr in production as it might contain PII/Passwords
+        if not settings_obj.is_production():
+            print(f"Validation error for {request.url}: {exc.errors()}", file=sys.stderr)
+        else:
+            print(f"Validation error for {request.url.path} (Request ID: {getattr(request.state, 'request_id', 'unknown')})", file=sys.stderr)
+            
         return JSONResponse(
             status_code=422,
             content={"detail": exc.errors()},
@@ -196,14 +214,14 @@ def create_app(settings_obj: Settings | None = None) -> FastAPI:
     app.include_router(health.router, prefix='/api')
     app.include_router(auth.router, prefix='/api')
     app.include_router(users.router, prefix='/api')
-    app.include_router(settings.router, prefix='/api')
+    app.include_router(settings.router, prefix='/api', dependencies=[Depends(limit_sensitive_ops)])
     app.include_router(fiscal_periods.router, prefix='/api')
     app.include_router(ops_nightly.router, prefix='/api')
     app.include_router(audit.router, prefix='/api')
     app.include_router(period_lock.router, prefix='/api')
     app.include_router(dashboard.router, prefix='/api')
     app.include_router(reports.router, prefix='/api')
-    app.include_router(exports.router, prefix='/api')
+    app.include_router(exports.router, prefix='/api', dependencies=[Depends(limit_sensitive_ops)])
     app.include_router(accounting.router, prefix='/api')
     app.include_router(customers.router, prefix='/api')
     app.include_router(catalog.router, prefix='/api')

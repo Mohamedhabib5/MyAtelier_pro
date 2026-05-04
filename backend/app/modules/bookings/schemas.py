@@ -116,3 +116,20 @@ class BookingCompensationCreateRequest(BaseModel):
     service_id: str
     amount: float = Field(gt=0)
     notes: str | None = None
+
+
+class BookingCancellationRequest(BaseModel):
+    reason: str = Field(min_length=3, max_length=500)
+    cancellation_date: str | None = None
+    refund_amount: float = Field(default=0, ge=0)
+    transfer_amount: float = Field(default=0, ge=0)
+    payment_method_id: str | None = None
+    # For partial cancellation
+    line_ids: list[str] | None = None
+    transfer_to_line_id: str | None = None
+    override_lock: bool = False
+    override_reason: str | None = None
+
+
+class BulkBookingCancellationRequest(BaseModel):
+    requests: list[BookingCancellationRequest]

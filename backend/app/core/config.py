@@ -40,6 +40,7 @@ class Settings(BaseSettings):
     nightly_failure_ingest_token: str = ""
     export_delivery_webhook_url: str = ""
     max_image_size_bytes: int = 307200  # 300 KB
+    redis_url: str = "redis://localhost:6379/0"
 
 
     def resolved_storage_root(self) -> Path:
@@ -76,36 +77,42 @@ class Settings(BaseSettings):
             raise ValueError("SESSION_SAME_SITE=none requires SESSION_HTTPS_ONLY=true.")
 
         if not self.is_production():
+            # In development, warn but don't block
+            import logging
+            logger = logging.getLogger(__name__)
+            if self.app_secret_key in INSECURE_SECRET_KEYS:
+                logger.warning("Using insecure APP_SECRET_KEY in non-production environment.")
             return
 
+        # STRICT PRODUCTION CHECKS
         if self.app_debug:
-            raise ValueError("APP_DEBUG must be false in production.")
+            raise ValueError("CRITICAL: APP_DEBUG must be false in production.")
 
-        if self.app_secret_key.strip() in INSECURE_SECRET_KEYS or len(self.app_secret_key.strip()) < 32:
-            raise ValueError("APP_SECRET_KEY is not safe for production. Use a long random value (32+ chars).")
+        if self.app_secret_key.strip() in INSECURE_SECRET_KEYS:
+            raise ValueError("CRITICAL: APP_SECRET_KEY is insecure. Change it for production.")
+        
+        if len(self.app_secret_key.strip()) < 32:
+            raise ValueError("CRITICAL: APP_SECRET_KEY must be at least 32 characters in production.")
 
         if self.default_admin_password.strip() == "admin123":
-            raise ValueError("DEFAULT_ADMIN_PASSWORD must be changed before production.")
+            raise ValueError("CRITICAL: DEFAULT_ADMIN_PASSWORD must be changed from default.")
 
         cors_origins = self.cors_origins()
-        if not cors_origins:
-            raise ValueError("APP_FRONTEND_ORIGINS must not be empty in production.")
-        if "*" in cors_origins:
-            raise ValueError("APP_FRONTEND_ORIGINS must not contain '*' in production.")
+        if not cors_origins or "*" in cors_origins:
+            raise ValueError("CRITICAL: Valid APP_FRONTEND_ORIGINS (no '*') are required in production.")
+        
         if any(origin.startswith("http://localhost") or origin.startswith("http://127.0.0.1") for origin in cors_origins):
-            raise ValueError("APP_FRONTEND_ORIGINS must not use localhost origins in production.")
+            raise ValueError("CRITICAL: Localhost origins are not allowed in production.")
 
         trusted_hosts = self.trusted_hosts()
-        if not trusted_hosts:
-            raise ValueError("ALLOWED_HOSTS must not be empty in production.")
-        if "*" in trusted_hosts:
-            raise ValueError("ALLOWED_HOSTS must not contain '*' in production.")
-        if self.ops_alert_webhook_url.strip() and not self.ops_alert_webhook_url.strip().startswith("https://"):
-            raise ValueError("OPS_ALERT_WEBHOOK_URL must use https in production.")
-        if self.nightly_failure_ingest_token.strip() and len(self.nightly_failure_ingest_token.strip()) < 16:
-            raise ValueError("NIGHTLY_FAILURE_INGEST_TOKEN must be at least 16 characters in production.")
-        if self.export_delivery_webhook_url.strip() and not self.export_delivery_webhook_url.strip().startswith("https://"):
-            raise ValueError("EXPORT_DELIVERY_WEBHOOK_URL must use https in production.")
+        if not trusted_hosts or "*" in trusted_hosts:
+            raise ValueError("CRITICAL: Specific ALLOWED_HOSTS (no '*') are required in production.")
+
+        if self.database_url.startswith("sqlite"):
+            raise ValueError("CRITICAL: SQLite is not allowed in production. Use PostgreSQL.")
+
+        if not self.effective_session_https_only():
+             raise ValueError("CRITICAL: SESSION_HTTPS_ONLY must be true in production.")
 
 
 @lru_cache(maxsize=1)

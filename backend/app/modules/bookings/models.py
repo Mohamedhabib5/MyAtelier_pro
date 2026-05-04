@@ -13,17 +13,20 @@ class Booking(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     __tablename__ = 'bookings'
     __table_args__ = (UniqueConstraint('company_id', 'booking_number', name='uq_bookings_company_number'),)
 
-    company_id: Mapped[str] = mapped_column(ForeignKey('companies.id', ondelete='CASCADE'), nullable=False)
-    branch_id: Mapped[str] = mapped_column(ForeignKey('branches.id', ondelete='RESTRICT'), nullable=False)
-    created_by_user_id: Mapped[str | None] = mapped_column(ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    company_id: Mapped[str] = mapped_column(ForeignKey('companies.id', ondelete='CASCADE'), nullable=False, index=True)
+    branch_id: Mapped[str] = mapped_column(ForeignKey('branches.id', ondelete='RESTRICT'), nullable=False, index=True)
+    created_by_user_id: Mapped[str | None] = mapped_column(ForeignKey('users.id', ondelete='SET NULL'), nullable=True, index=True)
     updated_by_user_id: Mapped[str | None] = mapped_column(ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
     entity_version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
-    booking_number: Mapped[str] = mapped_column(String(40), nullable=False)
-    customer_id: Mapped[str] = mapped_column(ForeignKey('customers.id', ondelete='RESTRICT'), nullable=False)
-    booking_date: Mapped[str] = mapped_column(Date, nullable=False)
-    status: Mapped[str] = mapped_column(String(40), nullable=False)
+    booking_number: Mapped[str] = mapped_column(String(40), nullable=False, index=True)
+    customer_id: Mapped[str] = mapped_column(ForeignKey('customers.id', ondelete='RESTRICT'), nullable=False, index=True)
+    booking_date: Mapped[str] = mapped_column(Date, nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(40), nullable=False, index=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     external_code: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    cancellation_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    cancelled_by_user_id: Mapped[str | None] = mapped_column(ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
     parent_booking_id: Mapped[str | None] = mapped_column(ForeignKey('bookings.id', ondelete='SET NULL'), nullable=True)
 
     branch = relationship('Branch', lazy='joined')
@@ -37,6 +40,7 @@ class Booking(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     )
     created_by = relationship('User', foreign_keys=[created_by_user_id], lazy='select')
     updated_by = relationship('User', foreign_keys=[updated_by_user_id], lazy='select')
+    cancelled_by = relationship('User', foreign_keys=[cancelled_by_user_id], lazy='select')
     parent = relationship('Booking', remote_side='Booking.id', primaryjoin='Booking.parent_booking_id == Booking.id', lazy='select')
 
 
@@ -61,6 +65,9 @@ class BookingLine(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     status: Mapped[str] = mapped_column(String(40), nullable=False)
     revenue_recognized_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    cancellation_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    cancelled_by_user_id: Mapped[str | None] = mapped_column(ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
 
     booking = relationship('Booking', back_populates='lines', lazy='joined')
     department = relationship('Department', lazy='joined')
@@ -70,3 +77,4 @@ class BookingLine(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     payment_allocations = relationship('PaymentAllocation', back_populates='booking_line', lazy='selectin')
     created_by = relationship('User', foreign_keys=[created_by_user_id], lazy='select')
     updated_by = relationship('User', foreign_keys=[updated_by_user_id], lazy='select')
+    cancelled_by = relationship('User', foreign_keys=[cancelled_by_user_id], lazy='select')

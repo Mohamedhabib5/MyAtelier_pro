@@ -1,4 +1,4 @@
-﻿__pycache__/
+__pycache__/
 .pytest_cache/
 .mypy_cache/
 .venv/
@@ -14,3 +14,7 @@ storage/backups/*.zip
 storage/attachments/*
 !storage/backups/.gitkeep
 !storage/attachments/.gitkeep
+*.log
+backend/scratch/
+backend/scratch_test_comp.py
+backend/app/brain_test_validation.py

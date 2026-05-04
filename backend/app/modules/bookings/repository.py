@@ -27,6 +27,29 @@ class BookingsRepository:
         stmt = stmt.order_by(Booking.booking_date.desc(), Booking.created_at.desc())
         return list(self.db.scalars(stmt))
 
+    def search_bookings(self, company_id: str, branch_id: str | None, query: str, limit: int = 20) -> list[Booking]:
+        if not query:
+            return []
+        pattern = f"%{query.strip()}%"
+        stmt = (
+            self._booking_query()
+            .join(Booking.customer)
+            .where(
+                Booking.company_id == company_id,
+                or_(
+                    Booking.booking_number.ilike(pattern),
+                    Customer.full_name.ilike(pattern),
+                    Customer.phone.ilike(pattern),
+                    Booking.external_code.ilike(pattern)
+                )
+            )
+        )
+        if branch_id:
+            stmt = stmt.where(Booking.branch_id == branch_id)
+        
+        stmt = stmt.order_by(Booking.booking_date.desc()).limit(limit)
+        return list(self.db.scalars(stmt))
+
     def list_booking_page(
         self,
         company_id: str,

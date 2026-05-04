@@ -13,23 +13,25 @@ from app.modules.bookings.schemas import (
     BookingSummaryPageResponse,
     BookingSummaryResponse,
     CalendarEventResponse,
-)
-from app.modules.bookings.query_service import (
-    get_calendar_events,
-    list_booking_page,
-    list_bookings,
+    BookingCancellationRequest,
+    BulkBookingCancellationRequest,
 )
 from app.modules.bookings.service import (
     create_booking,
     create_compensation_booking,
     get_booking_document,
+    get_calendar_events,
+    list_booking_page,
+    list_bookings,
     update_booking,
+    delete_booking,
+    delete_booking_line,
 )
 from app.modules.bookings.lifecycle import (
-    cancel_booking_line,
     complete_booking_line,
     reverse_completed_booking_line,
 )
+from app.modules.bookings.cancellation_service import cancel_booking_workflow, undo_cancellation_workflow, bulk_cancel_workflow
 from app.modules.identity.models import User
 
 router = APIRouter(prefix='/bookings', tags=['bookings'])
@@ -143,15 +145,46 @@ def complete_booking_line_route(
     return BookingDocumentResponse.model_validate(complete_booking_line(db, current_user, booking_id, line_id, request.session))
 
 
-@router.post('/{booking_id}/lines/{line_id}/cancel', response_model=BookingDocumentResponse)
-def cancel_booking_line_route(
+@router.post('/{booking_id}/cancel', response_model=BookingDocumentResponse)
+def cancel_booking_route(
     booking_id: str,
-    line_id: str,
+    payload: BookingCancellationRequest,
     request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_bookings_manage),
 ) -> BookingDocumentResponse:
-    return BookingDocumentResponse.model_validate(cancel_booking_line(db, current_user, booking_id, line_id, request.session))
+    return BookingDocumentResponse.model_validate(
+        cancel_booking_workflow(db, current_user, booking_id, payload, request.session)
+    )
+
+
+@router.post('/{booking_id}/lines/{line_id}/cancel', response_model=BookingDocumentResponse)
+def cancel_booking_line_route(
+    booking_id: str,
+    line_id: str,
+    payload: BookingCancellationRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_bookings_manage),
+) -> BookingDocumentResponse:
+    # Set the line ID in the payload for partial cancellation
+    payload.line_ids = [line_id]
+    return BookingDocumentResponse.model_validate(
+        cancel_booking_workflow(db, current_user, booking_id, payload, request.session)
+    )
+
+
+@router.post('/{booking_id}/bulk-cancel', response_model=BookingDocumentResponse)
+def bulk_cancel_booking_route(
+    booking_id: str,
+    payload: BulkBookingCancellationRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_bookings_manage),
+) -> BookingDocumentResponse:
+    return BookingDocumentResponse.model_validate(
+        bulk_cancel_workflow(db, current_user, booking_id, payload, request.session)
+    )
 
 
 @router.post('/{booking_id}/lines/{line_id}/reverse-revenue', response_model=BookingDocumentResponse)
@@ -189,3 +222,36 @@ def create_compensation_booking_route(
         create_compensation_booking(db, current_user, booking_id, payload, request.session)
     )
 
+
+@router.delete('/{booking_id}')
+def delete_booking_route(
+    booking_id: str,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_bookings_manage),
+) -> None:
+    delete_booking(db, current_user, booking_id, request.session)
+
+
+@router.delete('/{booking_id}/lines/{line_id}', response_model=BookingDocumentResponse)
+def delete_booking_line_route(
+    booking_id: str,
+    line_id: str,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_bookings_manage),
+) -> BookingDocumentResponse:
+    return BookingDocumentResponse.model_validate(delete_booking_line(db, current_user, booking_id, line_id, request.session))
+
+
+@router.post('/{booking_id}/undo-cancellation', response_model=BookingDocumentResponse)
+def undo_cancellation_route(
+    booking_id: str,
+    request: Request,
+    line_ids: list[str] | None = Query(default=None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_bookings_manage),
+) -> BookingDocumentResponse:
+    return BookingDocumentResponse.model_validate(
+        undo_cancellation_workflow(db, current_user, booking_id, line_ids, request.session)
+    )

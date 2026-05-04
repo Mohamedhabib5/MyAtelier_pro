@@ -14,7 +14,9 @@ from app.modules.payments.repository import PaymentsRepository
 from app.modules.payments.schemas import PaymentMethodCreateRequest, PaymentMethodUpdateRequest
 
 DEFAULT_PAYMENT_METHOD_CODE = "cash"
-DEFAULT_PAYMENT_METHOD_NAME_AR = "\u0643\u0627\u0634"
+DEFAULT_PAYMENT_METHOD_NAME_AR = "كاش"
+SYSTEM_INTERNAL_METHOD_CODE = "system_internal"
+SYSTEM_INTERNAL_METHOD_NAME_AR = "تسوية داخلية - حركات النظام"
 PAYMENT_METHOD_STATUS_VALUES = {"all", "active", "inactive"}
 
 
@@ -134,9 +136,9 @@ def resolve_payment_method(
 
 def _ensure_active_method_available(db: Session, company_id: str, *, actor_user_id: str | None) -> bool:
     repo = PaymentsRepository(db)
-    active_rows = repo.list_payment_methods(company_id, include_inactive=False)
-    if active_rows:
-        return False
+    changed = False
+
+    # Ensure Cash
     default_method = repo.get_payment_method_by_code(company_id, DEFAULT_PAYMENT_METHOD_CODE)
     if default_method is None:
         default_method = PaymentMethod(
@@ -150,14 +152,37 @@ def _ensure_active_method_available(db: Session, company_id: str, *, actor_user_
             display_order=1,
         )
         repo.add_payment_method(default_method)
+        changed = True
+    elif not default_method.is_active:
+        default_method.is_active = True
+        default_method.updated_by_user_id = actor_user_id
+        default_method.entity_version += 1
+        changed = True
+
+    # Ensure System Internal
+    system_method = repo.get_payment_method_by_code(company_id, SYSTEM_INTERNAL_METHOD_CODE)
+    if system_method is None:
+        system_method = PaymentMethod(
+            company_id=company_id,
+            created_by_user_id=actor_user_id,
+            updated_by_user_id=actor_user_id,
+            entity_version=1,
+            code=SYSTEM_INTERNAL_METHOD_CODE,
+            name=SYSTEM_INTERNAL_METHOD_NAME_AR,
+            is_active=True,
+            display_order=99,
+        )
+        repo.add_payment_method(system_method)
+        changed = True
+    elif not system_method.is_active:
+        system_method.is_active = True
+        system_method.updated_by_user_id = actor_user_id
+        system_method.entity_version += 1
+        changed = True
+
+    if changed:
         db.flush()
-        return True
-    default_method.is_active = True
-    default_method.display_order = max(1, default_method.display_order)
-    default_method.updated_by_user_id = actor_user_id
-    default_method.entity_version += 1
-    db.flush()
-    return True
+    return changed
 
 
 def _normalize_status(value: str) -> str:
