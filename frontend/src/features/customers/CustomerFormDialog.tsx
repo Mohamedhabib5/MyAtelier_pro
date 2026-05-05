@@ -68,9 +68,11 @@ export function CustomerFormDialog({ open, editing, form, onChange, onClose, onS
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
           <TextField
             fullWidth
+            required
             label={customersText.dialog.phone}
             value={form.phone}
             onChange={(event) => onChange({ ...form, phone: event.target.value })}
+            error={!form.phone && open}
           />
           <TextField
             fullWidth
@@ -83,9 +85,12 @@ export function CustomerFormDialog({ open, editing, form, onChange, onClose, onS
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
           <TextField
             fullWidth
+            required
             label={customersText.dialog.address}
             value={form.address}
             onChange={(event) => onChange({ ...form, address: event.target.value })}
+            error={!form.address && open}
+            helperText={!form.address && open ? (language === 'ar' ? 'العنوان مطلوب' : 'Address is required') : ''}
           />
           <TextField
             fullWidth

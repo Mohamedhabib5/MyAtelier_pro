@@ -95,6 +95,21 @@ export function CustomersPage() {
 
   async function saveCustomer() {
     setError(null);
+    
+    // Validation
+    if (!form.bride_name.trim() && !form.groom_name.trim()) {
+      setError(language === 'ar' ? 'يجب إدخال اسم العروسة أو العريس على الأقل' : 'At least Bride or Groom name is required');
+      return;
+    }
+    if (!form.address || form.address.trim().length < 2) {
+      setError(language === 'ar' ? 'العنوان مطلوب (حرفين على الأقل)' : 'Address is required (at least 2 chars)');
+      return;
+    }
+    if (!form.phone || form.phone.trim().length < 3) {
+      setError(language === 'ar' ? 'رقم الهاتف مطلوب' : 'Phone number is required');
+      return;
+    }
+
     const calculatedFullName = form.full_name || (form.groom_name && form.bride_name ? `${form.groom_name} & ${form.bride_name}` : (form.groom_name || form.bride_name || 'Customer'));
     
     if (editingCustomer) {
@@ -104,7 +119,7 @@ export function CustomersPage() {
           ...form, 
           full_name: calculatedFullName,
           email: form.email || null, 
-          address: form.address || null, 
+          address: form.address, 
           notes: form.notes || null 
         },
       });
@@ -118,7 +133,7 @@ export function CustomersPage() {
       phone: form.phone,
       phone_2: form.phone_2 || null,
       email: form.email || null,
-      address: form.address || null,
+      address: form.address,
       notes: form.notes || null,
     });
   }

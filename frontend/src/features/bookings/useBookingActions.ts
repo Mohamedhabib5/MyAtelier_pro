@@ -137,7 +137,7 @@ export function useBookingActions({
 
   async function handleCancelLine(lineId: string, payload?: BookingCancellationPayload) {
     if (!editingBookingId) return;
-    const finalPayload = payload ?? { reason: 'Corrective Delete', refund_amount: 0 };
+    const finalPayload = payload ?? { reason: 'Corrective Delete', refund_amount: 0, transfer_amount: 0 };
     try {
       await cancelLineMutation.mutateAsync({ bookingId: editingBookingId, lineId, payload: finalPayload });
       await queryClient.invalidateQueries({ queryKey: ['bookings', editingBookingId] });

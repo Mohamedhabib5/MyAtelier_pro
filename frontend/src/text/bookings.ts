@@ -53,7 +53,6 @@ const bookingsText = {
       summaryPrefix: 'ملخص الوثيقة',
       updateTitlePrefix: 'محرر تعديل الحجز',
       cancelTitlePrefix: 'محرر إلغاء الحجز',
-      createTitle: 'إنشاء حجز جديد',
       cancelFullDocument: 'إلغاء الوثيقة بالكامل',
       undoCancel: 'تراجع عن الإلغاء',
       reverseRevenue: 'عكس الإيراد',

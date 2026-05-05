@@ -71,6 +71,8 @@ type Props<Row> = {
   getRowStyle?: (params: any) => any;
   getRowClass?: (params: any) => string | string[] | undefined;
   pinnedBottomRowData?: Row[];
+  onRowClicked?: (params: any) => void;
+  toolbarLeftContent?: React.ReactNode;
 };
 
 export function AppAgGrid<Row>({
@@ -106,6 +108,8 @@ export function AppAgGrid<Row>({
   getRowStyle,
   getRowClass,
   pinnedBottomRowData,
+  onRowClicked,
+  toolbarLeftContent,
 }: Props<Row>) {
   const [internalSearch, setInternalSearch] = useState('');
   const [columnsAnchor, setColumnsAnchor] = useState<HTMLElement | null>(null);
@@ -199,13 +203,20 @@ export function AppAgGrid<Row>({
         {!hideToolbar ? (
         <Stack spacing={2} sx={{ p: { xs: 2, md: 3 }, background: 'rgba(0,0,0,0.02)' }}>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent='space-between' alignItems={{ sm: 'center' }}>
-            <Stack spacing={0.5}>
-              <Typography variant='subtitle1' fontWeight={800} sx={{ fontSize: { xs: '1rem', md: '1.1rem' } }}>
-                {title ?? searchLabel}
-              </Typography>
-              <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 600, opacity: 0.8 }}>
-                {visibleRowsCount} {language === 'ar' ? 'سجل' : 'records'}
-              </Typography>
+            <Stack direction='row' spacing={2} alignItems='center' sx={{ flex: 1, minWidth: 0 }}>
+              <Stack spacing={0.5} sx={{ minWidth: 'fit-content' }}>
+                <Typography variant='subtitle1' fontWeight={800} sx={{ fontSize: { xs: '1rem', md: '1.1rem' }, whiteSpace: 'nowrap' }}>
+                  {title ?? searchLabel}
+                </Typography>
+                <Typography variant='caption' color='text.secondary' sx={{ fontWeight: 600, opacity: 0.8 }}>
+                  {visibleRowsCount} {language === 'ar' ? 'سجل' : 'records'}
+                </Typography>
+              </Stack>
+              {toolbarLeftContent && (
+                <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+                  {toolbarLeftContent}
+                </Box>
+              )}
             </Stack>
             <TextField
               label={searchLabel}
@@ -309,6 +320,7 @@ export function AppAgGrid<Row>({
               getRowStyle={getRowStyle}
               getRowClass={getRowClass}
               pinnedBottomRowData={pinnedBottomRowData}
+              onRowClicked={onRowClicked}
             />
           )}
           {!loading && !rows.length && emptyState ? (

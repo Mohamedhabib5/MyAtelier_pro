@@ -1,6 +1,7 @@
 import { Alert, Stack } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { useDeferredValue, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { PeriodLockOverrideDialog } from '../components/PeriodLockOverrideDialog';
 import { BookingCancellationDialog } from '../features/bookings/BookingCancellationDialog';
 import { BookingEditorDialog } from '../features/bookings/BookingEditorDialog';
@@ -26,8 +27,11 @@ import { useBookingsText } from '../text/bookings';
 export function BookingsPage() {
   const { language } = useLanguage();
   const bookingsText = useBookingsText();
+  const [searchParams] = useSearchParams();
+  const urlEditId = searchParams.get('edit');
+
   const [error, setError] = useState<string | null>(null);
-  const [editingBookingId, setEditingBookingId] = useState<string | null>(null);
+  const [editingBookingId, setEditingBookingId] = useState<string | null>(urlEditId);
   const [creatingNew, setCreatingNew] = useState(false);
   const [searchInput, setSearchInput] = useState('');
   const [statusFilter, setStatusFilter] = useState('');

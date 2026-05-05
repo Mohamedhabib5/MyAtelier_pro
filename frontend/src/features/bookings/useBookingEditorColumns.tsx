@@ -25,6 +25,10 @@ interface UseBookingEditorColumnsProps {
   updateLine: (localId: string, patch: Partial<EditableLine>) => void;
   handleDepartmentChange: (localId: string, departmentId: string) => void;
   handleServiceChange: (localId: string, serviceId: string) => void;
+  onCompleteLine: (lineId: string) => void;
+  onCancelLine: (lineId: string) => void;
+  onReverseRevenueLine: (lineId: string) => void;
+  onDeleteLine: (lineId: string) => void;
   onUndoCancellation: (lineIds: string[]) => void;
   onUnmarkPendingCancellation: (lineId: string) => void;
   setLines: React.Dispatch<React.SetStateAction<EditableLine[]>>;
@@ -122,35 +126,12 @@ export function useBookingEditorColumns({
         },
       },
       {
-        colId: 'service_date',
-        headerName: bookingsText.lineTable.serviceDate,
-        minWidth: 155,
-        cellRenderer: ({ data }: ICellRendererParams<EditableLine>) =>
-          data ? (
-            <TextField
-              type='date'
-              size='small'
-              fullWidth
-              value={data.service_date}
-              onChange={(event) => updateLine(data.local_id, { service_date: event.target.value })}
-              InputLabelProps={{ shrink: true }}
-              disabled={data.is_locked}
-            />
-          ) : null,
-      },
-      {
         colId: 'dress_id',
         headerName: bookingsText.lineTable.dress,
-        minWidth: 150,
+        minWidth: 140,
         cellRenderer: ({ data }: ICellRendererParams<EditableLine>) => {
           if (!data) return null;
-          const selectedDepartment = departments.find((item) => item.id === data.department_id);
-          const dressVisible = departmentUsesDressCode(selectedDepartment);
-
-          if (!dressVisible) {
-            return <Typography color='text.secondary'>{EMPTY_VALUE}</Typography>;
-          }
-
+          
           return (
             <TextField
               select
@@ -170,6 +151,23 @@ export function useBookingEditorColumns({
             </TextField>
           );
         },
+      },
+      {
+        colId: 'service_date',
+        headerName: bookingsText.lineTable.serviceDate,
+        minWidth: 145,
+        cellRenderer: ({ data }: ICellRendererParams<EditableLine>) =>
+          data ? (
+            <TextField
+              type='date'
+              size='small'
+              fullWidth
+              value={data.service_date}
+              onChange={(event) => updateLine(data.local_id, { service_date: event.target.value })}
+              InputLabelProps={{ shrink: true }}
+              disabled={data.is_locked}
+            />
+          ) : null,
       },
       {
         colId: 'suggested_price',

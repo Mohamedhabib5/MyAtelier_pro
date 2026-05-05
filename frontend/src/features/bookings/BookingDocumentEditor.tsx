@@ -211,7 +211,7 @@ export function BookingDocumentEditor({
     setShowCancelDialogFor({ id: document?.id || '', isFull: true });
   }
 
-  function handleConfirmPendingCancellation(payload: BookingCancellationPayload) {
+  async function handleConfirmPendingCancellation(payload: BookingCancellationPayload) {
     if (!showCancelDialogFor) return;
 
     if (showCancelDialogFor.isFull) {
@@ -295,24 +295,58 @@ export function BookingDocumentEditor({
         gap: 2, 
         alignItems: 'flex-start' 
       }}>
-        <Autocomplete
-          fullWidth
-          options={customers}
-          getOptionLabel={(option) => option.full_name}
-          value={customers.find((c) => c.id === customerId) || null}
-          onChange={(_, newValue) => setCustomerId(newValue?.id ?? '')}
-          renderInput={(params) => (
-            <TextField {...params} label={bookingsText.editor.customer} placeholder={bookingsText.editor.selectCustomer} />
+        <Stack spacing={1}>
+          <Autocomplete
+            fullWidth
+            options={customers}
+            getOptionLabel={(option) => option.full_name}
+            value={customers.find((c) => c.id === customerId) || null}
+            onChange={(_, newValue) => setCustomerId(newValue?.id ?? '')}
+            renderInput={(params) => (
+              <TextField {...params} label={bookingsText.editor.customer} placeholder={bookingsText.editor.selectCustomer} />
+            )}
+            noOptionsText={language === 'ar' ? 'لا توجد نتائج' : 'No results'}
+            disabled={mode === 'cancel'}
+          />
+          {customerId && customers.find(c => c.id === customerId) && (
+            <Stack 
+              direction="row" 
+              spacing={2} 
+              alignItems="center" 
+              sx={{ 
+                px: 2, 
+                py: 0.75, 
+                bgcolor: 'rgba(25, 118, 210, 0.05)', 
+                borderRadius: 2,
+                border: '1px dashed rgba(25, 118, 210, 0.2)'
+              }}
+            >
+              <Stack direction="row" spacing={0.5} alignItems="center">
+                <Typography variant="caption" color="primary.main" fontWeight="bold">
+                  {language === 'ar' ? '📍 العنوان:' : '📍 Address:'}
+                </Typography>
+                <Typography variant="caption" color="text.primary" fontWeight={500}>
+                  {customers.find(c => c.id === customerId)?.address || EMPTY_VALUE}
+                </Typography>
+              </Stack>
+              <Box sx={{ height: 12, width: 1, bgcolor: 'divider' }} />
+              <Stack direction="row" spacing={0.5} alignItems="center">
+                <Typography variant="caption" color="primary.main" fontWeight="bold">
+                  {language === 'ar' ? '📞 الهاتف:' : '📞 Phone:'}
+                </Typography>
+                <Typography variant="caption" color="text.primary" fontWeight={500}>
+                  {customers.find(c => c.id === customerId)?.phone || EMPTY_VALUE}
+                </Typography>
+              </Stack>
+            </Stack>
           )}
-          noOptionsText={language === 'ar' ? 'لا توجد نتائج' : 'No results'}
-          disabled={mode === 'cancel'}
-        />
+        </Stack>
         {mode === 'edit' && (
           <Button 
             variant='outlined' 
             startIcon={<PersonAddOutlinedIcon />} 
             onClick={() => setCustomerDialogOpen(true)}
-            sx={{ height: 56, borderRadius: 3 }}
+            sx={{ height: 56, borderRadius: 3, minWidth: 140 }}
           >
             {bookingsText.editor.addCustomer}
           </Button>
@@ -427,7 +461,7 @@ export function BookingDocumentEditor({
           booking={document}
           paymentMethods={paymentMethods}
           lineId={showCancelDialogFor.isFull ? undefined : showCancelDialogFor.id}
-          isSaving={false}
+          saving={false}
           initialDate={cancellationDate}
         />
       )}

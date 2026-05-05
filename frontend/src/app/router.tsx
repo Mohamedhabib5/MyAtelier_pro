@@ -19,6 +19,7 @@ const ReportsPage = lazy(() => import('../pages/ReportsPage').then((module) => (
 const ReportsPrintPage = lazy(() => import('../pages/ReportsPrintPage').then((module) => ({ default: module.ReportsPrintPage })));
 const AccountingPage = lazy(() => import('../pages/AccountingPage').then((module) => ({ default: module.AccountingPage })));
 const SettingsPage = lazy(() => import('../pages/SettingsPage').then((module) => ({ default: module.SettingsPage })));
+const BIAnalyticsPage = lazy(() => import('../pages/BIAnalyticsPage').then((module) => ({ default: module.BIAnalyticsPage })));
 
 // Settings Views
 const GeneralCompanyView = lazy(() => import('../features/settings/views/GeneralCompanyView').then((module) => ({ default: module.GeneralCompanyView })));
@@ -55,6 +56,7 @@ export const router = createBrowserRouter([
           { path: 'custody-reports', element: <Navigate to='/custody' replace /> },
           { path: 'audit', element: <AuditExplorerPage /> },
           { path: 'reports', element: <ReportsPage /> },
+          { path: 'analytics', element: <BIAnalyticsPage /> },
           { path: 'accounting', element: <AccountingPage /> },
           { path: 'services', element: <Navigate to='/settings/catalog/services' replace /> },
           { path: 'users', element: <Navigate to='/settings/security/users' replace /> },

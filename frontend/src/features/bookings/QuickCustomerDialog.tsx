@@ -1,5 +1,5 @@
 import { useState } from 'react';
-
+import { useLanguage } from '../language/LanguageProvider';
 import { CustomerFormDialog, type CustomerFormState } from '../customers/CustomerFormDialog';
 import type { CustomerPayload } from '../customers/api';
 
@@ -28,9 +28,23 @@ export function QuickCustomerDialog({
   onClose: () => void;
   onSubmit: (payload: CustomerPayload) => Promise<void>;
 }) {
+  const { language } = useLanguage();
   const [form, setForm] = useState<CustomerFormState>(emptyForm());
 
   async function handleSubmit() {
+    if (!form.bride_name.trim() && !form.groom_name.trim()) {
+      alert(language === 'ar' ? 'يجب إدخال اسم العروسة أو العريس على الأقل' : 'At least Bride or Groom name is required');
+      return;
+    }
+    if (!form.address || form.address.trim().length < 2) {
+      alert('Address is required / العنوان مطلوب');
+      return;
+    }
+    if (!form.phone || form.phone.trim().length < 3) {
+      alert('Phone number is required / رقم الهاتف مطلوب');
+      return;
+    }
+
     const calculatedFullName = form.full_name || (form.groom_name && form.bride_name ? `${form.groom_name} & ${form.bride_name}` : (form.groom_name || form.bride_name || 'Customer'));
     
     await onSubmit({
@@ -41,7 +55,7 @@ export function QuickCustomerDialog({
       phone: form.phone,
       phone_2: form.phone_2 || null,
       email: form.email || null,
-      address: form.address || null,
+      address: form.address,
       notes: form.notes || null,
     });
     setForm(emptyForm());
