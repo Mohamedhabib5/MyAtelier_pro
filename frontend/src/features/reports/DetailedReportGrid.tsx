@@ -11,6 +11,7 @@ type Props = {
   language: 'ar' | 'en';
   rows: DetailedReportRowResponse[];
   loading: boolean;
+  onExport?: (format: 'csv' | 'xlsx', scope: 'all' | 'page') => void;
 };
 
 type GroupByField = 
@@ -25,7 +26,7 @@ type GroupByField =
     | 'booking_status' 
     | 'created_by';
 
-export function DetailedReportGrid({ language, rows, loading }: Props) {
+export function DetailedReportGrid({ language, rows, loading, onExport }: Props) {
   const commonText = useCommonText();
   const formatters = useLanguageFormatters();
   const reportsText = useReportsText();
@@ -238,7 +239,7 @@ export function DetailedReportGrid({ language, rows, loading }: Props) {
             noRowsLabel={language === 'ar' ? 'لا توجد بيانات مطابقة.' : 'No matching data found.'}
             rowsPerPageLabel={language === 'ar' ? 'عدد الصفوف' : 'Rows per page'}
             loading={loading}
-            csvFileName="detailed_report.csv"
+            onExport={onExport}
             getRowId={({ data }) => data.booking_line_id}
             externalPagination={undefined}
             getRowStyle={(params) => {

@@ -1,13 +1,20 @@
-﻿import { ToggleButton, ToggleButtonGroup } from '@mui/material';
+import { Chip, MenuItem, TextField } from '@mui/material';
+import type { ColDef } from 'ag-grid-community';
 import { useMemo } from 'react';
 
-import { AppDataTable } from '../../components/data-table/AppDataTable';
+import { AppAgGrid } from '../../components/ag-grid';
 import { SectionCard } from '../../components/SectionCard';
 import { getCustodyStatusLabel, type Language } from './presentation';
 import type { CustodyCaseRecord, CustodyCaseView } from './api';
 
 type Props = {
   rows: CustodyCaseRecord[];
+  total: number;
+  loading: boolean;
+  page: number;
+  pageSize: number;
+  onPageChange: (value: number) => void;
+  onPageSizeChange: (value: number) => void;
   view: CustodyCaseView;
   onViewChange: (value: CustodyCaseView) => void;
   language: Language;
@@ -37,112 +44,85 @@ type Props = {
     close: string;
     emptyValue: string;
   };
+  onExport: (format: 'csv' | 'xlsx', scope: 'all' | 'page') => void;
 };
-
-function formatAmount(value: number | null, emptyValue: string): string {
-  if (value === null || value === undefined) return emptyValue;
-  return `${value.toLocaleString()} EGP`;
-}
 
 export function CustodyCasesTableSection({
   rows,
+  total,
+  loading,
+  page,
+  pageSize,
+  onPageChange,
+  onPageSizeChange,
   view,
   onViewChange,
   language,
   title,
   subtitle,
-  viewOpenLabel,
-  viewSettledLabel,
-  viewAllLabel,
   labels,
+  onExport,
 }: Props) {
-  const searchFields = useMemo(
+  const isAr = language === 'ar';
+  
+  const columns = useMemo<ColDef<CustodyCaseRecord>[]>(
     () => [
-      (row: CustodyCaseRecord) => row.case_number,
-      (row: CustodyCaseRecord) => row.customer_name ?? '',
-      (row: CustodyCaseRecord) => row.booking_number ?? '',
-      (row: CustodyCaseRecord) => row.dress_code ?? '',
-      (row: CustodyCaseRecord) => row.notes ?? '',
-      (row: CustodyCaseRecord) => getCustodyStatusLabel(row.status, language),
+      { colId: 'case_number', field: 'case_number', headerName: labels.caseNumber, pinned: isAr ? 'right' : 'left' },
+      { colId: 'custody_date', field: 'custody_date', headerName: labels.custodyDate },
+      { colId: 'customer_name', field: 'customer_name', headerName: labels.customerName },
+      { colId: 'booking_number', field: 'booking_number', headerName: labels.bookingNumber },
+      { colId: 'dress_code', field: 'dress_code', headerName: labels.dressCode, valueFormatter: ({ value }) => value ?? labels.emptyValue },
+      { colId: 'notes', field: 'notes', headerName: labels.statement, flex: 1.2 },
+      { 
+        colId: 'security_deposit_amount', 
+        field: 'security_deposit_amount', 
+        headerName: labels.depositAmount, 
+        filter: 'agNumberColumnFilter',
+        valueFormatter: (params) => params.value ? `${params.value.toLocaleString()} EGP` : labels.emptyValue
+      },
+      { 
+        colId: 'compensation_amount', 
+        field: 'compensation_amount', 
+        headerName: labels.compensationAmount, 
+        filter: 'agNumberColumnFilter',
+        valueFormatter: (params) => params.value ? `${params.value.toLocaleString()} EGP` : labels.emptyValue
+      },
+      {
+        colId: 'status',
+        headerName: labels.status,
+        cellRenderer: ({ data }: { data: CustodyCaseRecord | undefined }) =>
+          data ? <Chip size='small' color={data.status === 'settled' ? 'success' : 'primary'} label={getCustodyStatusLabel(data.status, language)} /> : null,
+      },
     ],
-    [language],
+    [labels, language, isAr],
   );
 
   return (
     <SectionCard title={title} subtitle={subtitle}>
-      <ToggleButtonGroup
-        size='small'
-        value={view}
-        exclusive
-        onChange={(_event, value: CustodyCaseView | null) => {
-          if (!value) return;
-          onViewChange(value);
-        }}
-        aria-label='custody-view-filter'
-      >
-        <ToggleButton value='open'>{viewOpenLabel}</ToggleButton>
-        <ToggleButton value='settled'>{viewSettledLabel}</ToggleButton>
-        <ToggleButton value='all'>{viewAllLabel}</ToggleButton>
-      </ToggleButtonGroup>
-      <AppDataTable
-        tableKey='custody-cases'
+      <AppAgGrid
+        tableKey='custody-cases-grid'
         rows={rows}
-        columns={[
-          { key: 'case_number', header: labels.caseNumber, searchValue: (row) => row.case_number, render: (row) => row.case_number },
-          { key: 'custody_date', header: labels.custodyDate, searchValue: (row) => row.custody_date, render: (row) => row.custody_date },
-          {
-            key: 'customer_name',
-            header: labels.customerName,
-            searchValue: (row) => row.customer_name ?? '',
-            render: (row) => row.customer_name ?? labels.emptyValue,
-          },
-          {
-            key: 'booking_number',
-            header: labels.bookingNumber,
-            searchValue: (row) => row.booking_number ?? '',
-            render: (row) => row.booking_number ?? labels.emptyValue,
-          },
-          {
-            key: 'dress_code',
-            header: labels.dressCode,
-            searchValue: (row) => row.dress_code ?? '',
-            render: (row) => row.dress_code ?? labels.emptyValue,
-          },
-          {
-            key: 'notes',
-            header: labels.statement,
-            searchValue: (row) => row.notes ?? '',
-            render: (row) => row.notes ?? labels.emptyValue,
-          },
-          {
-            key: 'security_deposit_amount',
-            header: labels.depositAmount,
-            searchValue: (row) => row.security_deposit_amount?.toString() ?? '',
-            render: (row) => formatAmount(row.security_deposit_amount, labels.emptyValue),
-          },
-          {
-            key: 'compensation_amount',
-            header: labels.compensationAmount,
-            searchValue: (row) => row.compensation_amount?.toString() ?? '',
-            render: (row) => formatAmount(row.compensation_amount, labels.emptyValue),
-          },
-          {
-            key: 'status',
-            header: labels.status,
-            searchValue: (row) => getCustodyStatusLabel(row.status, language),
-            render: (row) => getCustodyStatusLabel(row.status, language),
-          },
-        ]}
+        columns={columns}
+        language={language}
         searchLabel={labels.search}
         searchPlaceholder={labels.searchPlaceholder}
-        resetColumnsLabel={labels.reset}
-        noRowsLabel={labels.noRows}
-        filtersLabel={labels.filters}
         columnsLabel={labels.columns}
         exportLabel={labels.export}
-        rowsPerPageLabel={labels.rowsPerPage}
+        resetLabel={labels.reset}
         closeLabel={labels.close}
-        searchFields={searchFields}
+        noRowsLabel={labels.noRows}
+        rowsPerPageLabel={labels.rowsPerPage}
+        toolbarFilters={
+          <TextField select size='small' label={labels.filters} value={view} onChange={(e) => onViewChange(e.target.value as CustodyCaseView)} sx={{ minWidth: 160 }}>
+            <MenuItem value='all'>{isAr ? 'الكل' : 'All'}</MenuItem>
+            <MenuItem value='open'>{isAr ? 'المفتوحة' : 'Open'}</MenuItem>
+            <MenuItem value='settled'>{isAr ? 'المسواة' : 'Settled'}</MenuItem>
+          </TextField>
+        }
+        externalPagination={{ total, page, pageSize, onPageChange, onPageSizeChange }}
+        loading={loading}
+        onExport={onExport}
+        getRowId={({ data }) => data.id}
       />
     </SectionCard>
   );

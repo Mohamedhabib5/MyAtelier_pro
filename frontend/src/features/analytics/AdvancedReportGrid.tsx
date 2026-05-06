@@ -12,10 +12,16 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@mui/material';
 
+import { getAdvancedBIExcelUrl, getAdvancedBIExportUrl } from '../exports/api';
+import { downloadFile } from '../../lib/api';
+
 interface Props {
   records: AdvancedBIRecord[];
   loading: boolean;
   language: 'ar' | 'en';
+  dateFrom?: string;
+  dateTo?: string;
+  branchId?: string;
   // Lifted Props
   groupStack: any[];
   setGroupStack: (stack: any[]) => void;
@@ -29,12 +35,20 @@ type GroupField = { id: keyof AdvancedBIRecord; label: string };
 
 export function AdvancedReportGrid({ 
   records, loading, language,
+  dateFrom, dateTo, branchId,
   groupStack, setGroupStack,
   drillDownPath, setDrillDownPath,
   selectedBookingId, setSelectedBookingId
 }: Props) {
   const isAr = language === 'ar';
   const navigate = useNavigate();
+
+  const handleExport = (format: 'csv' | 'xlsx', scope: 'all' | 'page') => {
+    const isXlsx = format === 'xlsx';
+    const filters = { dateFrom, dateTo };
+    const url = isXlsx ? getAdvancedBIExcelUrl(branchId, filters) : getAdvancedBIExportUrl(branchId, filters);
+    downloadFile(url);
+  };
 
   const handleBack = () => {
     if (selectedBookingId) {
@@ -294,6 +308,7 @@ export function AdvancedReportGrid({
         closeLabel={isAr ? 'إغلاق' : 'Close'}
         noRowsLabel={isAr ? 'لا توجد بيانات' : 'No data'}
         rowsPerPageLabel={isAr ? 'سجل' : 'rows'}
+        onExport={handleExport}
         toolbarLeftContent={
           <Stack direction="row" spacing={2} alignItems="center" sx={{ overflowX: 'auto', py: 0.5, px: 1 }}>
             <Button

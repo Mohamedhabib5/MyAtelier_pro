@@ -18,7 +18,7 @@ import {
 import { listDepartments, listServices } from '../features/catalog/api';
 import { listCustomers } from '../features/customers/api';
 import { listDresses } from '../features/dresses/api';
-import { getBookingsExcelUrl } from '../features/exports/api';
+import { getBookingsExcelUrl, getBookingsExportUrl } from '../features/exports/api';
 import { useLanguage } from '../features/language/LanguageProvider';
 import { downloadFile } from '../lib/api';
 import { listPaymentMethods } from '../features/paymentMethods/api';
@@ -184,15 +184,20 @@ export function BookingsPage() {
             await handleDeleteBooking(record.id);
           }
         }}
-        onExportXlsx={() => {
-          downloadFile(getBookingsExcelUrl(undefined, {
+        onExport={(format, scope) => {
+          const isXlsx = format === 'xlsx';
+          const urlFn = isXlsx ? getBookingsExcelUrl : getBookingsExportUrl;
+          const exportPage = scope === 'page' ? page + 1 : undefined;
+          const exportPageSize = scope === 'page' ? pageSize : undefined;
+          
+          downloadFile(urlFn(undefined, {
             search: deferredSearch || undefined,
             status: statusFilter || undefined,
             dateFrom: dateFrom || undefined,
             dateTo: dateTo || undefined,
             sortBy,
             sortDir,
-          }));
+          }, exportPage, exportPageSize));
         }}
       />
 

@@ -71,144 +71,188 @@ export function getCustomersExcelUrl(): string {
   return '/api/exports/customers.xlsx';
 }
 
-export function getBookingsExportUrl(branchId?: string | null, filters?: BookingExportFilters): string {
+export function getBookingsExportUrl(branchId?: string | null, filters?: BookingExportFilters, page?: number, pageSize?: number): string {
   const base = withBranch('/api/exports/bookings.csv', branchId);
-  if (!filters) return base;
   const query = buildQuery([
-    ['search', filters.search],
-    ['status', filters.status],
-    ['date_from', filters.dateFrom],
-    ['date_to', filters.dateTo],
-    ['sort_by', filters.sortBy],
-    ['sort_dir', filters.sortDir],
+    ['search', filters?.search],
+    ['status', filters?.status],
+    ['date_from', filters?.dateFrom],
+    ['date_to', filters?.dateTo],
+    ['sort_by', filters?.sortBy],
+    ['sort_dir', filters?.sortDir],
+    ['page', page?.toString()],
+    ['page_size', pageSize?.toString()],
   ]);
   if (!query) return base;
   const separator = base.includes('?') ? '&' : '?';
   return `${base}${separator}${query.slice(1)}`;
 }
 
-export function getBookingsExcelUrl(branchId?: string | null, filters?: BookingExportFilters): string {
+export function getBookingsExcelUrl(branchId?: string | null, filters?: BookingExportFilters, page?: number, pageSize?: number): string {
   const base = withBranch('/api/exports/bookings.xlsx', branchId);
-  if (!filters) return base;
   const query = buildQuery([
-    ['search', filters.search],
-    ['status', filters.status],
-    ['date_from', filters.dateFrom],
-    ['date_to', filters.dateTo],
-    ['sort_by', filters.sortBy],
-    ['sort_dir', filters.sortDir],
+    ['search', filters?.search],
+    ['status', filters?.status],
+    ['date_from', filters?.dateFrom],
+    ['date_to', filters?.dateTo],
+    ['sort_by', filters?.sortBy],
+    ['sort_dir', filters?.sortDir],
+    ['page', page?.toString()],
+    ['page_size', pageSize?.toString()],
   ]);
   if (!query) return base;
   const separator = base.includes('?') ? '&' : '?';
   return `${base}${separator}${query.slice(1)}`;
 }
 
-export function getBookingLinesExportUrl(branchId?: string | null, filters?: BookingExportFilters): string {
+export function getBookingLinesExportUrl(branchId?: string | null, filters?: BookingExportFilters, page?: number, pageSize?: number): string {
   const base = withBranch('/api/exports/booking-lines.csv', branchId);
-  if (!filters) return base;
   const query = buildQuery([
-    ['search', filters.search],
-    ['status', filters.status],
-    ['date_from', filters.dateFrom],
-    ['date_to', filters.dateTo],
-    ['sort_by', filters.sortBy],
-    ['sort_dir', filters.sortDir],
+    ['search', filters?.search],
+    ['status', filters?.status],
+    ['date_from', filters?.dateFrom],
+    ['date_to', filters?.dateTo],
+    ['sort_by', filters?.sortBy],
+    ['sort_dir', filters?.sortDir],
+    ['page', page?.toString()],
+    ['page_size', pageSize?.toString()],
   ]);
   if (!query) return base;
   const separator = base.includes('?') ? '&' : '?';
   return `${base}${separator}${query.slice(1)}`;
 }
 
-export function getBookingLinesExcelUrl(branchId?: string | null, filters?: BookingExportFilters): string {
+export function getBookingLinesExcelUrl(branchId?: string | null, filters?: BookingExportFilters, page?: number, pageSize?: number): string {
   const base = withBranch('/api/exports/booking-lines.xlsx', branchId);
-  if (!filters) return base;
   const query = buildQuery([
-    ['search', filters.search],
-    ['status', filters.status],
-    ['date_from', filters.dateFrom],
-    ['date_to', filters.dateTo],
-    ['sort_by', filters.sortBy],
-    ['sort_dir', filters.sortDir],
+    ['search', filters?.search],
+    ['status', filters?.status],
+    ['date_from', filters?.dateFrom],
+    ['date_to', filters?.dateTo],
+    ['sort_by', filters?.sortBy],
+    ['sort_dir', filters?.sortDir],
+    ['page', page?.toString()],
+    ['page_size', pageSize?.toString()],
   ]);
   if (!query) return base;
   const separator = base.includes('?') ? '&' : '?';
   return `${base}${separator}${query.slice(1)}`;
 }
 
-export function getPaymentsExportUrl(branchId?: string | null, filters?: PaymentExportFilters): string {
+export function getPaymentsExportUrl(branchId?: string | null, filters?: PaymentExportFilters, page?: number, pageSize?: number): string {
   const base = withBranch('/api/exports/payment-documents.csv', branchId);
-  if (!filters) return base;
   const query = buildQuery([
-    ['search', filters.search],
-    ['status', filters.status],
-    ['document_kind', filters.documentKind],
-    ['date_from', filters.dateFrom],
-    ['date_to', filters.dateTo],
-    ['sort_by', filters.sortBy],
-    ['sort_dir', filters.sortDir],
+    ['search', filters?.search],
+    ['status', filters?.status],
+    ['document_kind', filters?.documentKind],
+    ['date_from', filters?.dateFrom],
+    ['date_to', filters?.dateTo],
+    ['sort_by', filters?.sortBy],
+    ['sort_dir', filters?.sortDir],
+    ['page', page?.toString()],
+    ['page_size', pageSize?.toString()],
   ]);
   if (!query) return base;
   const separator = base.includes('?') ? '&' : '?';
   return `${base}${separator}${query.slice(1)}`;
 }
 
-export function getPaymentsExcelUrl(branchId?: string | null, filters?: PaymentExportFilters): string {
+export function getPaymentsExcelUrl(branchId?: string | null, filters?: PaymentExportFilters, page?: number, pageSize?: number): string {
   const base = withBranch('/api/exports/payment-documents.xlsx', branchId);
-  if (!filters) return base;
   const query = buildQuery([
-    ['search', filters.search],
-    ['status', filters.status],
-    ['document_kind', filters.documentKind],
-    ['date_from', filters.dateFrom],
-    ['date_to', filters.dateTo],
-    ['sort_by', filters.sortBy],
-    ['sort_dir', filters.sortDir],
+    ['search', filters?.search],
+    ['status', filters?.status],
+    ['document_kind', filters?.documentKind],
+    ['date_from', filters?.dateFrom],
+    ['date_to', filters?.dateTo],
+    ['sort_by', filters?.sortBy],
+    ['sort_dir', filters?.sortDir],
+    ['page', page?.toString()],
+    ['page_size', pageSize?.toString()],
   ]);
   if (!query) return base;
   const separator = base.includes('?') ? '&' : '?';
   return `${base}${separator}${query.slice(1)}`;
 }
 
-export function getPaymentAllocationsExportUrl(branchId?: string | null, filters?: PaymentExportFilters): string {
+export function getPaymentAllocationsExportUrl(branchId?: string | null, filters?: PaymentExportFilters, page?: number, pageSize?: number): string {
   const base = withBranch('/api/exports/payment-allocations.csv', branchId);
-  if (!filters) return base;
   const query = buildQuery([
-    ['search', filters.search],
-    ['status', filters.status],
-    ['document_kind', filters.documentKind],
-    ['date_from', filters.dateFrom],
-    ['date_to', filters.dateTo],
-    ['sort_by', filters.sortBy],
-    ['sort_dir', filters.sortDir],
+    ['search', filters?.search],
+    ['status', filters?.status],
+    ['document_kind', filters?.documentKind],
+    ['date_from', filters?.dateFrom],
+    ['date_to', filters?.dateTo],
+    ['sort_by', filters?.sortBy],
+    ['sort_dir', filters?.sortDir],
+    ['page', page?.toString()],
+    ['page_size', pageSize?.toString()],
   ]);
   if (!query) return base;
   const separator = base.includes('?') ? '&' : '?';
   return `${base}${separator}${query.slice(1)}`;
 }
 
-export function getPaymentAllocationsExcelUrl(branchId?: string | null, filters?: PaymentExportFilters): string {
+export function getPaymentAllocationsExcelUrl(branchId?: string | null, filters?: PaymentExportFilters, page?: number, pageSize?: number): string {
   const base = withBranch('/api/exports/payment-allocations.xlsx', branchId);
-  if (!filters) return base;
   const query = buildQuery([
-    ['search', filters.search],
-    ['status', filters.status],
-    ['document_kind', filters.documentKind],
-    ['date_from', filters.dateFrom],
-    ['date_to', filters.dateTo],
-    ['sort_by', filters.sortBy],
-    ['sort_dir', filters.sortDir],
+    ['search', filters?.search],
+    ['status', filters?.status],
+    ['document_kind', filters?.documentKind],
+    ['date_from', filters?.dateFrom],
+    ['date_to', filters?.dateTo],
+    ['sort_by', filters?.sortBy],
+    ['sort_dir', filters?.sortDir],
+    ['page', page?.toString()],
+    ['page_size', pageSize?.toString()],
   ]);
   if (!query) return base;
   const separator = base.includes('?') ? '&' : '?';
   return `${base}${separator}${query.slice(1)}`;
 }
 
-export function getCustodyExportUrl(): string {
-  return '/api/exports/custody.csv';
+export function getCustodyExportUrl(branchId?: string | null, page?: number, pageSize?: number): string {
+  const base = withBranch('/api/exports/custody.csv', branchId);
+  const query = buildQuery([
+    ['page', page?.toString()],
+    ['page_size', pageSize?.toString()],
+  ]);
+  if (!query) return base;
+  const separator = base.includes('?') ? '&' : '?';
+  return `${base}${separator}${query.slice(1)}`;
 }
 
-export function getCustodyExcelUrl(): string {
-  return '/api/exports/custody.xlsx';
+export function getCustodyExcelUrl(branchId?: string | null, page?: number, pageSize?: number): string {
+  const base = withBranch('/api/exports/custody.xlsx', branchId);
+  const query = buildQuery([
+    ['page', page?.toString()],
+    ['page_size', pageSize?.toString()],
+  ]);
+  if (!query) return base;
+  const separator = base.includes('?') ? '&' : '?';
+  return `${base}${separator}${query.slice(1)}`;
+}
+
+export function getAdvancedBIExportUrl(branchId?: string | null, filters?: { dateFrom?: string; dateTo?: string }): string {
+  const base = withBranch('/api/exports/advanced-bi.csv', branchId);
+  const query = buildQuery([
+    ['date_from', filters?.dateFrom],
+    ['date_to', filters?.dateTo],
+  ]);
+  if (!query) return base;
+  const separator = base.includes('?') ? '&' : '?';
+  return `${base}${separator}${query.slice(1)}`;
+}
+
+export function getAdvancedBIExcelUrl(branchId?: string | null, filters?: { dateFrom?: string; dateTo?: string }): string {
+  const base = withBranch('/api/exports/advanced-bi.xlsx', branchId);
+  const query = buildQuery([
+    ['date_from', filters?.dateFrom],
+    ['date_to', filters?.dateTo],
+  ]);
+  if (!query) return base;
+  const separator = base.includes('?') ? '&' : '?';
+  return `${base}${separator}${query.slice(1)}`;
 }
 
 export function getFinancePrintUrl(branchId?: string | null): string {

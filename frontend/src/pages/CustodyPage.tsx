@@ -1,4 +1,4 @@
-﻿import AddCircleOutlineOutlinedIcon from '@mui/icons-material/AddCircleOutlineOutlined';
+import AddCircleOutlineOutlinedIcon from '@mui/icons-material/AddCircleOutlineOutlined';
 import PaidOutlinedIcon from '@mui/icons-material/PaidOutlined';
 import PublishedWithChangesOutlinedIcon from '@mui/icons-material/PublishedWithChangesOutlined';
 import { Alert, Button, Stack, Typography } from '@mui/material';
@@ -6,6 +6,8 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import { AppDialogShell } from '../components/AppDialogShell';
 import { applyCustodyAction, createCustodyCase, listCustodyCases, type CustodyCaseCreatePayload, type CustodyCaseView } from '../features/custody/api';
+import { getCustodyExcelUrl, getCustodyExportUrl } from '../features/exports/api';
+import { downloadFile } from '../lib/api';
 import { CustodyActionForm } from '../features/custody/CustodyActionForm';
 import { CustodyCaseCreateSection } from '../features/custody/CustodyCaseCreateSection';
 import { CustodyCasesTableSection } from '../features/custody/CustodyCasesTableSection';
@@ -25,6 +27,8 @@ export function CustodyPage() {
   const selectedLanguage = isArabic ? 'ar' : 'en';
 
   const [caseView, setCaseView] = useState<CustodyCaseView>('open');
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(25);
   const [targetCaseId, setTargetCaseId] = useState('');
   const [action, setAction] = useState('handover');
   const [actionDate, setActionDate] = useState(todayIso());
@@ -39,8 +43,14 @@ export function CustodyPage() {
   const [actionDialogOpen, setActionDialogOpen] = useState(false);
   const [compensationDialogOpen, setCompensationDialogOpen] = useState(false);
 
-  const casesQuery = useQuery({ queryKey: ['custody', 'cases', caseView], queryFn: () => listCustodyCases(caseView) });
+  const casesQuery = useQuery({ 
+    queryKey: ['custody', 'cases', caseView, page, pageSize], 
+    queryFn: () => listCustodyCases(caseView, page + 1, pageSize) 
+  });
   const allCasesQuery = useQuery({ queryKey: ['custody', 'cases', 'all'], queryFn: () => listCustodyCases('all') });
+  
+  const caseRows = casesQuery.data?.items ?? [];
+  const caseTotal = casesQuery.data?.total ?? 0;
   const paymentMethodsQuery = useQuery({ queryKey: ['payment-methods', 'active'], queryFn: () => listPaymentMethods('active') });
 
   const caseOptions = useMemo(() => allCasesQuery.data ?? [], [allCasesQuery.data]);
@@ -134,9 +144,15 @@ export function CustodyPage() {
       {paymentMethodsQuery.error instanceof Error ? <Alert severity='error'>{paymentMethodsQuery.error.message}</Alert> : null}
 
       <CustodyCasesTableSection
-        rows={casesQuery.data ?? []}
+        rows={caseRows}
+        total={caseTotal}
+        loading={casesQuery.isLoading}
+        page={page}
+        pageSize={pageSize}
+        onPageChange={setPage}
+        onPageSizeChange={(v) => { setPageSize(v); setPage(0); }}
         view={caseView}
-        onViewChange={setCaseView}
+        onViewChange={(v) => { setCaseView(v); setPage(0); }}
         language={selectedLanguage}
         title={custodyText.page.listTitle}
         subtitle={custodyText.page.listSubtitle}
@@ -163,6 +179,14 @@ export function CustodyPage() {
           rowsPerPage: labels.rowsPerPage,
           close: labels.close,
           emptyValue: custodyText.page.emptyValue,
+        }}
+        onExport={(format, scope) => {
+          const isXlsx = format === 'xlsx';
+          const urlFn = isXlsx ? getCustodyExcelUrl : getCustodyExportUrl;
+          const exportPage = scope === 'page' ? page + 1 : undefined;
+          const exportPageSize = scope === 'page' ? pageSize : undefined;
+          
+          downloadFile(urlFn(undefined, exportPage, exportPageSize));
         }}
       />
 

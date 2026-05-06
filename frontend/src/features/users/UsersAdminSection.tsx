@@ -21,15 +21,15 @@ export function UsersAdminSection({ rows, language, currentLanguage, usersText, 
   const tableLabels =
     language === 'ar'
       ? {
-          search: 'ط¨ط­ط«',
-          searchPlaceholder: 'ط§ط¨ط­ط« ط¨ط§ط³ظ… ط§ظ„ظ…ط³طھط®ط¯ظ… ط£ظˆ ط§ظ„ط§ط³ظ… ط§ظ„ظƒط§ظ…ظ„ ط£ظˆ ط§ظ„ط¯ظˆط±',
-          filters: 'ط§ظ„ظپظ„ط§طھط±',
-          columns: 'ط§ظ„ط£ط¹ظ…ط¯ط©',
-          export: 'طھطµط¯ظٹط±',
-          reset: 'ط¥ط¹ط§ط¯ط© ط§ظ„ط¶ط¨ط·',
-          noRows: 'ظ„ط§ طھظˆط¬ط¯ ط¨ظٹط§ظ†ط§طھ ظ…ط·ط§ط¨ظ‚ط©',
-          rowsPerPage: 'ط¹ط¯ط¯ ط§ظ„طµظپظˆظپ',
-          close: 'ط¥ط؛ظ„ط§ظ‚',
+          search: 'بحث',
+          searchPlaceholder: 'ابحث باسم المستخدم أو الاسم الكامل أو الدور',
+          filters: 'الفلاتر',
+          columns: 'الأعمدة',
+          export: 'تصدير',
+          reset: 'إعادة الضبط',
+          noRows: 'لا توجد بيانات مطابقة',
+          rowsPerPage: 'عدد الصفوف',
+          close: 'إغلاق',
         }
       : {
           search: 'Search',

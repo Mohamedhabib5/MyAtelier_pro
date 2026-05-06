@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.core.exceptions import ValidationAppError
 from app.modules.bookings.calculations import derive_booking_status, line_paid_total, serialize_booking_document
-from app.modules.bookings.document_access import get_line_or_404, get_scoped_booking, reload_booking_or_404
+from app.modules.bookings.document_access import get_line_or_404, get_scoped_booking_by_branch, reload_booking_or_404
 from app.modules.bookings.repository import BookingsRepository
 from app.modules.bookings.revenue_bridge import post_booking_line_revenue_recognition, reverse_booking_line_revenue_recognition
 from app.modules.core_platform.period_lock import enforce_not_locked_with_override, record_period_lock_override
@@ -16,8 +16,8 @@ from app.modules.identity.models import User
 
 ZERO = Decimal("0.00")
 
-def complete_booking_line(db: Session, actor: User, booking_id: str, line_id: str, session: dict) -> dict:
-    booking = get_scoped_booking(db, booking_id, session)
+def complete_booking_line(db: Session, actor: User, booking_id: str, line_id: str, branch_id: str) -> dict:
+    booking = get_scoped_booking_by_branch(db, booking_id, branch_id)
     line = get_line_or_404(booking, line_id)
     if line.status == "cancelled":
         raise ValidationAppError("لا يمكن إكمال السطور الملغاة")
@@ -62,7 +62,7 @@ def reverse_completed_booking_line(
     actor: User,
     booking_id: str,
     line_id: str,
-    session: dict,
+    branch_id: str,
     *,
     override_lock: bool = False,
     override_reason: str | None = None,
@@ -75,7 +75,7 @@ def reverse_completed_booking_line(
         override_lock=override_lock,
         override_reason=override_reason,
     )
-    booking = get_scoped_booking(db, booking_id, session)
+    booking = get_scoped_booking_by_branch(db, booking_id, branch_id)
     line = get_line_or_404(booking, line_id)
     if line.status != "completed" or not line.revenue_journal_entry_id:
         raise ValidationAppError("يمكن عكس الإيراد فقط لسطر مكتمل")

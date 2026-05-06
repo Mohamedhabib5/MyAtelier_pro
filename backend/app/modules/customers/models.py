@@ -22,6 +22,6 @@ class Customer(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     phone: Mapped[str] = mapped_column(String(30), nullable=False, index=True)
     phone_2: Mapped[str | None] = mapped_column(String(30), nullable=True)
     email: Mapped[str | None] = mapped_column(String(160), nullable=True)
-    address: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    address: Mapped[str] = mapped_column(String(255), nullable=False)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)

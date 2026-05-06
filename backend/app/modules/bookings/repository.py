@@ -159,6 +159,81 @@ class BookingsRepository:
         )
         return list(self.db.scalars(stmt))
 
+    def get_bookings_stats(self, company_id: str, branch_id: str | None = None) -> dict:
+        """
+        Efficiently calculates total bookings and remaining balance using SQL aggregations.
+        """
+        # Count bookings
+        count_stmt = select(func.count(Booking.id)).where(Booking.company_id == company_id)
+        if branch_id:
+            count_stmt = count_stmt.where(Booking.branch_id == branch_id)
+        total_bookings = self.db.scalar(count_stmt) or 0
+
+        # Sum remaining balance across non-cancelled lines
+        # remaining = line_price - SUM(allocated_amount)
+        # To avoid complex joins, we can sum line_price and then subtract total allocations
+        
+        # 1. Total line prices for active bookings
+        price_stmt = (
+            select(func.sum(BookingLine.line_price))
+            .join(BookingLine.booking)
+            .where(
+                Booking.company_id == company_id,
+                BookingLine.status != 'cancelled'
+            )
+        )
+        if branch_id:
+            price_stmt = price_stmt.where(Booking.branch_id == branch_id)
+        total_line_price = self.db.scalar(price_stmt) or Decimal('0.00')
+
+        # 2. Total allocated payments for these lines
+        # We need to sum allocations for lines belonging to these bookings
+        alloc_stmt = (
+            select(func.sum(PaymentAllocation.allocated_amount))
+            .join(PaymentAllocation.booking_line)
+            .join(BookingLine.booking)
+            .join(PaymentAllocation.payment_document)
+            .where(
+                Booking.company_id == company_id,
+                BookingLine.status != 'cancelled',
+                PaymentDocument.status != 'voided'
+            )
+        )
+        if branch_id:
+            alloc_stmt = alloc_stmt.where(Booking.branch_id == branch_id)
+        
+        total_allocated = self.db.scalar(alloc_stmt) or Decimal('0.00')
+
+        return {
+            'total_bookings': total_bookings,
+            'total_remaining': total_line_price - total_allocated
+        }
+
+    def get_top_services_stats(self, company_id: str, branch_id: str | None = None, limit: int = 5) -> list[dict]:
+        """
+        Calculates most popular services using GROUP BY.
+        """
+        stmt = (
+            select(
+                ServiceCatalogItem.name.label('label'),
+                func.count(BookingLine.id).label('count')
+            )
+            .join(BookingLine.service)
+            .join(BookingLine.booking)
+            .where(
+                Booking.company_id == company_id,
+                BookingLine.status != 'cancelled'
+            )
+            .group_by(ServiceCatalogItem.name)
+            .order_by(func.count(BookingLine.id).desc())
+            .limit(limit)
+        )
+        if branch_id:
+            stmt = stmt.where(Booking.branch_id == branch_id)
+        
+        results = self.db.execute(stmt).all()
+        return [{'label': r.label, 'count': r.count} for r in results]
+
     def get_booking(self, booking_id: str) -> Booking | None:
         stmt = self._booking_query().where(Booking.id == booking_id)
         return self.db.scalars(stmt).first()

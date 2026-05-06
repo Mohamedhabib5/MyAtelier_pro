@@ -11,7 +11,6 @@ from app.modules.organization.branch_context import resolve_branch_scope
 def export_booking_lines_csv(
     db: Session,
     actor: User,
-    session: dict,
     branch_id: str | None = None,
     *,
     search: str | None = None,
@@ -20,11 +19,13 @@ def export_booking_lines_csv(
     date_to: str | None = None,
     sort_by: str = 'booking_date',
     sort_dir: str = 'desc',
+    page: int | None = None,
+    page_size: int | None = None,
 ) -> tuple[str, str]:
-    branch = resolve_branch_scope(db, session, branch_id)
+    from app.modules.organization.branch_context import resolve_branch_scope_stateless
+    branch = resolve_branch_scope_stateless(db, branch_id)
     rows = booking_line_rows(
         db,
-        session,
         branch.id,
         search=search,
         status=status,
@@ -32,6 +33,8 @@ def export_booking_lines_csv(
         date_to=date_to,
         sort_by=sort_by,
         sort_dir=sort_dir,
+        page=page,
+        page_size=page_size,
     )
     content = build_csv(rows, BOOKING_LINE_COLUMNS)
     filename = build_filename(f'booking_lines_{branch.code.lower()}')
@@ -42,7 +45,6 @@ def export_booking_lines_csv(
 def export_booking_lines_xlsx(
     db: Session,
     actor: User,
-    session: dict,
     branch_id: str | None = None,
     *,
     search: str | None = None,
@@ -51,11 +53,13 @@ def export_booking_lines_xlsx(
     date_to: str | None = None,
     sort_by: str = 'booking_date',
     sort_dir: str = 'desc',
+    page: int | None = None,
+    page_size: int | None = None,
 ) -> tuple[str, bytes]:
-    branch = resolve_branch_scope(db, session, branch_id)
+    from app.modules.organization.branch_context import resolve_branch_scope_stateless
+    branch = resolve_branch_scope_stateless(db, branch_id)
     rows = booking_line_rows(
         db,
-        session,
         branch.id,
         search=search,
         status=status,
@@ -63,6 +67,8 @@ def export_booking_lines_xlsx(
         date_to=date_to,
         sort_by=sort_by,
         sort_dir=sort_dir,
+        page=page,
+        page_size=page_size,
     )
     content = build_xlsx(rows, BOOKING_LINE_COLUMNS)
     filename = build_filename(f'booking_lines_{branch.code.lower()}', extension='xlsx')
@@ -73,7 +79,6 @@ def export_booking_lines_xlsx(
 def export_payment_allocations_csv(
     db: Session,
     actor: User,
-    session: dict,
     branch_id: str | None = None,
     *,
     search: str | None = None,
@@ -83,11 +88,13 @@ def export_payment_allocations_csv(
     date_to: str | None = None,
     sort_by: str = 'payment_date',
     sort_dir: str = 'desc',
+    page: int | None = None,
+    page_size: int | None = None,
 ) -> tuple[str, str]:
-    branch = resolve_branch_scope(db, session, branch_id)
+    from app.modules.organization.branch_context import resolve_branch_scope_stateless
+    branch = resolve_branch_scope_stateless(db, branch_id)
     rows = payment_allocation_rows(
         db,
-        session,
         branch.id,
         search=search,
         status=status,
@@ -96,6 +103,8 @@ def export_payment_allocations_csv(
         date_to=date_to,
         sort_by=sort_by,
         sort_dir=sort_dir,
+        page=page,
+        page_size=page_size,
     )
     content = build_csv(rows, PAYMENT_ALLOCATION_COLUMNS)
     filename = build_filename(f'payment_allocations_{branch.code.lower()}')
@@ -106,7 +115,6 @@ def export_payment_allocations_csv(
 def export_payment_allocations_xlsx(
     db: Session,
     actor: User,
-    session: dict,
     branch_id: str | None = None,
     *,
     search: str | None = None,
@@ -116,11 +124,13 @@ def export_payment_allocations_xlsx(
     date_to: str | None = None,
     sort_by: str = 'payment_date',
     sort_dir: str = 'desc',
+    page: int | None = None,
+    page_size: int | None = None,
 ) -> tuple[str, bytes]:
-    branch = resolve_branch_scope(db, session, branch_id)
+    from app.modules.organization.branch_context import resolve_branch_scope_stateless
+    branch = resolve_branch_scope_stateless(db, branch_id)
     rows = payment_allocation_rows(
         db,
-        session,
         branch.id,
         search=search,
         status=status,
@@ -129,6 +139,8 @@ def export_payment_allocations_xlsx(
         date_to=date_to,
         sort_by=sort_by,
         sort_dir=sort_dir,
+        page=page,
+        page_size=page_size,
     )
     content = build_xlsx(rows, PAYMENT_ALLOCATION_COLUMNS)
     filename = build_filename(f'payment_allocations_{branch.code.lower()}', extension='xlsx')

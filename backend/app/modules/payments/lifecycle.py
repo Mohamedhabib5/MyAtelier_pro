@@ -11,7 +11,7 @@ from app.modules.identity.models import User
 from app.modules.payments.accounting_bridge import reverse_linked_payment_document_entry
 from app.modules.payments.document_access import (
     ensure_payment_document_is_editable,
-    get_scoped_payment_document,
+    get_scoped_payment_document_by_branch,
     load_document_or_404,
 )
 from app.modules.payments.repository import PaymentsRepository
@@ -19,8 +19,8 @@ from app.modules.payments.rules import clean_required_text, parse_payment_date
 from app.modules.payments.schemas import PaymentVoidRequest
 
 
-def void_payment(db: Session, actor: User, payment_document_id: str, payload: PaymentVoidRequest, session: dict) -> dict:
-    payment_document = get_scoped_payment_document(db, payment_document_id, session)
+def void_payment(db: Session, actor: User, payment_document_id: str, payload: PaymentVoidRequest, branch_id: str) -> dict:
+    payment_document = get_scoped_payment_document_by_branch(db, payment_document_id, branch_id)
     ensure_payment_document_is_editable(payment_document)
     void_date = parse_payment_date(payload.void_date)
     override_payload = enforce_not_locked_with_override(

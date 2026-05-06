@@ -53,6 +53,8 @@ def serialize_document(payment_document: PaymentDocument, *, include_allocations
         "branch_name": payment_document.branch.name,
         "customer_id": payment_document.customer_id,
         "customer_name": payment_document.customer.full_name,
+        "customer_phone": payment_document.customer.phone,
+        "customer_address": payment_document.customer.address,
         "payment_method_id": payment_document.payment_method_id,
         "payment_method_name": payment_document.payment_method.name if payment_document.payment_method else None,
         "payment_number": payment_document.payment_number,

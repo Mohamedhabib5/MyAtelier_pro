@@ -42,6 +42,10 @@ class Settings(BaseSettings):
     max_image_size_bytes: int = 307200  # 300 KB
     redis_url: str = "redis://localhost:6379/0"
 
+    csrf_cookie_name: str = "myatelier_pro_csrf"
+    csrf_header_name: str = "X-CSRF-Token"
+    csrf_secret_key: str | None = None  # If None, will fallback to app_secret_key
+
 
     def resolved_storage_root(self) -> Path:
         return Path(self.storage_root).resolve()

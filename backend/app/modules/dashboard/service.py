@@ -16,38 +16,27 @@ ZERO = Decimal('0.00')
 
 def get_finance_dashboard(db: Session, branch_id: str | None = None) -> dict:
     company = get_company_settings(db)
-    bookings = BookingsRepository(db).list_bookings(company.id, branch_id)
-    payment_documents = PaymentsRepository(db).list_payment_documents(company.id, branch_id)
+    bookings_repo = BookingsRepository(db)
+    payments_repo = PaymentsRepository(db)
 
-    daily_income: dict[str, Decimal] = defaultdict(lambda: ZERO)
-    department_income: dict[str, Decimal] = defaultdict(lambda: ZERO)
-    total_income = ZERO
-    top_services: dict[str, int] = defaultdict(int)
-    total_remaining = ZERO
+    # 1. Get Core Stats (Total Bookings, Total Remaining)
+    booking_stats = bookings_repo.get_bookings_stats(company.id, branch_id)
+    
+    # 2. Get Total Income
+    total_income = payments_repo.get_total_income_stats(company.id, branch_id)
 
-    for payment_document in payment_documents:
-        if payment_document.status == 'voided':
-            continue
-        for allocation in payment_document.allocations:
-            amount = Decimal(str(allocation.allocated_amount)).quantize(PRICE_QUANT, rounding=ROUND_HALF_UP)
-            total_income += amount
-            daily_income[payment_document.payment_date.isoformat()] += amount
-            department_income[allocation.booking_line.department.name] += amount
-
-    for booking in bookings:
-        for line in booking.lines:
-            if line.status == 'cancelled':
-                continue
-            total_remaining += line_remaining_amount(line)
-            top_services[line.service.name] += 1
+    # 3. Get Charts Data
+    daily_income = payments_repo.get_payment_stats_by_date(company.id, branch_id, days=7)
+    department_income = payments_repo.get_payment_stats_by_department(company.id, branch_id)
+    top_services = bookings_repo.get_top_services_stats(company.id, branch_id, limit=5)
 
     return {
         'total_income': _to_float(total_income),
-        'total_remaining': _to_float(total_remaining),
-        'total_bookings': len(bookings),
-        'daily_income': _sorted_daily_items(daily_income),
-        'department_income': _sorted_metric_items(department_income),
-        'top_services': _sorted_count_items(top_services),
+        'total_remaining': _to_float(booking_stats['total_remaining']),
+        'total_bookings': booking_stats['total_bookings'],
+        'daily_income': [{'label': item['label'], 'value': _to_float(item['value'])} for item in daily_income],
+        'department_income': [{'label': item['label'], 'value': _to_float(item['value'])} for item in department_income],
+        'top_services': top_services,
     }
 
 

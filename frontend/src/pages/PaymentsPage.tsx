@@ -10,7 +10,8 @@ import { PaymentVoidDialog } from '../features/payments/PaymentVoidDialog';
 import { usePaymentActions } from '../features/payments/usePaymentActions';
 import { usePaymentsPageState, type PaymentSortField } from '../features/payments/usePaymentsPageState';
 import { usePaymentsText } from '../text/payments';
-import type { PaymentExportFilters } from '../features/exports/api';
+import { getPaymentsExcelUrl, getPaymentsExportUrl, type PaymentExportFilters } from '../features/exports/api';
+import { downloadFile } from '../lib/api';
 
 export function PaymentsPage() {
   const paymentsText = usePaymentsText();
@@ -182,6 +183,14 @@ export function PaymentsPage() {
           if (window.confirm(`هل أنت متأكد من حذف السند ${row.payment_number} نهائياً؟ سيتم إلغاء القيود المحاسبية المرتبطة أيضاً.`)) {
             await handleDeletePayment(row.id);
           }
+        }}
+        onExport={(format, scope) => {
+          const isXlsx = format === 'xlsx';
+          const urlFn = isXlsx ? getPaymentsExcelUrl : getPaymentsExportUrl;
+          const exportPage = scope === 'page' ? page + 1 : undefined;
+          const exportPageSize = scope === 'page' ? pageSize : undefined;
+          
+          downloadFile(urlFn(undefined, activeExportFilters, exportPage, exportPageSize));
         }}
       />
 

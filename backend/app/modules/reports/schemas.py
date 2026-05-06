@@ -88,6 +88,7 @@ class DetailedReportRowResponse(BaseModel):
     customer_name: str
     customer_phone: str | None
     customer_phone_2: str | None
+    customer_address: str | None
     department_name: str
     service_name: str
     dress_code: str | None
@@ -104,3 +105,16 @@ class DetailedReportRowResponse(BaseModel):
     custody_status: str | None
     notes: str | None
     created_by: str | None
+
+
+class AdvancedBISummary(BaseModel):
+    total_sales: float
+    total_paid: float
+    total_remaining: float
+    record_count: int
+    department_breakdown: list[dict]
+
+
+class AdvancedBIResponse(BaseModel):
+    summary: AdvancedBISummary
+    records: list[DetailedReportRowResponse]

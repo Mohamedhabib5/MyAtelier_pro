@@ -146,6 +146,76 @@ class PaymentsRepository:
         max_value = self.db.scalar(select(func.max(PaymentMethod.display_order)).where(PaymentMethod.company_id == company_id))
         return int(max_value or 0) + 1
 
+    def get_payment_stats_by_date(self, company_id: str, branch_id: str | None = None, days: int = 7) -> list[dict]:
+        """
+        Calculates daily income using GROUP BY.
+        """
+        stmt = (
+            select(
+                PaymentDocument.payment_date.label('label'),
+                func.sum(PaymentAllocation.allocated_amount).label('value')
+            )
+            .join(PaymentDocument.allocations)
+            .where(
+                PaymentDocument.company_id == company_id,
+                PaymentDocument.status != 'voided'
+            )
+            .group_by(PaymentDocument.payment_date)
+            .order_by(PaymentDocument.payment_date.desc())
+            .limit(days)
+        )
+        if branch_id:
+            stmt = stmt.where(PaymentDocument.branch_id == branch_id)
+        
+        results = self.db.execute(stmt).all()
+        # Sort ascending for chart
+        items = [{'label': r.label.isoformat(), 'value': r.value} for r in reversed(results)]
+        return items
+
+    def get_payment_stats_by_department(self, company_id: str, branch_id: str | None = None) -> list[dict]:
+        """
+        Calculates income per department using GROUP BY.
+        """
+        from app.modules.catalog.models import Department
+        stmt = (
+            select(
+                Department.name.label('label'),
+                func.sum(PaymentAllocation.allocated_amount).label('value')
+            )
+            .join(PaymentAllocation.payment_document)
+            .join(PaymentAllocation.booking_line)
+            .join(BookingLine.department)
+            .where(
+                PaymentDocument.company_id == company_id,
+                PaymentDocument.status != 'voided'
+            )
+            .group_by(Department.name)
+            .order_by(func.sum(PaymentAllocation.allocated_amount).desc())
+            .limit(7)
+        )
+        if branch_id:
+            stmt = stmt.where(PaymentDocument.branch_id == branch_id)
+        
+        results = self.db.execute(stmt).all()
+        return [{'label': r.label, 'value': r.value} for r in results]
+
+    def get_total_income_stats(self, company_id: str, branch_id: str | None = None) -> Decimal:
+        """
+        Calculates total income across all time.
+        """
+        stmt = (
+            select(func.sum(PaymentAllocation.allocated_amount))
+            .join(PaymentAllocation.payment_document)
+            .where(
+                PaymentDocument.company_id == company_id,
+                PaymentDocument.status != 'voided'
+            )
+        )
+        if branch_id:
+            stmt = stmt.where(PaymentDocument.branch_id == branch_id)
+        
+        return self.db.scalar(stmt) or Decimal('0.00')
+
     def _document_query(self):
         return (
             select(PaymentDocument)

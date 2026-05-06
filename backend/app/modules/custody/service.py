@@ -18,20 +18,37 @@ from app.modules.organization.branch_context import ensure_active_branch
 from app.modules.organization.service import get_company_settings
 from app.modules.payments.custody_compensation import create_custody_compensation_payment
 
-def list_custody_cases(db: Session, session: dict, *, view: str = "all") -> list[dict]:
+def list_custody_cases(
+    db: Session,
+    branch_id: str,
+    *,
+    view: str = "all",
+    page: int | None = None,
+    page_size: int | None = None,
+) -> dict | list[dict]:
     company = get_company_settings(db)
-    branch = ensure_active_branch(db, session)
     normalized_view = _normalize_case_view(view)
-    rows = CustodyRepository(db).list_cases_detailed(company.id, branch.id, view=normalized_view)
-    return [
+    rows, total = CustodyRepository(db).list_cases_detailed(
+        company.id,
+        branch_id,
+        view=normalized_view,
+        page=page,
+        page_size=page_size
+    )
+    items = [
         _serialize_case(
             custody_case,
             customer_name=customer_name,
+            customer_phone=customer_phone,
+            customer_address=customer_address,
             booking_number=booking_number,
             dress_code=dress_code,
         )
-        for custody_case, customer_name, booking_number, dress_code in rows
+        for custody_case, customer_name, customer_phone, customer_address, booking_number, dress_code in rows
     ]
+    if page is not None:
+        return {"items": items, "total": total, "page": page, "page_size": page_size}
+    return items
 
 
 def get_custody_case(db: Session, session: dict, case_id: str) -> dict:
@@ -138,6 +155,8 @@ def _serialize_case(
     custody_case: CustodyCase,
     *,
     customer_name: str | None = None,
+    customer_phone: str | None = None,
+    customer_address: str | None = None,
     booking_number: str | None = None,
     dress_code: str | None = None,
 ) -> dict:
@@ -167,6 +186,8 @@ def _serialize_case(
         "compensation_collected_on": custody_case.compensation_collected_on.isoformat() if custody_case.compensation_collected_on else None,
         "compensation_payment_document_id": custody_case.compensation_payment_document_id,
         "customer_name": customer_name,
+        "customer_phone": customer_phone,
+        "customer_address": customer_address,
         "booking_number": booking_number,
         "dress_code": dress_code,
         "created_at": custody_case.created_at.isoformat() if custody_case.created_at else None,

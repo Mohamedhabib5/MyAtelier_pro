@@ -12,7 +12,8 @@ import {
   ShieldCheck, 
   Settings, 
   LogOut,
-  Menu
+  Menu,
+  Database
 } from 'lucide-react';
 import { AppBar, Box, Button, Drawer, IconButton, List, ListItemButton, ListItemIcon, ListItemText, Stack, Toolbar, Typography, useMediaQuery, useTheme } from '@mui/material';
 import { alpha } from '@mui/material/styles';
@@ -26,6 +27,7 @@ import { userIsAdmin } from '../lib/auth';
 import { useNavigationText } from '../text/navigation';
 import { BranchSelector } from './BranchSelector';
 import { useThemeSettings } from '../features/theme/ThemeSettingsProvider';
+import { UniversalSearch } from './navigation/UniversalSearch';
 
 const drawerWidth = 260;
 
@@ -44,7 +46,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     sidebarTextColor, 
     primaryColor,
     accentColor,
-    bgGradientStart
+    bgGradientStart,
+    themeMode
   } = useThemeSettings();
   const navigationText = useNavigationText();
   const location = useLocation();
@@ -57,6 +60,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     : { left: { md: drawerWidth + 32 } };
   
   const drawerSide = isRtl ? { right: isMobile ? 0 : 16 } : { left: isMobile ? 0 : 16 };
+  const isDark = themeMode === 'dark';
+  const defaultBg = isDark ? '#1a1b26' : '#FFFFFF';
+  const defaultText = isDark ? '#e0e0e0' : '#2B2C3E';
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -75,21 +81,38 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     { to: '/reports', label: navigationText.pages.reports, icon: <BarChart3 size={20} /> },
     { to: '/analytics', label: navigationText.pages.analytics, icon: <LineChart size={20} /> },
     { to: '/accounting', label: navigationText.pages.accounting, icon: <Calculator size={20} /> },
-    ...(isAdmin ? [{ to: '/audit', label: navigationText.pages.audit, icon: <ShieldCheck size={20} /> }] : []),
+    ...(isAdmin ? [
+      { to: '/audit', label: navigationText.pages.audit, icon: <ShieldCheck size={20} /> },
+      { to: '/ops/backups', label: language === 'ar' ? 'النسخ الاحتياطي' : 'Backups', icon: <Database size={20} /> }
+    ] : []),
     { to: '/settings', label: navigationText.pages.settings, icon: <Settings size={20} /> },
   ];
 
   const drawerContent = (
     <>
-      <Box sx={{ p: 4, textAlign: 'center' }}>
-        <Typography variant="h5" sx={{ fontWeight: 900, color: primaryColor, letterSpacing: -1.5 }}>
-          MYATELIER
+      <Box sx={{ p: 3, textAlign: 'center', mb: 2 }}>
+        <Typography 
+          variant="h5" 
+          sx={{ 
+            fontWeight: 1000, 
+            background: `linear-gradient(135deg, ${primaryColor}, ${alpha(primaryColor, 0.7)})`,
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            letterSpacing: -1.8,
+            textTransform: 'uppercase',
+            filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))'
+          }}
+        >
+          MyAtelier
+        </Typography>
+        <Typography variant="caption" sx={{ opacity: 0.4, fontWeight: 700, letterSpacing: 2, display: 'block', mt: -0.5 }}>
+          PRO EDITION
         </Typography>
       </Box>
       
       {isMobile && (
-        <Box sx={{ px: 2, pb: 3, textAlign }}>
-          <Stack spacing={2} sx={{ p: 2, bgcolor: alpha(primaryColor, 0.05), borderRadius: 4 }}>
+        <Box sx={{ px: 2, pb: 2, textAlign }}>
+          <Stack spacing={1.5} sx={{ p: 1.5, bgcolor: alpha(primaryColor, 0.05), borderRadius: 4 }}>
             <Box>
               <Typography variant='subtitle1' sx={{ fontWeight: 800 }}>{user?.full_name}</Typography>
               <Typography variant='caption' sx={{ opacity: 0.6 }}>{user?.username}</Typography>
@@ -110,23 +133,37 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               onClick={() => isMobile && setMobileOpen(false)}
               sx={{ 
                 borderRadius: 50, 
-                mb: 1, 
-                px: 2.5,
-                py: 1.5,
+                mb: 0.5, 
+                px: 2,
+                py: 1,
                 flexDirection: isRtl ? 'row-reverse' : 'row', 
                 justifyContent: 'flex-start', 
                 textAlign,
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                transition: 'background-color 0.2s ease, color 0.2s ease, transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                 '&.Mui-selected': {
-                  bgcolor: accentColor || '#DFFF00',
-                  color: '#000',
-                  boxShadow: `0 4px 20px ${alpha(accentColor || '#DFFF00', 0.5)}`,
+                  bgcolor: isDark ? alpha(accentColor || '#DFFF00', 0.15) : alpha(accentColor || '#DFFF00', 0.1),
+                  color: isDark ? (accentColor || '#DFFF00') : '#000',
+                  boxShadow: `inset 0 0 0 1px ${alpha(accentColor || '#DFFF00', 0.3)}`,
                   '& .MuiListItemIcon-root': {
-                    color: '#000',
+                    color: accentColor || '#DFFF00',
+                    transform: 'scale(1.1)',
+                  },
+                  '& .MuiListItemText-root span': {
+                    fontWeight: 900,
+                  },
+                  '&::after': {
+                    content: '""',
+                    position: 'absolute',
+                    ...(isRtl ? { right: 0 } : { left: 0 }),
+                    top: '20%',
+                    bottom: '20%',
+                    width: 4,
+                    borderRadius: 4,
+                    bgcolor: accentColor || '#DFFF00',
+                    boxShadow: `0 0 12px ${accentColor || '#DFFF00'}`,
                   },
                   '&:hover': {
-                    bgcolor: accentColor || '#DFFF00',
-                    opacity: 0.9,
+                    bgcolor: isDark ? alpha(accentColor || '#DFFF00', 0.2) : alpha(accentColor || '#DFFF00', 0.15),
                   },
                 },
                 '&:hover': {
@@ -186,19 +223,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <AppBar 
         position='fixed' 
         sx={{ 
-          width: { md: `calc(100% - ${drawerWidth}px - 48px)` }, 
-          top: { xs: 0, md: 16 }, // Stick to top on mobile for more space
+          width: { md: `calc(100% - ${drawerWidth}px - 64px)` }, 
+          top: { xs: 0, md: 16 }, 
           ...appBarOffset,
-          background: `linear-gradient(135deg, ${alpha(headerColor || '#FFFFFF', 0.9)}, ${alpha(headerColorEnd || headerColor || '#FFFFFF', 0.85)}) !important`,
-          backdropFilter: 'blur(12px)',
-          borderRadius: { xs: 0, md: '16px' }, // No radius on mobile to save space
-          color: `${sidebarTextColor || '#2B2C3E'} !important`,
+          background: `linear-gradient(135deg, ${alpha(headerColor || defaultBg, 0.95)}, ${alpha(headerColorEnd || headerColor || defaultBg, 0.9)}) !important`,
+          backdropFilter: 'blur(20px)',
+          borderRadius: { xs: 0, md: '20px' },
+          color: `${sidebarTextColor || defaultText} !important`,
           mx: { xs: 0, md: 2 },
-          left: { xs: 0, md: 'auto' },
-          right: { xs: 0, md: 'auto' },
-          border: { xs: 'none', md: '1px solid rgba(255,255,255,0.4)' },
-          borderBottom: { xs: '1px solid rgba(0,0,0,0.05)', md: '1px solid rgba(255,255,255,0.4)' },
-          boxShadow: { xs: '0 2px 10px rgba(0,0,0,0.03)', md: '0 8px 32px rgba(0, 0, 0, 0.08)' },
+          border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(255,255,255,0.5)',
+          boxShadow: isDark ? '0 12px 40px rgba(0, 0, 0, 0.4)' : '0 12px 40px rgba(0, 0, 0, 0.06)',
+          zIndex: theme.zIndex.drawer + 1,
         }}
       >
         <Toolbar sx={{ 
@@ -231,6 +266,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 {navigationText.appTitle}
               </Typography>
             </Stack>
+            {!isMobile && (
+              <Box sx={{ ml: 4 }}>
+                <UniversalSearch />
+              </Box>
+            )}
           </Stack>
           
           <Stack direction='row' spacing={{ xs: 0.5, md: 2 }} alignItems='center' sx={{ flexDirection: isRtl ? 'row-reverse' : 'row' }}>
@@ -274,10 +314,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               display: { xs: 'block', md: 'none' },
               '& .MuiDrawer-paper': { 
                 width: drawerWidth, 
-                background: `linear-gradient(180deg, ${alpha(sidebarColor || '#FFFFFF', 0.95)}, ${alpha(sidebarColorEnd || sidebarColor || '#FFFFFF', 0.95)})`,
+                background: `linear-gradient(180deg, ${alpha(sidebarColor || defaultBg, 0.95)}, ${alpha(sidebarColorEnd || sidebarColor || defaultBg, 0.95)})`,
                 boxSizing: 'border-box',
                 border: 'none',
-                boxShadow: isRtl ? '-10px 0 30px rgba(0,0,0,0.1)' : '10px 0 30px rgba(0,0,0,0.1)'
+                boxShadow: isDark ? 'none' : (isRtl ? '-10px 0 30px rgba(0,0,0,0.1)' : '10px 0 30px rgba(0,0,0,0.1)')
               },
             }}
           >
@@ -299,12 +339,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 height: 'calc(100% - 32px)',
                 ...drawerSide,
                 textAlign,
-                background: `linear-gradient(180deg, ${alpha(sidebarColor || '#FFFFFF', 0.9)}, ${alpha(sidebarColorEnd || sidebarColor || '#FFFFFF', 0.85)}) !important`,
+                background: `linear-gradient(180deg, ${alpha(sidebarColor || defaultBg, 0.9)}, ${alpha(sidebarColorEnd || sidebarColor || defaultBg, 0.85)}) !important`,
                 backdropFilter: 'blur(20px)',
-                color: `${sidebarTextColor || '#2B2C3E'} !important`,
+                color: `${sidebarTextColor || defaultText} !important`,
                 borderRadius: '20px',
-                border: '1px solid rgba(255,255,255,0.4)',
-                boxShadow: '8px 0 40px 0 rgba(0,0,0,0.08)',
+                border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(255,255,255,0.4)',
+                boxShadow: isDark ? 'none' : '8px 0 40px 0 rgba(0,0,0,0.08)',
                 overflowX: 'hidden',
               },
             }}

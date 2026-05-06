@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.core.enums import PaymentDocumentKind, PaymentReceiptStatus
 from app.core.exceptions import ValidationAppError
 from app.modules.bookings.calculations import line_paid_total, serialize_booking_document, quantize_amount, derive_booking_status
-from app.modules.bookings.document_access import get_scoped_booking, reload_booking_or_404
+from app.modules.bookings.document_access import get_scoped_booking_by_branch, reload_booking_or_404
 from app.modules.bookings.models import Booking, BookingLine
 from app.modules.bookings.repository import BookingsRepository
 from app.modules.core_platform.period_lock import enforce_not_locked_with_override, record_period_lock_override
@@ -15,7 +15,7 @@ from app.modules.bookings.rules import clean_optional, parse_date
 from app.modules.bookings.schemas import BookingCancellationRequest
 from app.modules.core_platform.service import record_audit
 from app.modules.identity.models import User
-from app.modules.organization.branch_context import ensure_active_branch
+from app.modules.organization.branch_context import resolve_branch_by_id
 from app.modules.organization.service import get_company_settings
 from app.modules.payments.models import PaymentDocument, PaymentAllocation
 from app.modules.payments.repository import PaymentsRepository
@@ -53,30 +53,30 @@ def _distribute_amount(lines: list[BookingLine], total_amount: Decimal) -> list[
     return result
 
 
-def cancel_booking_workflow(db: Session, actor: User, booking_id: str, payload: BookingCancellationRequest, session: dict) -> dict:
+def cancel_booking_workflow(db: Session, actor: User, booking_id: str, payload: BookingCancellationRequest, branch_id: str) -> dict:
     repo = BookingsRepository(db)
-    _execute_cancellation(db, actor, booking_id, payload, session)
+    _execute_cancellation(db, actor, booking_id, payload, branch_id)
     db.commit()
     return serialize_booking_document(reload_booking_or_404(repo, booking_id))
 
 
-def bulk_cancel_workflow(db: Session, actor: User, booking_id: str, payload: BulkBookingCancellationRequest, session: dict) -> dict:
+def bulk_cancel_workflow(db: Session, actor: User, booking_id: str, payload: BulkBookingCancellationRequest, branch_id: str) -> dict:
     repo = BookingsRepository(db)
     for request in payload.requests:
-        _execute_cancellation(db, actor, booking_id, request, session)
+        _execute_cancellation(db, actor, booking_id, request, branch_id)
     db.commit()
     return serialize_booking_document(reload_booking_or_404(repo, booking_id))
 
 
-def _execute_cancellation(db: Session, actor: User, booking_id: str, payload: BookingCancellationRequest, session: dict) -> None:
+def _execute_cancellation(db: Session, actor: User, booking_id: str, payload: BookingCancellationRequest, branch_id: str) -> None:
     from app.modules.payments.models import PaymentMethod
     from app.modules.payments.payment_methods import SYSTEM_INTERNAL_METHOD_CODE, _ensure_active_method_available
     from app.modules.payments.booking_bridge import create_payment_document_from_lines
 
-    booking = get_scoped_booking(db, booking_id, session)
+    booking = get_scoped_booking_by_branch(db, booking_id, branch_id)
     
     company = get_company_settings(db)
-    branch = ensure_active_branch(db, session)
+    branch = resolve_branch_by_id(db, branch_id)
     
     cancel_date = parse_date(payload.cancellation_date, default_today=True)
     reason = clean_optional(payload.reason)
@@ -247,8 +247,8 @@ def _execute_cancellation(db: Session, actor: User, booking_id: str, payload: Bo
     )
 
 
-def undo_cancellation_workflow(db: Session, actor: User, booking_id: str, line_ids: list[str] | None, session: dict) -> dict:
-    booking = get_scoped_booking(db, booking_id, session)
+def undo_cancellation_workflow(db: Session, actor: User, booking_id: str, line_ids: list[str] | None, branch_id: str) -> dict:
+    booking = get_scoped_booking_by_branch(db, booking_id, branch_id)
     repo = BookingsRepository(db)
 
     # Determine Scope
@@ -297,7 +297,7 @@ def undo_cancellation_workflow(db: Session, actor: User, booking_id: str, line_i
 
     for doc_id in docs_to_delete:
         try:
-            delete_payment(db, actor, doc_id, session)
+            delete_payment(db, actor, doc_id, branch_id)
         except Exception as e:
             raise ValidationAppError(f"فشل حذف السند المرتبط {doc_id}: {str(e)}")
 

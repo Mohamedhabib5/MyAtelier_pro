@@ -164,3 +164,22 @@ def limit_sensitive_ops(request: Request) -> None:
     client_ip = request.client.host if request.client else "unknown"
     if not sensitive_ops_rate_limiter.is_allowed(f"sensitive:{client_ip}"):
         raise RateLimitError()
+
+
+def require_identity_view(current_user: User = Depends(get_current_user)) -> User:
+    """
+    Requirement for basic identity/profile view access.
+    Maps to users.self_manage as the baseline permission for all active users.
+    """
+    ensure_permission(current_user, "users.self_manage")
+    return current_user
+from app.modules.organization.branch_context import ensure_active_branch
+from app.modules.organization.models import Branch
+
+def get_active_branch(request: Request, db: Session = Depends(get_db)) -> Branch:
+    return ensure_active_branch(db, request.session)
+
+
+def get_active_branch_id(request: Request, db: Session = Depends(get_db)) -> str:
+    branch = ensure_active_branch(db, request.session)
+    return branch.id

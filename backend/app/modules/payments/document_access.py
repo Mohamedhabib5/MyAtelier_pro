@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.core.enums import PaymentReceiptStatus
 from app.core.exceptions import NotFoundError, ValidationAppError
+from app.core.messages import PAYMENT_NOT_FOUND, PAYMENT_VOIDED_NO_EDIT, PAYMENT_READ_ONLY_TYPE
 from app.modules.core_platform.service import record_audit
 from app.modules.organization.branch_context import ensure_active_branch
 from app.modules.organization.models import DocumentSequence
@@ -34,23 +35,27 @@ def ensure_payment_sequence(db: Session, company_id: str) -> None:
 
 
 def get_scoped_payment_document(db: Session, payment_document_id: str, session: dict) -> PaymentDocument:
-    company = get_company_settings(db)
     branch = ensure_active_branch(db, session)
+    return get_scoped_payment_document_by_branch(db, payment_document_id, branch.id)
+
+
+def get_scoped_payment_document_by_branch(db: Session, payment_document_id: str, branch_id: str) -> PaymentDocument:
+    company = get_company_settings(db)
     payment_document = PaymentsRepository(db).get_payment_document(payment_document_id)
-    if payment_document is None or payment_document.company_id != company.id or payment_document.branch_id != branch.id:
+    if payment_document is None or payment_document.company_id != company.id or payment_document.branch_id != branch_id:
         raise NotFoundError("لم يتم العثور على سند الدفع")
     return payment_document
 
 
 def ensure_payment_document_is_editable(payment_document: PaymentDocument) -> None:
     if payment_document.status == PaymentReceiptStatus.VOIDED.value:
-        raise ValidationAppError("لا يمكن تعديل سندات الدفع المبطلة")
+        raise ValidationAppError(PAYMENT_VOIDED_NO_EDIT)
     if payment_document.document_kind not in ("collection", "refund"):
-        raise ValidationAppError("هذا النوع من السندات للقراءة فقط في هذه المرحلة")
+        raise ValidationAppError(PAYMENT_READ_ONLY_TYPE)
 
 
 def load_document_or_404(repo: PaymentsRepository, payment_document_id: str, *, include_allocations: bool) -> dict:
     payment_document = repo.get_payment_document(payment_document_id)
     if payment_document is None:
-        raise NotFoundError("لم يتم العثور على سند الدفع")
+        raise NotFoundError(PAYMENT_NOT_FOUND)
     return serialize_document(payment_document, include_allocations=include_allocations)

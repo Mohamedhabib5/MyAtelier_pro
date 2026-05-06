@@ -39,7 +39,7 @@ type Props = {
   onOpenEdit: (record: BookingSummaryRecord) => void;
   onOpenCancel: (record: BookingSummaryRecord) => void;
   onDelete: (record: BookingSummaryRecord) => void;
-  onExportXlsx: () => void;
+  onExport: (format: 'csv' | 'xlsx', scope: 'all' | 'page') => void;
 };
 
 export function BookingsTableSection({
@@ -64,9 +64,9 @@ export function BookingsTableSection({
   onSortChange,
   exportFilters,
   onOpenEdit,
-   onOpenCancel,
+  onOpenCancel,
   onDelete,
-  onExportXlsx,
+  onExport,
 }: Props) {
   const commonText = useCommonText();
   const bookingsText = useBookingsText();
@@ -150,8 +150,7 @@ export function BookingsTableSection({
         }}
         externalPagination={{ total, page, pageSize, onPageChange, onPageSizeChange }}
         loading={loading}
-        csvFileName='bookings.csv'
-        onExportXlsx={onExportXlsx}
+        onExport={onExport}
         getRowId={({ data }) => data.id}
       />
     </SectionCard>

@@ -20,6 +20,7 @@ const ReportsPrintPage = lazy(() => import('../pages/ReportsPrintPage').then((mo
 const AccountingPage = lazy(() => import('../pages/AccountingPage').then((module) => ({ default: module.AccountingPage })));
 const SettingsPage = lazy(() => import('../pages/SettingsPage').then((module) => ({ default: module.SettingsPage })));
 const BIAnalyticsPage = lazy(() => import('../pages/BIAnalyticsPage').then((module) => ({ default: module.BIAnalyticsPage })));
+const BackupPage = lazy(() => import('../pages/ops/BackupPage'));
 
 // Settings Views
 const GeneralCompanyView = lazy(() => import('../features/settings/views/GeneralCompanyView').then((module) => ({ default: module.GeneralCompanyView })));
@@ -58,6 +59,7 @@ export const router = createBrowserRouter([
           { path: 'reports', element: <ReportsPage /> },
           { path: 'analytics', element: <BIAnalyticsPage /> },
           { path: 'accounting', element: <AccountingPage /> },
+          { path: 'ops/backups', element: <BackupPage /> },
           { path: 'services', element: <Navigate to='/settings/catalog/services' replace /> },
           { path: 'users', element: <Navigate to='/settings/security/users' replace /> },
           { path: 'exports', element: <Navigate to='/settings/data/exports' replace /> },

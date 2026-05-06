@@ -11,11 +11,12 @@ from app.modules.core_platform.service import record_audit
 from app.modules.identity.models import User
 
 CUSTOMER_COLUMNS = ['full_name', 'phone', 'email', 'address', 'is_active', 'notes']
-BOOKING_COLUMNS = ['booking_number', 'branch_name', 'customer_name', 'booking_date', 'line_count', 'service_summary', 'next_service_date', 'total_amount', 'paid_total', 'remaining_amount', 'status', 'cancelled_at', 'cancellation_reason', 'notes']
-BOOKING_LINE_COLUMNS = ['booking_number', 'branch_name', 'customer_name', 'line_number', 'department_name', 'service_name', 'dress_code', 'service_date', 'suggested_price', 'line_price', 'paid_total', 'remaining_amount', 'status', 'revenue_journal_entry_number', 'cancelled_at', 'cancellation_reason', 'notes']
-PAYMENT_DOCUMENT_COLUMNS = ['payment_number', 'branch_name', 'customer_name', 'payment_date', 'document_kind', 'status', 'total_amount', 'allocation_count', 'booking_numbers', 'journal_entry_number', 'journal_entry_status', 'voided_at', 'void_reason', 'notes']
-PAYMENT_ALLOCATION_COLUMNS = ['payment_number', 'branch_name', 'customer_name', 'payment_date', 'document_kind', 'booking_number', 'booking_line_number', 'department_name', 'service_name', 'dress_code', 'service_date', 'line_status', 'line_price', 'allocated_amount']
+BOOKING_COLUMNS = ['booking_number', 'branch_name', 'customer_name', 'customer_phone', 'customer_address', 'booking_date', 'line_count', 'service_summary', 'next_service_date', 'total_amount', 'paid_total', 'remaining_amount', 'status', 'cancelled_at', 'cancellation_reason', 'notes']
+BOOKING_LINE_COLUMNS = ['booking_number', 'branch_name', 'customer_name', 'customer_phone', 'customer_address', 'line_number', 'department_name', 'service_name', 'dress_code', 'service_date', 'suggested_price', 'line_price', 'paid_total', 'remaining_amount', 'status', 'revenue_journal_entry_number', 'cancelled_at', 'cancellation_reason', 'notes']
+PAYMENT_DOCUMENT_COLUMNS = ['payment_number', 'branch_name', 'customer_name', 'customer_phone', 'customer_address', 'payment_date', 'document_kind', 'status', 'total_amount', 'allocation_count', 'booking_numbers', 'journal_entry_number', 'journal_entry_status', 'voided_at', 'void_reason', 'notes']
+PAYMENT_ALLOCATION_COLUMNS = ['payment_number', 'branch_name', 'customer_name', 'customer_phone', 'customer_address', 'payment_date', 'document_kind', 'booking_number', 'booking_line_number', 'department_name', 'service_name', 'dress_code', 'service_date', 'line_status', 'line_price', 'allocated_amount']
 CUSTODY_COLUMNS = ['case_number', 'status', 'case_type', 'customer_id', 'dress_id', 'compensation_amount', 'compensation_collected_on', 'compensation_payment_document_id', 'notes']
+ADVANCED_BI_COLUMNS = ['booking_number', 'booking_date', 'customer_name', 'department_name', 'service_name', 'dress_code', 'line_price', 'paid_amount', 'remaining_amount', 'line_status', 'payment_method', 'payment_type', 'created_by']
 
 
 def record_export_download(

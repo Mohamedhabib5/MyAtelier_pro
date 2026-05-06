@@ -54,9 +54,13 @@ def get_detailed_lines_report(
     result = []
     for line in lines:
         booking = line.booking
-        customer_name = booking.customer.full_name if booking.customer else ''
-        customer_phone = booking.customer.phone if booking.customer else ''
-        customer_phone_2 = booking.customer.phone_2 if booking.customer else None
+        customer = booking.customer if booking else None
+        customer_name = customer.full_name if customer else 'NO CUSTOMER'
+        customer_address = customer.address if customer else 'NO ADDRESS'
+        
+        
+        customer_phone = customer.phone if customer else ''
+        customer_phone_2 = customer.phone_2 if customer else None
         
         paid_amount = ZERO
         methods = set()
@@ -90,6 +94,7 @@ def get_detailed_lines_report(
             'customer_name': customer_name,
             'customer_phone': customer_phone,
             'customer_phone_2': customer_phone_2,
+            'customer_address': customer_address if customer_address != 'NO ADDRESS' else None,
             'department_name': line.department.name if line.department else '',
             'service_name': line.service.name if line.service else '',
             'dress_code': line.dress.code if line.dress else None,

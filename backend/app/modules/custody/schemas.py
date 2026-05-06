@@ -31,6 +31,8 @@ class CustodyCaseResponse(BaseModel):
     compensation_collected_on: str | None = None
     compensation_payment_document_id: str | None = None
     customer_name: str | None = None
+    customer_phone: str | None = None
+    customer_address: str | None = None
     booking_number: str | None = None
     dress_code: str | None = None
     created_at: str | None = None

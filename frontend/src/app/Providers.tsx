@@ -2,6 +2,7 @@ import { PropsWithChildren, useMemo } from 'react';
 
 import { CacheProvider } from '@emotion/react';
 import { CssBaseline, GlobalStyles, ThemeProvider } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import { QueryClientProvider } from '@tanstack/react-query';
 
 import { AuthProvider } from '../features/auth/AuthProvider';
@@ -18,18 +19,20 @@ function DirectionalTheme({ children }: PropsWithChildren) {
     secondaryColor, 
     bgGradientStart, 
     bgGradientEnd, 
-    accentColor 
+    accentColor,
+    themeMode
   } = useThemeSettings();
   
+  const isDark = themeMode === 'dark';
   const safePrimary = primaryColor || '#FF2D78';
   const safeSecondary = secondaryColor || '#00F5D4';
-  const safeBgStart = bgGradientStart || '#E2E8F0';
-  const safeBgEnd = bgGradientEnd || '#CBD5E1';
+  const safeBgStart = bgGradientStart || (isDark ? '#1e1f2e' : '#E2E8F0');
+  const safeBgEnd = bgGradientEnd || (isDark ? '#0f0f15' : '#CBD5E1');
 
   const cache = useMemo(() => getEmotionCache(direction), [direction]);
   const theme = useMemo(() => 
-    buildAppTheme(direction, safePrimary, safeSecondary), 
-    [direction, safePrimary, safeSecondary]
+    buildAppTheme(direction, safePrimary, safeSecondary, themeMode), 
+    [direction, safePrimary, safeSecondary, themeMode]
   );
 
   return (
@@ -58,6 +61,25 @@ function DirectionalTheme({ children }: PropsWithChildren) {
               backgroundRepeat: 'no-repeat !important',
             },
             '#root': { direction },
+            // Premium Scrollbar
+            '::-webkit-scrollbar': {
+              width: '6px',
+              height: '6px',
+            },
+            '::-webkit-scrollbar-track': {
+              background: 'transparent',
+            },
+            '::-webkit-scrollbar-thumb': {
+              background: alpha(primaryColor, 0.2),
+              borderRadius: '10px',
+              '&:hover': {
+                background: alpha(primaryColor, 0.4),
+              },
+            },
+            // Global Transitions
+            '*': {
+              transition: 'background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease',
+            },
             // Global Table Customization
             '.ag-theme-material': {
               '--ag-border-radius': '24px',

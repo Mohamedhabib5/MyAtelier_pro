@@ -214,6 +214,8 @@ export default function AnalyticsPage() {
           records={filteredRecords} 
           loading={isLoading} 
           language={language}
+          dateFrom={dateFrom}
+          dateTo={dateTo}
           drillDownPath={drillDownPath}
           setDrillDownPath={(path) => {
             setDrillDownPath(path);

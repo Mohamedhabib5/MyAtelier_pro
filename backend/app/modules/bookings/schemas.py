@@ -48,6 +48,8 @@ class BookingSummaryResponse(BaseModel):
     booking_number: str
     customer_id: str
     customer_name: str
+    customer_phone: str | None
+    customer_address: str | None
     booking_date: str
     status: str
     line_count: int
@@ -107,6 +109,8 @@ class CalendarEventResponse(BaseModel):
     department_name: str
     service_name: str
     customer_name: str
+    customer_phone: str | None
+    customer_address: str | None
     booking_number: str
     external_code: str | None
 

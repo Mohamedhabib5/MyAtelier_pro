@@ -1,4 +1,4 @@
-import { Button, Stack, TextField, Typography, Box, Divider } from '@mui/material';
+import { Button, Stack, TextField, Typography, Box, Divider, FormControlLabel, Switch } from '@mui/material';
 import { SectionCard } from '../../components/SectionCard';
 import { useSettingsText } from '../../text/settings';
 import { useThemeSettings } from '../theme/ThemeSettingsProvider';
@@ -7,9 +7,9 @@ export function ThemeSettingsSection() {
   const settingsText = useSettingsText();
   const { 
     primaryColor, secondaryColor, sidebarColor, sidebarColorEnd, headerColor, headerColorEnd, sidebarTextColor,
-    bgGradientStart, bgGradientEnd, accentColor,
+    bgGradientStart, bgGradientEnd, accentColor, themeMode,
     setPrimaryColor, setSecondaryColor, setSidebarColor, setSidebarColorEnd, setHeaderColor, setHeaderColorEnd, setSidebarTextColor, 
-    setBgGradientStart, setBgGradientEnd, setAccentColor,
+    setBgGradientStart, setBgGradientEnd, setAccentColor, setThemeMode,
     resetTheme 
   } = useThemeSettings();
 
@@ -53,6 +53,48 @@ export function ThemeSettingsSection() {
       subtitle={settingsText.appearance.subtitle}
     >
       <Stack spacing={5}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center">
+          <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+            {settingsText.appearance.darkMode}
+          </Typography>
+          <Switch 
+            checked={themeMode === 'dark'}
+            onChange={(e) => setThemeMode(e.target.checked ? 'dark' : 'light')}
+            sx={{
+              width: 62,
+              height: 34,
+              padding: 0,
+              '& .MuiSwitch-switchBase': {
+                padding: 0,
+                margin: '2px',
+                transitionDuration: '300ms',
+                '&.Mui-checked': {
+                  transform: 'translateX(28px)',
+                  color: '#fff',
+                  '& + .MuiSwitch-track': {
+                    backgroundColor: primaryColor,
+                    opacity: 1,
+                    border: 0,
+                  },
+                },
+              },
+              '& .MuiSwitch-thumb': {
+                boxSizing: 'border-box',
+                width: 30,
+                height: 30,
+              },
+              '& .MuiSwitch-track': {
+                borderRadius: 34 / 2,
+                backgroundColor: '#E9E9EA',
+                opacity: 1,
+                transition: 'background-color 500ms',
+              },
+            }}
+          />
+        </Stack>
+
+        <Divider />
+
         <Stack spacing={3}>
           <Typography variant="overline" color="primary" sx={{ fontWeight: 800, letterSpacing: 1.5 }}>
             Background Gradient

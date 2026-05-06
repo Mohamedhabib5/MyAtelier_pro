@@ -37,8 +37,8 @@ export function PaymentVoidDialog({
   const commonText = useCommonText();
   const paymentsText = usePaymentsText();
   const isArabic = /[\u0600-\u06FF]/.test(paymentsText.voidDialog.title);
-  const overrideLabel = isArabic ? 'ط§ط³طھط®ط¯ط§ظ… Override ظ„ظ‚ظپظ„ ط§ظ„ظپطھط±ط©' : 'Use period-lock override';
-  const overrideReasonLabel = isArabic ? 'ط³ط¨ط¨ Override' : 'Override reason';
+  const overrideLabel = isArabic ? 'استخدام Override لقفل الفترة' : 'Use period-lock override';
+  const overrideReasonLabel = isArabic ? 'سبب Override' : 'Override reason';
 
   return (
     <AppDialogShell

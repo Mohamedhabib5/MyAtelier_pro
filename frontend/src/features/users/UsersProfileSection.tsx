@@ -27,7 +27,7 @@ type Props = {
 
 function languageLabel(currentLanguage: LanguageCode, value: LanguageCode) {
   if (currentLanguage === 'ar') {
-    return value === 'ar' ? 'ط§ظ„ط¹ط±ط¨ظٹط©' : 'ط§ظ„ط¥ظ†ط¬ظ„ظٹط²ظٹط©';
+    return value === 'ar' ? 'العربية' : 'الإنجليزية';
   }
   return value === 'ar' ? 'Arabic' : 'English';
 }

@@ -30,10 +30,14 @@ def ensure_booking_sequence(db: Session, company_id: str) -> None:
 
 
 def get_scoped_booking(db: Session, booking_id: str, session: dict) -> Booking:
-    company = get_company_settings(db)
     branch = ensure_active_branch(db, session)
+    return get_scoped_booking_by_branch(db, booking_id, branch.id)
+
+
+def get_scoped_booking_by_branch(db: Session, booking_id: str, branch_id: str) -> Booking:
+    company = get_company_settings(db)
     booking = BookingsRepository(db).get_booking(booking_id)
-    if booking is None or booking.company_id != company.id or booking.branch_id != branch.id:
+    if booking is None or booking.company_id != company.id or booking.branch_id != branch_id:
         raise NotFoundError("لم يتم العثور على الحجز")
     return booking
 

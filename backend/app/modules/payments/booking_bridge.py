@@ -169,3 +169,46 @@ def create_cancellation_refund_document(
         },
     )
     return document
+
+
+def sync_booking_lines_status(db: Session, line_ids: list[str]) -> None:
+    """
+    Synchronizes BookingLine statuses with their actual payment state.
+    - If paid > 0 -> Force 'confirmed'.
+    - If paid == 0 AND status is 'confirmed' -> Revert to 'draft' (unless completed/cancelled).
+    """
+    if not line_ids:
+        return
+    
+    from app.modules.bookings.calculations import derive_booking_status, line_paid_total
+    
+    # Load unique lines
+    lines = db.query(BookingLine).filter(BookingLine.id.in_(list(set(line_ids)))).all()
+    affected_bookings: dict[str, Booking] = {}
+
+    for line in lines:
+        paid = line_paid_total(line)
+        
+        # Rule 1: Any payment forces 'confirmed'
+        if paid > ZERO:
+            if line.status == 'draft':
+                line.status = 'confirmed'
+                line.entity_version += 1
+        
+        # Rule 2: Zero payment reverts 'confirmed' to 'draft'
+        # Note: We don't touch 'completed' or 'cancelled' statuses here as they have their own lifecycle
+        elif line.status == 'confirmed':
+            line.status = 'draft'
+            line.entity_version += 1
+        
+        if line.booking:
+            affected_bookings[line.booking_id] = line.booking
+
+    # Update the overall booking status for all affected documents
+    for booking in affected_bookings.values():
+        new_status = derive_booking_status(booking.lines)
+        if booking.status != new_status:
+            booking.status = new_status
+            booking.entity_version += 1
+    
+    db.flush()

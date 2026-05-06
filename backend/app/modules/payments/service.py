@@ -6,11 +6,12 @@ from sqlalchemy.orm import Session
 
 from app.core.exceptions import ValidationAppError, ConflictError
 from app.core.enums import PaymentReceiptStatus
+from app.core.messages import PAYMENT_VOIDED_NO_EDIT, PAYMENT_READ_ONLY_TYPE
 from app.modules.core_platform.destructive_reasons import normalize_destructive_reason_code
 from app.modules.core_platform.period_lock import enforce_not_locked_with_override, record_period_lock_override
 from app.modules.core_platform.service import record_audit
 from app.modules.identity.models import User
-from app.modules.organization.branch_context import ensure_active_branch, resolve_branch_scope
+from app.modules.organization.branch_context import resolve_branch_by_id, resolve_branch_scope
 from app.modules.organization.service import get_company_settings
 from app.modules.payments.accounting_bridge import auto_post_payment_document, reverse_linked_payment_document_entry, delete_linked_payment_document_entry
 from app.modules.payments.allocation_builder import build_allocations
@@ -18,28 +19,27 @@ from app.modules.payments.document_access import (
     PAYMENT_SEQUENCE_KEY,
     ensure_payment_document_is_editable,
     ensure_payment_sequence,
-    get_scoped_payment_document,
+    get_scoped_payment_document_by_branch,
     load_document_or_404,
 )
 from app.modules.payments.models import PaymentDocument
 from app.modules.payments.payment_methods import resolve_payment_method
+from app.modules.payments.booking_bridge import sync_booking_lines_status
 from app.modules.payments.repository import PaymentsRepository
 from app.modules.payments.rules import clean_optional_text, parse_payment_date
 from app.modules.payments.serializers import document_total, serialize_document
 from app.modules.payments.schemas import PaymentDocumentCreateRequest, PaymentDocumentUpdateRequest
 
-def list_payments(db: Session, session: dict, branch_id: str | None = None) -> list[dict]:
+def list_payments(db: Session, branch_id: str) -> list[dict]:
     company = get_company_settings(db)
-    branch = resolve_branch_scope(db, session, branch_id)
-    rows = PaymentsRepository(db).list_payment_documents(company.id, branch.id)
+    rows = PaymentsRepository(db).list_payment_documents(company.id, branch_id)
     return [serialize_document(row) for row in rows]
 
 
 def list_payment_page(
     db: Session,
-    session: dict,
+    branch_id: str,
     *,
-    branch_id: str | None = None,
     search: str | None = None,
     status: str | None = None,
     document_kind: str | None = None,
@@ -51,10 +51,9 @@ def list_payment_page(
     sort_dir: str = "desc",
 ) -> dict:
     company = get_company_settings(db)
-    branch = resolve_branch_scope(db, session, branch_id)
     rows, total = PaymentsRepository(db).list_payment_document_page(
         company.id,
-        branch_id=branch.id,
+        branch_id=branch_id,
         search=clean_optional_text(search),
         status=clean_optional_text(status),
         document_kind=clean_optional_text(document_kind),
@@ -68,13 +67,13 @@ def list_payment_page(
     return {"items": [serialize_document(row) for row in rows], "total": total, "page": page, "page_size": page_size}
 
 
-def get_payment_document(db: Session, payment_document_id: str, session: dict) -> dict:
-    payment_document = get_scoped_payment_document(db, payment_document_id, session)
+def get_payment_document(db: Session, payment_document_id: str, branch_id: str) -> dict:
+    payment_document = get_scoped_payment_document_by_branch(db, payment_document_id, branch_id)
     return serialize_document(payment_document, include_allocations=True)
 
 
-def create_payment(db: Session, actor: User, payload: PaymentDocumentCreateRequest, session: dict) -> dict:
-    branch = ensure_active_branch(db, session)
+def create_payment(db: Session, actor: User, payload: PaymentDocumentCreateRequest, branch_id: str) -> dict:
+    branch = resolve_branch_by_id(db, branch_id)
     company = get_company_settings(db)
     repo = PaymentsRepository(db)
     ensure_payment_sequence(db, company.id)
@@ -102,7 +101,7 @@ def create_payment(db: Session, actor: User, payload: PaymentDocumentCreateReque
     payment_document.allocations = build_allocations(
         db,
         company.id,
-        branch.id,
+        branch_id,
         payload.customer_id,
         payload.allocations,
         document_kind=payload.document_kind,
@@ -132,8 +131,8 @@ def create_payment(db: Session, actor: User, payload: PaymentDocumentCreateReque
     return load_document_or_404(repo, payment_document.id, include_allocations=True)
 
 
-def update_payment(db: Session, actor: User, payment_document_id: str, payload: PaymentDocumentUpdateRequest, session: dict) -> dict:
-    payment_document = get_scoped_payment_document(db, payment_document_id, session)
+def update_payment(db: Session, actor: User, payment_document_id: str, payload: PaymentDocumentUpdateRequest, branch_id: str) -> dict:
+    payment_document = get_scoped_payment_document_by_branch(db, payment_document_id, branch_id)
     ensure_payment_document_is_editable(payment_document)
     reverse_date = parse_payment_date(payload.payment_date)
     override_payload = enforce_not_locked_with_override(
@@ -145,6 +144,8 @@ def update_payment(db: Session, actor: User, payment_document_id: str, payload: 
         override_reason=payload.override_reason,
     )
     previous_journal_entry_id = payment_document.journal_entry_id
+    previous_line_ids = [alloc.booking_line_id for alloc in payment_document.allocations if alloc.booking_line_id]
+    
     if payment_document.journal_entry_id:
         reverse_linked_payment_document_entry(db, actor, payment_document, reverse_date)
     payment_method = resolve_payment_method(
@@ -172,12 +173,21 @@ def update_payment(db: Session, actor: User, payment_document_id: str, payload: 
     )
     payment_document.allocations.clear()
     db.flush()
+    
+    # Collect affected line IDs for status sync
+    affected_line_ids = [alloc.booking_line_id for alloc in new_allocations if alloc.booking_line_id]
+    affected_line_ids.extend(previous_line_ids)
+    
     payment_document.allocations = new_allocations
     db.flush()
     journal_entry = auto_post_payment_document(db, actor, payment_document)
     payment_document.journal_entry_id = journal_entry.id
     payment_document.journal_entry = journal_entry
     db.flush()
+    
+    # Sync statuses
+    sync_booking_lines_status(db, affected_line_ids)
+    
     if override_payload is not None:
         record_period_lock_override(
             db,
@@ -206,8 +216,8 @@ def update_payment(db: Session, actor: User, payment_document_id: str, payload: 
     return load_document_or_404(PaymentsRepository(db), payment_document.id, include_allocations=True)
 
 
-def delete_payment(db: Session, actor: User, payment_document_id: str, session: dict) -> None:
-    payment_document = get_scoped_booking_payment_document(db, payment_document_id, session)
+def delete_payment(db: Session, actor: User, payment_document_id: str, branch_id: str) -> None:
+    payment_document = get_scoped_payment_document_by_branch(db, payment_document_id, branch_id)
     
     # Check Period Lock
     enforce_not_locked_with_override(
@@ -236,7 +246,15 @@ def delete_payment(db: Session, actor: User, payment_document_id: str, session: 
             "customer_id": payment_document.customer_id
         },
     )
+    # Collect affected line IDs before deletion
+    affected_line_ids = [alloc.booking_line_id for alloc in payment_document.allocations if alloc.booking_line_id]
+    
     db.delete(payment_document)
+    db.flush()
+    
+    # Sync statuses
+    sync_booking_lines_status(db, affected_line_ids)
+    
     db.commit()
 
 

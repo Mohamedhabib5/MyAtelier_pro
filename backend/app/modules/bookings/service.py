@@ -5,8 +5,9 @@ from decimal import Decimal
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import ValidationAppError, ConflictError
+from app.core.messages import BOOKING_CANCELLED_NO_EDIT, BOOKING_LINE_NOT_FOUND, BOOKING_LINE_RECOGNIZED_DELETE_ERROR, BOOKING_LINE_PAID_DELETE_ERROR
 from app.modules.bookings.calculations import derive_booking_status, line_paid_total, serialize_booking_document
-from app.modules.bookings.document_access import BOOKING_SEQUENCE_KEY, ensure_booking_sequence, get_scoped_booking, reload_booking_or_404
+from app.modules.bookings.document_access import BOOKING_SEQUENCE_KEY, ensure_booking_sequence, get_scoped_booking_by_branch, reload_booking_or_404
 from app.modules.bookings.line_mutations import create_initial_payment_document, materialize_line
 from app.modules.bookings.models import Booking, BookingLine
 from app.modules.bookings.query_service import get_calendar_events, list_booking_page, list_bookings
@@ -16,18 +17,18 @@ from app.modules.bookings.rules import clean_optional, parse_date
 from app.modules.bookings.schemas import BookingDocumentCreateRequest, BookingDocumentUpdateRequest
 from app.modules.core_platform.service import record_audit
 from app.modules.identity.models import User
-from app.modules.organization.branch_context import ensure_active_branch
+from app.modules.organization.branch_context import resolve_branch_by_id
 from app.modules.organization.service import get_company_settings
 
 ZERO = Decimal("0.00")
 
-def get_booking_document(db: Session, booking_id: str, session: dict) -> dict:
-    return serialize_booking_document(get_scoped_booking(db, booking_id, session))
+def get_booking_document(db: Session, booking_id: str, branch_id: str) -> dict:
+    return serialize_booking_document(get_scoped_booking_by_branch(db, booking_id, branch_id))
 
 
-def create_booking(db: Session, actor: User, payload: BookingDocumentCreateRequest, session: dict) -> dict:
+def create_booking(db: Session, actor: User, payload: BookingDocumentCreateRequest, branch_id: str) -> dict:
     company = get_company_settings(db)
-    branch = ensure_active_branch(db, session)
+    branch = resolve_branch_by_id(db, branch_id)
     repo = BookingsRepository(db)
     ensure_booking_sequence(db, company.id)
     booking = Booking(
@@ -77,11 +78,11 @@ def create_booking(db: Session, actor: User, payload: BookingDocumentCreateReque
     return serialize_booking_document(reload_booking_or_404(repo, booking.id))
 
 
-def update_booking(db: Session, actor: User, booking_id: str, payload: BookingDocumentUpdateRequest, session: dict) -> dict:
-    booking = get_scoped_booking(db, booking_id, session)
+def update_booking(db: Session, actor: User, booking_id: str, payload: BookingDocumentUpdateRequest, branch_id: str) -> dict:
+    booking = get_scoped_booking_by_branch(db, booking_id, branch_id)
     
     if booking.status == "cancelled":
-        raise ValidationAppError("لا يمكن تعديل وثيقة حجز ملغاة")
+        raise ValidationAppError(BOOKING_CANCELLED_NO_EDIT)
 
     company_id = booking.company_id
     booking.customer_id = get_customer_or_404(db, company_id, payload.customer_id).id
@@ -98,7 +99,7 @@ def update_booking(db: Session, actor: User, booking_id: str, payload: BookingDo
     for index, payload_line in enumerate(payload.lines, start=1):
         existing_line = existing_by_id.get(payload_line.id) if payload_line.id else None
         if payload_line.id and existing_line is None:
-            raise ValidationAppError("لم يتم العثور على سطر الحجز")
+            raise ValidationAppError(BOOKING_LINE_NOT_FOUND)
         line_entry = materialize_line(db, company_id, actor.id, payload_line, existing_line, index)
         next_lines.append(line_entry["line"])
         line_entries.append(line_entry)
@@ -109,9 +110,9 @@ def update_booking(db: Session, actor: User, booking_id: str, payload: BookingDo
         if line.id in seen_ids:
             continue
         if line.revenue_journal_entry_id:
-            raise ValidationAppError("لا يمكن حذف السطور المكتملة بعد الاعتراف بالإيراد")
+            raise ValidationAppError(BOOKING_LINE_RECOGNIZED_DELETE_ERROR)
         if line_paid_total(line) > ZERO:
-            raise ValidationAppError("لا يمكن حذف السطور التي لها مدفوعات محصلة")
+            raise ValidationAppError(BOOKING_LINE_PAID_DELETE_ERROR)
 
     booking.lines = next_lines
     booking.status = derive_booking_status(booking.lines)
@@ -141,10 +142,10 @@ def update_booking(db: Session, actor: User, booking_id: str, payload: BookingDo
     return serialize_booking_document(reload_booking_or_404(BookingsRepository(db), booking.id))
 
 
-def create_compensation_booking(db: Session, actor: User, original_booking_id: str, payload: BookingCompensationCreateRequest, session: dict) -> dict:
-    original = get_scoped_booking(db, original_booking_id, session)
+def create_compensation_booking(db: Session, actor: User, original_booking_id: str, payload: BookingCompensationCreateRequest, branch_id: str) -> dict:
+    original = get_scoped_booking_by_branch(db, original_booking_id, branch_id)
     company = get_company_settings(db)
-    branch = ensure_active_branch(db, session)
+    branch = resolve_branch_by_id(db, branch_id)
     repo = BookingsRepository(db)
     
     compensation_number = f"{original.booking_number}-C"
@@ -201,8 +202,8 @@ def create_compensation_booking(db: Session, actor: User, original_booking_id: s
     db.commit()
     return serialize_booking_document(reload_booking_or_404(repo, booking.id))
 
-def delete_booking(db: Session, actor: User, booking_id: str, session: dict) -> None:
-    booking = get_scoped_booking(db, booking_id, session)
+def delete_booking(db: Session, actor: User, booking_id: str, branch_id: str) -> None:
+    booking = get_scoped_booking_by_branch(db, booking_id, branch_id)
     
     # Financial Integrity Check
     for line in booking.lines:
@@ -228,11 +229,11 @@ def delete_booking(db: Session, actor: User, booking_id: str, session: dict) -> 
     db.commit()
 
 
-def delete_booking_line(db: Session, actor: User, booking_id: str, line_id: str, session: dict) -> dict:
-    booking = get_scoped_booking(db, booking_id, session)
+def delete_booking_line(db: Session, actor: User, booking_id: str, line_id: str, branch_id: str) -> dict:
+    booking = get_scoped_booking_by_branch(db, booking_id, branch_id)
     line = next((l for l in booking.lines if l.id == line_id), None)
     if not line:
-        raise ValidationAppError("سطر الحجز غير موجود")
+        raise ValidationAppError(BOOKING_LINE_NOT_FOUND)
 
     # Financial Integrity Check
     if line_paid_total(line) > ZERO:

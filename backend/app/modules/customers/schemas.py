@@ -31,7 +31,7 @@ class CustomerCreateRequest(BaseModel):
     phone_2: str | None = Field(default=None, max_length=30)
     registration_date: str | None = None
     email: str | None = Field(default=None, max_length=160)
-    address: str | None = Field(default=None, max_length=255)
+    address: str = Field(min_length=2, max_length=255)
     notes: str | None = None
 
 
@@ -43,7 +43,7 @@ class CustomerUpdateRequest(BaseModel):
     phone_2: str | None = Field(default=None, max_length=30)
     registration_date: str | None = None
     email: str | None = Field(default=None, max_length=160)
-    address: str | None = Field(default=None, max_length=255)
+    address: str = Field(min_length=2, max_length=255)
     notes: str | None = None
     is_active: bool = True
 

@@ -5,11 +5,34 @@ export const DEFAULT_PRIMARY = '#FF2D78'; // Pink
 export const DEFAULT_SECONDARY = '#00F5D4'; // Teal
 export const NEUTRAL_NAVY = '#2B2C3E';
 
-export function buildAppTheme(direction: Direction, primaryColor = DEFAULT_PRIMARY, secondaryColor = DEFAULT_SECONDARY) {
+export function buildAppTheme(
+  direction: Direction, 
+  primaryColor = DEFAULT_PRIMARY, 
+  secondaryColor = DEFAULT_SECONDARY,
+  mode: 'light' | 'dark' = 'light'
+) {
+  const isDark = mode === 'dark';
   const themeOptions: ThemeOptions = {
     direction,
+    transitions: {
+      duration: {
+        shortest: 100,
+        shorter: 150,
+        short: 200,
+        standard: 250,
+        complex: 300,
+        enteringScreen: 225,
+        leavingScreen: 195,
+      },
+      easing: {
+        easeInOut: 'cubic-bezier(0.4, 0, 0.2, 1)',
+        easeOut: 'cubic-bezier(0.0, 0, 0.2, 1)',
+        easeIn: 'cubic-bezier(0.4, 0, 1, 1)',
+        sharp: 'cubic-bezier(0.4, 0, 0.6, 1)',
+      },
+    },
     palette: {
-      mode: 'light',
+      mode,
       primary: {
         main: primaryColor,
       },
@@ -18,20 +41,21 @@ export function buildAppTheme(direction: Direction, primaryColor = DEFAULT_PRIMA
       },
       background: {
         default: 'transparent', // Let index.css mesh gradient show through
-        paper: 'rgba(255, 255, 255, 0.7)', // Semi-translucent white
+        paper: isDark ? 'rgba(30, 31, 46, 0.8)' : 'rgba(255, 255, 255, 0.7)', 
       },
       text: {
-        primary: NEUTRAL_NAVY,
+        primary: isDark ? '#E2E8F0' : NEUTRAL_NAVY,
+        secondary: isDark ? '#94A3B8' : 'rgba(43, 44, 62, 0.7)',
       },
     },
     typography: {
       fontFamily: "'Inter', 'Segoe UI', Tahoma, sans-serif",
-      h1: { color: NEUTRAL_NAVY, fontWeight: 700, lineHeight: 1.2 },
-      h2: { color: NEUTRAL_NAVY, fontWeight: 700, lineHeight: 1.2 },
-      h3: { color: NEUTRAL_NAVY, fontWeight: 600, lineHeight: 1.3 },
-      h4: { color: NEUTRAL_NAVY, fontWeight: 600, lineHeight: 1.3 },
-      h5: { color: NEUTRAL_NAVY, fontWeight: 600, lineHeight: 1.4 },
-      h6: { color: NEUTRAL_NAVY, fontWeight: 600, lineHeight: 1.4 },
+      h1: { fontWeight: 700, lineHeight: 1.2 },
+      h2: { fontWeight: 700, lineHeight: 1.2 },
+      h3: { fontWeight: 600, lineHeight: 1.3 },
+      h4: { fontWeight: 600, lineHeight: 1.3 },
+      h5: { fontWeight: 600, lineHeight: 1.4 },
+      h6: { fontWeight: 600, lineHeight: 1.4 },
       body1: { lineHeight: 1.6 },
       body2: { lineHeight: 1.6 },
     },
@@ -42,7 +66,7 @@ export function buildAppTheme(direction: Direction, primaryColor = DEFAULT_PRIMA
       MuiCssBaseline: {
         styleOverrides: {
           body: {
-            backgroundColor: '#F8F9FA', // Fallback
+            backgroundColor: isDark ? '#0f0f15' : '#F8F9FA', // Fallback
             WebkitTapHighlightColor: 'transparent', // Better mobile touch feel
           },
         },
@@ -52,8 +76,10 @@ export function buildAppTheme(direction: Direction, primaryColor = DEFAULT_PRIMA
           root: {
             backdropFilter: 'blur(20px) saturate(180%)',
             WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-            border: '1px solid rgba(255, 255, 255, 0.3)',
-            boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.07)',
+            border: isDark ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid rgba(255, 255, 255, 0.3)',
+            boxShadow: isDark 
+              ? '0 4px 24px 0 rgba(0, 0, 0, 0.4)' 
+              : '0 8px 32px 0 rgba(31, 38, 135, 0.07)',
           },
         },
       },
@@ -99,6 +125,10 @@ export function buildAppTheme(direction: Direction, primaryColor = DEFAULT_PRIMA
           root: {
             borderRadius: 32, // Extra rounded cards
             padding: '16px',
+            border: isDark ? '1px solid rgba(255, 255, 255, 0.05)' : 'none',
+            boxShadow: isDark 
+              ? '0 4px 20px 0 rgba(0, 0, 0, 0.3)' 
+              : '0 4px 12px rgba(0,0,0,0.03)',
             '@media (max-width: 600px)': {
               borderRadius: 24,
               padding: '12px',
@@ -116,11 +146,11 @@ export function buildAppTheme(direction: Direction, primaryColor = DEFAULT_PRIMA
       MuiAppBar: {
         styleOverrides: {
           root: {
-            backgroundColor: 'rgba(255, 255, 255, 0.6)',
+            backgroundColor: isDark ? 'rgba(30, 31, 46, 0.6)' : 'rgba(255, 255, 255, 0.6)',
             backdropFilter: 'blur(10px)',
-            color: NEUTRAL_NAVY,
-            boxShadow: '0 4px 20px 0 rgba(0,0,0,0.03)',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.3)',
+            color: isDark ? '#E2E8F0' : NEUTRAL_NAVY,
+            boxShadow: isDark ? '0 4px 20px 0 rgba(0,0,0,0.3)' : '0 4px 20px 0 rgba(0,0,0,0.03)',
+            borderBottom: isDark ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(255, 255, 255, 0.3)',
           },
         },
       },

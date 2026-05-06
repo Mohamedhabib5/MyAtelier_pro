@@ -24,16 +24,34 @@ def export_customers_xlsx(db: Session, actor: User) -> tuple[str, bytes]:
     return filename, content
 
 
-def export_custody_csv(db: Session, actor: User, session: dict) -> tuple[str, str]:
-    rows = list_custody_cases(db, session)
+def export_custody_csv(
+    db: Session,
+    actor: User,
+    branch_id: str | None = None,
+    page: int | None = None,
+    page_size: int | None = None,
+) -> tuple[str, str]:
+    from app.modules.organization.branch_context import resolve_branch_scope_stateless
+    branch = resolve_branch_scope_stateless(db, branch_id)
+    result = list_custody_cases(db, branch.id, page=page, page_size=page_size)
+    rows = result["items"] if isinstance(result, dict) else result
     content = build_csv(rows, CUSTODY_COLUMNS)
     filename = build_filename('custody_cases')
     record_export_download(db, actor, 'export.custody_csv_downloaded', filename, len(rows))
     return filename, content
 
 
-def export_custody_xlsx(db: Session, actor: User, session: dict) -> tuple[str, bytes]:
-    rows = list_custody_cases(db, session)
+def export_custody_xlsx(
+    db: Session,
+    actor: User,
+    branch_id: str | None = None,
+    page: int | None = None,
+    page_size: int | None = None,
+) -> tuple[str, bytes]:
+    from app.modules.organization.branch_context import resolve_branch_scope_stateless
+    branch = resolve_branch_scope_stateless(db, branch_id)
+    result = list_custody_cases(db, branch.id, page=page, page_size=page_size)
+    rows = result["items"] if isinstance(result, dict) else result
     content = build_xlsx(rows, CUSTODY_COLUMNS)
     filename = build_filename('custody_cases', extension='xlsx')
     record_export_download(db, actor, 'export.custody_xlsx_downloaded', filename, len(rows))

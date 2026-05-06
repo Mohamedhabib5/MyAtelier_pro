@@ -14,6 +14,7 @@ interface ThemeSettingsContextType {
   bgGradientStart: string;
   bgGradientEnd: string;
   accentColor: string;
+  themeMode: 'light' | 'dark';
   setPrimaryColor: (color: string) => void;
   setSecondaryColor: (color: string) => void;
   setSidebarColor: (color: string) => void;
@@ -24,6 +25,7 @@ interface ThemeSettingsContextType {
   setBgGradientStart: (color: string) => void;
   setBgGradientEnd: (color: string) => void;
   setAccentColor: (color: string) => void;
+  setThemeMode: (mode: 'light' | 'dark') => void;
   resetTheme: () => void;
 }
 
@@ -39,6 +41,7 @@ const STORAGE_KEY_SIDEBAR_TEXT = 'myatelier_theme_sidebar_text';
 const STORAGE_KEY_BG_START = 'myatelier_theme_bg_start';
 const STORAGE_KEY_BG_END = 'myatelier_theme_bg_end';
 const STORAGE_KEY_ACCENT = 'myatelier_theme_accent';
+const STORAGE_KEY_MODE = 'myatelier_theme_mode';
 
 const DEFAULT_BG_START = '#E2E8F0';
 const DEFAULT_BG_END = '#CBD5E1';
@@ -57,6 +60,7 @@ export function ThemeSettingsProvider({ children }: PropsWithChildren) {
   const [bgGradientStart, setBgGradientStart] = useState(() => localStorage.getItem(STORAGE_KEY_BG_START) || DEFAULT_BG_START);
   const [bgGradientEnd, setBgGradientEnd] = useState(() => localStorage.getItem(STORAGE_KEY_BG_END) || DEFAULT_BG_END);
   const [accentColor, setAccentColor] = useState(() => localStorage.getItem(STORAGE_KEY_ACCENT) || DEFAULT_ACCENT);
+  const [themeMode, setThemeMode] = useState<'light' | 'dark'>(() => (localStorage.getItem(STORAGE_KEY_MODE) as 'light' | 'dark') || 'light');
 
   const isFirstRender = useRef(true);
   const isUpdatingFromBackend = useRef(false);
@@ -72,6 +76,7 @@ export function ThemeSettingsProvider({ children }: PropsWithChildren) {
   useEffect(() => { localStorage.setItem(STORAGE_KEY_BG_START, bgGradientStart); }, [bgGradientStart]);
   useEffect(() => { localStorage.setItem(STORAGE_KEY_BG_END, bgGradientEnd); }, [bgGradientEnd]);
   useEffect(() => { localStorage.setItem(STORAGE_KEY_ACCENT, accentColor); }, [accentColor]);
+  useEffect(() => { localStorage.setItem(STORAGE_KEY_MODE, themeMode); }, [themeMode]);
 
   // Sync with Backend
   const saveToBackend = useCallback(async () => {
@@ -80,7 +85,7 @@ export function ThemeSettingsProvider({ children }: PropsWithChildren) {
       const themeData = {
         primaryColor, secondaryColor, sidebarColor, sidebarColorEnd, 
         headerColor, headerColorEnd,
-        sidebarTextColor, bgGradientStart, bgGradientEnd, accentColor
+        sidebarTextColor, bgGradientStart, bgGradientEnd, accentColor, themeMode
       };
       await apiRequest('/api/users/me/theme-preferences', {
         method: 'PUT',
@@ -89,7 +94,7 @@ export function ThemeSettingsProvider({ children }: PropsWithChildren) {
     } catch (err) {
       console.error('Failed to save theme preferences to backend:', err);
     }
-  }, [user, primaryColor, secondaryColor, sidebarColor, sidebarColorEnd, headerColor, headerColorEnd, sidebarTextColor, bgGradientStart, bgGradientEnd, accentColor]);
+  }, [user, primaryColor, secondaryColor, sidebarColor, sidebarColorEnd, headerColor, headerColorEnd, sidebarTextColor, bgGradientStart, bgGradientEnd, accentColor, themeMode]);
 
   useEffect(() => {
     if (isFirstRender.current) {
@@ -120,6 +125,7 @@ export function ThemeSettingsProvider({ children }: PropsWithChildren) {
           if (data.bgGradientStart) setBgGradientStart(data.bgGradientStart);
           if (data.bgGradientEnd) setBgGradientEnd(data.bgGradientEnd);
           if (data.accentColor) setAccentColor(data.accentColor);
+          if (data.themeMode) setThemeMode(data.themeMode);
           setTimeout(() => { isUpdatingFromBackend.current = false; }, 100);
         }
       } catch (err) {
@@ -140,14 +146,15 @@ export function ThemeSettingsProvider({ children }: PropsWithChildren) {
     setBgGradientStart(DEFAULT_BG_START);
     setBgGradientEnd(DEFAULT_BG_END);
     setAccentColor(DEFAULT_ACCENT);
+    setThemeMode('light');
   };
 
   return (
     <ThemeSettingsContext.Provider value={{ 
       primaryColor, secondaryColor, sidebarColor, sidebarColorEnd, headerColor, headerColorEnd, sidebarTextColor,
-      bgGradientStart, bgGradientEnd, accentColor,
+      bgGradientStart, bgGradientEnd, accentColor, themeMode,
       setPrimaryColor, setSecondaryColor, setSidebarColor, setSidebarColorEnd, setHeaderColor, setHeaderColorEnd, setSidebarTextColor, 
-      setBgGradientStart, setBgGradientEnd, setAccentColor,
+      setBgGradientStart, setBgGradientEnd, setAccentColor, setThemeMode,
       resetTheme
     }}>
       {children}

@@ -27,11 +27,13 @@ from app.api.routes import (
     fiscal_periods,
     health,
     ops_nightly,
+    ops,
     payment_methods,
     payment_targets,
     payments,
     period_lock,
     reports,
+    search,
     settings,
     users,
 )
@@ -39,6 +41,7 @@ from app.core.config import Settings, get_settings
 from app.core.exceptions import AppError, AuthorizationError
 from app.core.logging import configure_logging
 from app.core.request_context_middleware import RequestContextMiddleware
+from app.core.csrf_middleware import CSRFMiddleware
 from app.db.session import build_engine, build_session_factory
 from app.modules.accounting.models import ChartOfAccount, JournalEntry, JournalEntryLine
 from app.modules.accounting.service import ensure_accounting_foundation
@@ -146,6 +149,8 @@ def create_app(settings_obj: Settings | None = None) -> FastAPI:
     if trusted_hosts:
         app.add_middleware(TrustedHostMiddleware, allowed_hosts=trusted_hosts)
 
+    app.add_middleware(RequestContextMiddleware)
+    app.add_middleware(CSRFMiddleware)
     app.add_middleware(
         SessionMiddleware,
         secret_key=settings_obj.app_secret_key,
@@ -154,7 +159,6 @@ def create_app(settings_obj: Settings | None = None) -> FastAPI:
         https_only=settings_obj.effective_session_https_only(),
         max_age=settings_obj.session_max_age_seconds,
     )
-    app.add_middleware(RequestContextMiddleware)
 
     # Mount static files for attachments
     app.mount("/attachments", StaticFiles(directory=settings_obj.attachment_storage_dir), name="attachments")
@@ -164,7 +168,6 @@ def create_app(settings_obj: Settings | None = None) -> FastAPI:
         response = await call_next(request)
         response.headers.setdefault('X-Content-Type-Options', 'nosniff')
         response.headers.setdefault('X-Frame-Options', 'DENY')
-        response.headers.setdefault('X-XSS-Protection', '1; mode=block')
         response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
         
         # Content Security Policy (CSP)
@@ -186,7 +189,6 @@ def create_app(settings_obj: Settings | None = None) -> FastAPI:
             response.headers.setdefault('Cache-Control', 'no-store')
         if settings_obj.effective_session_https_only():
             response.headers.setdefault('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
-            response.headers.setdefault('Expect-CT', 'max-age=86400, enforce')
         return response
 
     @app.exception_handler(AppError)
@@ -217,9 +219,11 @@ def create_app(settings_obj: Settings | None = None) -> FastAPI:
     app.include_router(settings.router, prefix='/api', dependencies=[Depends(limit_sensitive_ops)])
     app.include_router(fiscal_periods.router, prefix='/api')
     app.include_router(ops_nightly.router, prefix='/api')
+    app.include_router(ops.router, prefix='/api')
     app.include_router(audit.router, prefix='/api')
     app.include_router(period_lock.router, prefix='/api')
     app.include_router(dashboard.router, prefix='/api')
+    app.include_router(search.router, prefix='/api')
     app.include_router(reports.router, prefix='/api')
     app.include_router(exports.router, prefix='/api', dependencies=[Depends(limit_sensitive_ops)])
     app.include_router(accounting.router, prefix='/api')

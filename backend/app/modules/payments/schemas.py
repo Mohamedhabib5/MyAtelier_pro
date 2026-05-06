@@ -63,6 +63,8 @@ class PaymentDocumentSummaryResponse(BaseModel):
     branch_name: str
     customer_id: str
     customer_name: str
+    customer_phone: str | None
+    customer_address: str | None
     payment_method_id: str | None
     payment_method_name: str | None
     payment_number: str
@@ -133,6 +135,8 @@ class PaymentTargetSearchResult(BaseModel):
     label: str
     customer_id: str
     customer_name: str
+    customer_phone: str | None
+    customer_address: str | None
     booking_id: str | None = None
     booking_number: str | None = None
 
@@ -167,6 +171,8 @@ class PaymentTargetDetailResponse(BaseModel):
     scope_id: str
     customer_id: str
     customer_name: str
+    customer_phone: str | None
+    customer_address: str | None
     branch_id: str
     branch_name: str
     total_remaining: float

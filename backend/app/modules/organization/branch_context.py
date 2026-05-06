@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from collections.abc import MutableMapping
 from typing import Any
@@ -42,4 +42,36 @@ def resolve_branch_scope(db: Session, session: MutableMapping[str, Any], branch_
 def set_active_branch(db: Session, session: MutableMapping[str, Any], branch_id: str) -> Branch:
     branch = resolve_branch_scope(db, session, branch_id)
     session[SESSION_BRANCH_KEY] = branch.id
+    return branch
+
+
+def resolve_branch_by_id(db: Session, branch_id: str) -> Branch:
+    company = get_company_settings(db)
+    repository = OrganizationRepository(db)
+    branch = repository.get_branch(branch_id)
+    if branch is None or branch.company_id != company.id:
+        raise NotFoundError('لم يتم العثور على الفرع')
+    if not branch.is_active:
+        raise ValidationAppError('لا يمكن اختيار فرع موقوف')
+    return branch
+
+
+def resolve_branch_scope_stateless(db: Session, branch_id: str | None) -> Branch:
+    """
+    Stateless version of resolve_branch_scope that doesn't use the session.
+    If no branch_id is provided, it returns the default branch for the company.
+    """
+    company = get_company_settings(db)
+    repository = OrganizationRepository(db)
+    if not branch_id:
+        default_branch = repository.get_default_branch(company.id)
+        if default_branch is None or not default_branch.is_active:
+            raise NotFoundError('لا يوجد فرع نشط متاح')
+        return default_branch
+    
+    branch = repository.get_branch(branch_id)
+    if branch is None or branch.company_id != company.id:
+        raise NotFoundError('لم يتم العثور على الفرع')
+    if not branch.is_active:
+        raise ValidationAppError('لا يمكن اختيار فرع موقوف')
     return branch

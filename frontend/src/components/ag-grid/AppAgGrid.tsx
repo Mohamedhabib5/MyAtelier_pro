@@ -14,6 +14,8 @@ import {
   TablePagination,
   TextField,
   Typography,
+  useMediaQuery,
+  useTheme
 } from '@mui/material';
 import type { ColDef, Column, ColumnMovedEvent, ColumnPinnedEvent, ColumnResizedEvent, ColumnVisibleEvent, FilterChangedEvent, FirstDataRenderedEvent, GetRowIdParams, GridApi, GridReadyEvent, SortChangedEvent } from 'ag-grid-community';
 import { AgGridReact } from 'ag-grid-react';
@@ -27,6 +29,7 @@ import { buildAgGridLocaleText } from './buildAgGridLocaleText';
 import { GridColumnPanel } from './GridColumnPanel';
 import type { AgGridPreferenceState, AppAgGridColumn } from './types';
 import { useAgGridPreferences } from './useAgGridPreferences';
+import { MobileCardView } from './MobileCardView';
 
 ensureAgGridModulesRegistered();
 
@@ -60,8 +63,7 @@ type Props<Row> = {
   quickSearchValue?: string;
   onQuickSearchChange?: (value: string) => void;
   externalPagination?: ExternalPagination;
-  csvFileName?: string;
-  onExportXlsx?: () => void;
+  onExport?: (format: 'csv' | 'xlsx', scope: 'all' | 'page') => void;
   getRowId?: (params: GetRowIdParams<Row>) => string;
   emptyState?: React.ReactNode;
   height?: number;
@@ -97,8 +99,7 @@ export function AppAgGrid<Row>({
   quickSearchValue,
   onQuickSearchChange,
   externalPagination,
-  csvFileName,
-  onExportXlsx,
+  onExport,
   getRowId,
   emptyState,
   height = 520,
@@ -111,11 +112,18 @@ export function AppAgGrid<Row>({
   onRowClicked,
   toolbarLeftContent,
 }: Props<Row>) {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [internalSearch, setInternalSearch] = useState('');
   const [columnsAnchor, setColumnsAnchor] = useState<HTMLElement | null>(null);
   const [exportAnchor, setExportAnchor] = useState<HTMLElement | null>(null);
+  const [exportSubAnchor, setExportSubAnchor] = useState<HTMLElement | null>(null);
+  const [exportFormat, setExportFormat] = useState<'csv' | 'xlsx' | null>(null);
+
   const gridApiRef = useRef<GridApi<Row> | null>(null);
   const { state, setState, defaults } = useAgGridPreferences(tableKey);
+  const [localPage, setLocalPage] = useState(0);
+  const [localPageSize, setLocalPageSize] = useState(state.pageSize ?? 25);
   const search = quickSearchValue ?? internalSearch;
   const localeText = useMemo(() => buildAgGridLocaleText(language), [language]);
 
@@ -145,10 +153,10 @@ export function AppAgGrid<Row>({
         sortIndex: item.sortIndex ?? undefined,
       })),
       filterModel: api.getFilterModel(),
-      pageSize: externalPagination?.pageSize ?? state.pageSize,
+      pageSize: externalPagination?.pageSize ?? localPageSize,
     };
     setState(nextState);
-  }, [externalPagination?.pageSize, setState, state.pageSize]);
+  }, [externalPagination?.pageSize, localPageSize, setState]);
 
   const applySavedState = useCallback(
     (api: GridApi<Row>) => {
@@ -186,7 +194,62 @@ export function AppAgGrid<Row>({
 
   const columnsList: Column[] = gridApiRef.current?.getColumns() ?? [];
 
-  const visibleRowsCount = externalPagination ? externalPagination.total : rows.length;
+  const effectivePageSize = externalPagination?.pageSize ?? localPageSize;
+  const effectivePage = externalPagination?.page ?? localPage;
+  const totalCount = externalPagination ? externalPagination.total : rows.length;
+
+  const onPageChangeInternal = useCallback((newPage: number) => {
+    if (externalPagination) {
+      externalPagination.onPageChange(newPage);
+    } else {
+      setLocalPage(newPage);
+      gridApiRef.current?.paginationGoToPage(newPage);
+    }
+  }, [externalPagination]);
+
+  const onPageSizeChangeInternal = useCallback((newPageSize: number) => {
+    if (externalPagination) {
+      externalPagination.onPageSizeChange(newPageSize);
+    } else {
+      setLocalPageSize(newPageSize);
+      setLocalPage(0);
+      gridApiRef.current?.paginationGoToPage(0);
+    }
+  }, [externalPagination]);
+
+  const visibleRowsCount = totalCount;
+
+  const triggerLocalCsvExport = useCallback(() => {
+    const api = gridApiRef.current;
+    if (api) {
+      const content = api.getDataAsCsv();
+      const filename = `${tableKey}.csv`;
+      const blob = new Blob(['\uFEFF', content], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+        if (a.parentNode) {
+            document.body.removeChild(a);
+        }
+      }, 1000);
+    }
+  }, [tableKey]);
+
+  const handleExportClick = (format: 'csv' | 'xlsx', scope: 'all' | 'page') => {
+    if (onExport) {
+      onExport(format, scope);
+    } else if (format === 'csv') {
+      // Fallback to local grid export if no handler provided
+      triggerLocalCsvExport(scope === 'all');
+    }
+    setExportAnchor(null);
+    setExportSubAnchor(null);
+  };
 
   return (
     <Stack spacing={2}>
@@ -264,6 +327,7 @@ export function AppAgGrid<Row>({
                   whiteSpace: 'nowrap', 
                   borderRadius: 3,
                 }}
+                endIcon={<DownloadOutlinedIcon />}
               >
                 {exportLabel}
               </Button>
@@ -272,12 +336,19 @@ export function AppAgGrid<Row>({
         </Stack>
         ) : null}
 
-        <Box className='ag-theme-quartz app-ag-grid' sx={{ height, width: '100%' }}>
+        <Box className='ag-theme-quartz app-ag-grid' sx={{ height: isMobile ? 'auto' : height, width: '100%' }}>
           {loading ? (
             <Stack alignItems='center' justifyContent='center' sx={{ height: '100%', gap: 1.5 }}>
               <CircularProgress size={24} />
               <Typography color='text.secondary'>{language === 'ar' ? 'جار التحميل...' : 'Loading...'}</Typography>
             </Stack>
+          ) : isMobile ? (
+            <MobileCardView 
+              rows={rows} 
+              columns={columns} 
+              onRowClicked={onRowClicked}
+              getRowId={getRowId}
+            />
           ) : (
             <AgGridReact<Row>
               theme='legacy'
@@ -286,8 +357,8 @@ export function AppAgGrid<Row>({
               localeText={localeText}
               quickFilterText={search}
               enableRtl={language === 'ar'}
-              pagination={!externalPagination && pagination}
-              paginationPageSize={externalPagination?.pageSize ?? state.pageSize}
+              pagination={pagination}
+              paginationPageSize={effectivePageSize}
               suppressPaginationPanel
               rowSelection={{ mode: 'multiRow', checkboxes: false, headerCheckbox: false }}
               animateRows
@@ -330,18 +401,18 @@ export function AppAgGrid<Row>({
           ) : null}
         </Box>
 
-        {externalPagination ? (
+        {pagination ? (
           <TablePagination
             component='div'
-            count={externalPagination.total}
-            page={externalPagination.page}
-            onPageChange={(_, nextPage) => externalPagination.onPageChange(nextPage)}
-            rowsPerPage={externalPagination.pageSize}
-            onRowsPerPageChange={(event) => externalPagination.onPageSizeChange(Number(event.target.value))}
+            count={totalCount}
+            page={effectivePage}
+            onPageChange={(_, nextPage) => onPageChangeInternal(nextPage)}
+            rowsPerPage={effectivePageSize}
+            onRowsPerPageChange={(event) => onPageSizeChangeInternal(Number(event.target.value))}
             rowsPerPageOptions={[10, 25, 50, 100]}
             labelRowsPerPage={rowsPerPageLabel}
           />
-        ) : !hideToolbar && pagination ? null : null}
+        ) : null}
       </Paper>
 
       <GridColumnPanel
@@ -370,25 +441,42 @@ export function AppAgGrid<Row>({
         }}
       />
 
+      {/* Primary Export Menu: Select Format */}
       <Menu anchorEl={exportAnchor} open={Boolean(exportAnchor)} onClose={() => setExportAnchor(null)}>
         <MenuItem
-          onClick={() => {
-            gridApiRef.current?.exportDataAsCsv({ fileName: csvFileName ?? `${tableKey}.csv` });
-            setExportAnchor(null);
+          onClick={(e) => {
+            setExportFormat('csv');
+            setExportSubAnchor(e.currentTarget);
           }}
         >
           CSV
         </MenuItem>
-        {onExportXlsx ? (
+        {onExport && (
           <MenuItem
-            onClick={() => {
-              onExportXlsx();
-              setExportAnchor(null);
+            onClick={(e) => {
+              setExportFormat('xlsx');
+              setExportSubAnchor(e.currentTarget);
             }}
           >
-            XLSX
+            Excel (XLSX)
           </MenuItem>
-        ) : null}
+        )}
+      </Menu>
+
+      {/* Secondary Export Menu: Select Scope */}
+      <Menu 
+        anchorEl={exportSubAnchor} 
+        open={Boolean(exportSubAnchor)} 
+        onClose={() => setExportSubAnchor(null)}
+        anchorOrigin={{ vertical: 'top', horizontal: language === 'ar' ? 'left' : 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: language === 'ar' ? 'right' : 'left' }}
+      >
+        <MenuItem onClick={() => handleExportClick(exportFormat!, 'all')}>
+          {language === 'ar' ? 'كل السجلات (المفلترة)' : 'All Records (Filtered)'}
+        </MenuItem>
+        <MenuItem onClick={() => handleExportClick(exportFormat!, 'page')}>
+          {language === 'ar' ? 'الصفحة الحالية فقط' : 'Current Page Only'}
+        </MenuItem>
       </Menu>
     </Stack>
   );

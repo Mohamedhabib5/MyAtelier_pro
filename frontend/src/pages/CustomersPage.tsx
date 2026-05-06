@@ -14,6 +14,8 @@ import { CustomerFormDialog, type CustomerFormState } from '../features/customer
 import { useLanguage } from '../features/language/LanguageProvider';
 import { queryClient } from '../lib/queryClient';
 import { EMPTY_VALUE, useCommonText } from '../text/common';
+import { getCustomersExcelUrl, getCustomersExportUrl } from '../features/exports/api';
+import { downloadFile } from '../lib/api';
 import { useCustomersText } from '../text/customers';
 
 function emptyForm() {
@@ -253,7 +255,11 @@ export function CustomersPage() {
               <option value='inactive'>{customersText.status.inactive}</option>
             </TextField>
           }
-          csvFileName='customers.csv'
+          onExport={(format) => {
+            const isXlsx = format === 'xlsx';
+            const url = isXlsx ? getCustomersExcelUrl() : getCustomersExportUrl();
+            downloadFile(url);
+          }}
           getRowId={({ data }) => data.id}
         />
       </SectionCard>

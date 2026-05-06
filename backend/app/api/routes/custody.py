@@ -1,10 +1,9 @@
-from __future__ import annotations
-
-from fastapi import APIRouter, Depends, Request, status
+from fastapi import APIRouter, Depends, Query, Request, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import require_custody_manage, require_custody_view, require_payments_manage
 from app.db.session import get_db
+from app.modules.organization.branch_context import resolve_branch_scope
 from app.modules.custody.schemas import CustodyCaseActionRequest, CustodyCaseCreateRequest, CustodyCaseResponse, CustodyCompensationCollectRequest
 from app.modules.custody.lifecycle import apply_custody_action, collect_custody_compensation
 from app.modules.custody.service import create_custody_case, get_custody_case, list_custody_cases
@@ -13,14 +12,27 @@ from app.modules.identity.models import User
 router = APIRouter(prefix="/custody", tags=["custody"])
 
 
-@router.get("", response_model=list[CustodyCaseResponse])
+
+@router.get("")
 def list_custody_cases_route(
     request: Request,
     view: str = "open",
+    branch_id: str | None = Query(default=None),
+    page: int | None = Query(default=None),
+    page_size: int | None = Query(default=None),
     db: Session = Depends(get_db),
     _: User = Depends(require_custody_view),
-) -> list[CustodyCaseResponse]:
-    return [CustodyCaseResponse.model_validate(item) for item in list_custody_cases(db, request.session, view=view)]
+) -> dict | list[CustodyCaseResponse]:
+    branch = resolve_branch_scope(db, request.session, branch_id)
+    result = list_custody_cases(db, branch.id, view=view, page=page, page_size=page_size)
+    if isinstance(result, dict):
+        return {
+            "items": [CustodyCaseResponse.model_validate(item) for item in result["items"]],
+            "total": result["total"],
+            "page": result["page"],
+            "page_size": result["page_size"],
+        }
+    return [CustodyCaseResponse.model_validate(item) for item in result]
 
 
 @router.post("", response_model=CustodyCaseResponse, status_code=status.HTTP_201_CREATED)

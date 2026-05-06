@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -13,9 +13,9 @@ class CustodyRepository:
     def __init__(self, db: Session):
         self.db = db
 
-    def list_cases_detailed(self, company_id: str, branch_id: str, *, view: str = "all"):
+    def list_cases_detailed(self, company_id: str, branch_id: str, *, view: str = "all", page: int | None = None, page_size: int | None = None):
         stmt = (
-            select(CustodyCase, Customer.full_name, Booking.booking_number, DressResource.code)
+            select(CustodyCase, Customer.full_name, Customer.phone, Customer.address, Booking.booking_number, DressResource.code)
             .join(Customer, CustodyCase.customer_id == Customer.id, isouter=True)
             .join(Booking, CustodyCase.booking_id == Booking.id, isouter=True)
             .join(DressResource, CustodyCase.dress_id == DressResource.id, isouter=True)
@@ -25,8 +25,16 @@ class CustodyRepository:
             stmt = stmt.where(CustodyCase.status == "settled")
         elif view == "open":
             stmt = stmt.where(CustodyCase.status != "settled")
+        
+        # Count total before limit/offset
+        total = self.db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
+        
         stmt = stmt.order_by(CustodyCase.custody_date.desc(), CustodyCase.created_at.desc())
-        return self.db.execute(stmt).all()
+        
+        if page is not None and page_size is not None:
+            stmt = stmt.limit(page_size).offset(page * page_size)
+            
+        return self.db.execute(stmt).all(), total
 
     def get_case(self, case_id: str) -> CustodyCase | None:
         return self.db.get(CustodyCase, case_id)

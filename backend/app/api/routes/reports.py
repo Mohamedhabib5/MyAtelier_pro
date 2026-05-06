@@ -10,9 +10,15 @@ from app.api.deps import require_reports_view
 from app.db.session import get_db
 from app.modules.identity.models import User
 from app.modules.organization.branch_context import resolve_branch_scope
+from app.modules.reports.advanced_service import get_advanced_bi_report
 from app.modules.reports.comprehensive_service import get_comprehensive_report
 from app.modules.reports.detailed_service import get_detailed_lines_report
-from app.modules.reports.schemas import ComprehensiveReportResponse, ReportsOverviewResponse, DetailedReportRowResponse
+from app.modules.reports.schemas import (
+    AdvancedBIResponse,
+    ComprehensiveReportResponse,
+    DetailedReportRowResponse,
+    ReportsOverviewResponse,
+)
 from app.modules.reports.service import get_reports_overview
 
 logger = logging.getLogger(__name__)
@@ -29,6 +35,20 @@ def get_reports_overview_route(
 ) -> ReportsOverviewResponse:
     branch = resolve_branch_scope(db, request.session, branch_id)
     return ReportsOverviewResponse.model_validate(get_reports_overview(db, branch.id))
+
+
+@router.get('/advanced-bi', response_model=AdvancedBIResponse)
+def get_advanced_bi_report_route(
+    request: Request,
+    branch_id: str | None = Query(default=None),
+    date_from: date = Query(..., description='Start date YYYY-MM-DD'),
+    date_to: date = Query(..., description='End date YYYY-MM-DD'),
+    db: Session = Depends(get_db),
+    _: User = Depends(require_reports_view),
+) -> AdvancedBIResponse:
+    branch = resolve_branch_scope(db, request.session, branch_id)
+    result = get_advanced_bi_report(db, branch.id, date_from, date_to)
+    return AdvancedBIResponse.model_validate(result)
 
 
 @router.get('/comprehensive', response_model=ComprehensiveReportResponse)

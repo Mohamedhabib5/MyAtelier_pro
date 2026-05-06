@@ -13,7 +13,6 @@ from app.modules.organization.branch_context import resolve_branch_scope
 def export_bookings_csv(
     db: Session,
     actor: User,
-    session: dict,
     branch_id: str | None = None,
     *,
     search: str | None = None,
@@ -22,11 +21,13 @@ def export_bookings_csv(
     date_to: str | None = None,
     sort_by: str = 'booking_date',
     sort_dir: str = 'desc',
+    page: int | None = None,
+    page_size: int | None = None,
 ) -> tuple[str, str]:
-    branch = resolve_branch_scope(db, session, branch_id)
+    from app.modules.organization.branch_context import resolve_branch_scope_stateless
+    branch = resolve_branch_scope_stateless(db, branch_id)
     rows = filtered_booking_rows(
         db,
-        session,
         branch.id,
         search=search,
         status=status,
@@ -34,6 +35,8 @@ def export_bookings_csv(
         date_to=date_to,
         sort_by=sort_by,
         sort_dir=sort_dir,
+        page=page,
+        page_size=page_size,
     )
     content = build_csv(rows, BOOKING_COLUMNS)
     filename = build_filename(f'bookings_{branch.code.lower()}')
@@ -44,7 +47,6 @@ def export_bookings_csv(
 def export_bookings_xlsx(
     db: Session,
     actor: User,
-    session: dict,
     branch_id: str | None = None,
     *,
     search: str | None = None,
@@ -53,11 +55,13 @@ def export_bookings_xlsx(
     date_to: str | None = None,
     sort_by: str = 'booking_date',
     sort_dir: str = 'desc',
+    page: int | None = None,
+    page_size: int | None = None,
 ) -> tuple[str, bytes]:
-    branch = resolve_branch_scope(db, session, branch_id)
+    from app.modules.organization.branch_context import resolve_branch_scope_stateless
+    branch = resolve_branch_scope_stateless(db, branch_id)
     rows = filtered_booking_rows(
         db,
-        session,
         branch.id,
         search=search,
         status=status,
@@ -65,6 +69,8 @@ def export_bookings_xlsx(
         date_to=date_to,
         sort_by=sort_by,
         sort_dir=sort_dir,
+        page=page,
+        page_size=page_size,
     )
     content = build_xlsx(rows, BOOKING_COLUMNS)
     filename = build_filename(f'bookings_{branch.code.lower()}', extension='xlsx')
@@ -75,7 +81,6 @@ def export_bookings_xlsx(
 def export_payments_csv(
     db: Session,
     actor: User,
-    session: dict,
     branch_id: str | None = None,
     *,
     search: str | None = None,
@@ -85,11 +90,13 @@ def export_payments_csv(
     date_to: str | None = None,
     sort_by: str = 'payment_date',
     sort_dir: str = 'desc',
+    page: int | None = None,
+    page_size: int | None = None,
 ) -> tuple[str, str]:
-    branch = resolve_branch_scope(db, session, branch_id)
+    from app.modules.organization.branch_context import resolve_branch_scope_stateless
+    branch = resolve_branch_scope_stateless(db, branch_id)
     rows = payment_document_rows(
         db,
-        session,
         branch.id,
         search=search,
         status=status,
@@ -98,6 +105,8 @@ def export_payments_csv(
         date_to=date_to,
         sort_by=sort_by,
         sort_dir=sort_dir,
+        page=page,
+        page_size=page_size,
     )
     content = build_csv(rows, PAYMENT_DOCUMENT_COLUMNS)
     filename = build_filename(f'payment_documents_{branch.code.lower()}')
@@ -108,7 +117,6 @@ def export_payments_csv(
 def export_payments_xlsx(
     db: Session,
     actor: User,
-    session: dict,
     branch_id: str | None = None,
     *,
     search: str | None = None,
@@ -118,11 +126,13 @@ def export_payments_xlsx(
     date_to: str | None = None,
     sort_by: str = 'payment_date',
     sort_dir: str = 'desc',
+    page: int | None = None,
+    page_size: int | None = None,
 ) -> tuple[str, bytes]:
-    branch = resolve_branch_scope(db, session, branch_id)
+    from app.modules.organization.branch_context import resolve_branch_scope_stateless
+    branch = resolve_branch_scope_stateless(db, branch_id)
     rows = payment_document_rows(
         db,
-        session,
         branch.id,
         search=search,
         status=status,
@@ -131,8 +141,58 @@ def export_payments_xlsx(
         date_to=date_to,
         sort_by=sort_by,
         sort_dir=sort_dir,
+        page=page,
+        page_size=page_size,
     )
     content = build_xlsx(rows, PAYMENT_DOCUMENT_COLUMNS)
     filename = build_filename(f'payment_documents_{branch.code.lower()}', extension='xlsx')
     record_export_download(db, actor, 'export.payments_xlsx_downloaded', filename, len(rows), branch_id=branch.id)
+    return filename, content
+
+
+def export_advanced_bi_csv(
+    db: Session,
+    actor: User,
+    branch_id: str | None = None,
+    *,
+    date_from: str | None = None,
+    date_to: str | None = None,
+) -> tuple[str, str]:
+    from app.modules.reports.rules import parse_date
+    from app.modules.reports.detailed_service import get_detailed_lines_report
+    from app.modules.exports.rendering import ADVANCED_BI_COLUMNS
+    from app.modules.organization.branch_context import resolve_branch_scope_stateless
+    
+    branch = resolve_branch_scope_stateless(db, branch_id)
+    d_from = parse_date(date_from) if date_from else None
+    d_to = parse_date(date_to) if date_to else None
+    
+    rows = get_detailed_lines_report(db, branch.id, d_from, d_to)
+    content = build_csv(rows, ADVANCED_BI_COLUMNS)
+    filename = build_filename(f'advanced_bi_{branch.code.lower()}')
+    record_export_download(db, actor, 'export.advanced_bi_csv_downloaded', filename, len(rows), branch_id=branch.id)
+    return filename, content
+
+
+def export_advanced_bi_xlsx(
+    db: Session,
+    actor: User,
+    branch_id: str | None = None,
+    *,
+    date_from: str | None = None,
+    date_to: str | None = None,
+) -> tuple[str, bytes]:
+    from app.modules.reports.rules import parse_date
+    from app.modules.reports.detailed_service import get_detailed_lines_report
+    from app.modules.exports.rendering import ADVANCED_BI_COLUMNS
+    from app.modules.organization.branch_context import resolve_branch_scope_stateless
+    
+    branch = resolve_branch_scope_stateless(db, branch_id)
+    d_from = parse_date(date_from) if date_from else None
+    d_to = parse_date(date_to) if date_to else None
+    
+    rows = get_detailed_lines_report(db, branch.id, d_from, d_to)
+    content = build_xlsx(rows, ADVANCED_BI_COLUMNS)
+    filename = build_filename(f'advanced_bi_{branch.code.lower()}', extension='xlsx')
+    record_export_download(db, actor, 'export.advanced_bi_xlsx_downloaded', filename, len(rows), branch_id=branch.id)
     return filename, content

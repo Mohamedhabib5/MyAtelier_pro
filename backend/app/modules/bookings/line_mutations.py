@@ -44,7 +44,6 @@ def materialize_line(
     if dress and not department_uses_dress(department):
         raise ValidationAppError("اختيار الفستان متاح فقط للأقسام الخاصة بالفستان")
     service_date = parse_date(payload.service_date)
-    status = clean_line_status(payload.status)
     suggested_price = quantize_amount(
         payload.suggested_price if payload.suggested_price is not None else service.default_price
     )
@@ -71,6 +70,14 @@ def materialize_line(
         raise ValidationAppError("لا يمكن أن تتجاوز الدفعة الأولى سعر السطر")
     if existing_line is not None and initial_payment_amount > quantize_amount(line_price - current_paid_total):
         raise ValidationAppError("لا يمكن أن تتجاوز الدفعة الأولى المتبقي على السطر")
+
+    # Smart Auto-Confirm Logic:
+    # 1. If there is ANY payment (previous or initial), force status to 'confirmed'.
+    # 2. Otherwise (no payment), respect the manual status choice from payload (handles VIP/Promo cases).
+    if (current_paid_total + initial_payment_amount) > ZERO:
+        status = "confirmed"
+    else:
+        status = clean_line_status(payload.status)
 
     if existing_line is not None:
         if existing_line.revenue_journal_entry_id:

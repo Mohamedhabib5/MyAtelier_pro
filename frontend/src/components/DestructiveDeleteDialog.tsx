@@ -89,14 +89,14 @@ export function DestructiveDeleteDialog({ open, entityType, entityId, entityLabe
 
   const previewReady = Boolean(preview);
   const canDelete = Boolean(preview?.eligible_for_hard_delete);
-  const title = language === 'ar' ? 'ط­ط°ظپ طھطµط­ظٹط­ظٹ' : 'Corrective delete';
-  const reasonLabel = language === 'ar' ? 'ط³ط¨ط¨ ط§ظ„ط­ط°ظپ' : 'Delete reason';
-  const notesLabel = language === 'ar' ? 'ظ…ظ„ط§ط­ط¸ط§طھ ط¥ط¶ط§ظپظٹط© (ط§ط®طھظٹط§ط±ظٹ)' : 'Additional notes (optional)';
-  const previewButton = language === 'ar' ? 'ظ…ط¹ط§ظٹظ†ط© ط§ظ„طھط£ط«ظٹط±' : 'Preview impact';
-  const deleteButton = language === 'ar' ? 'طھظ†ظپظٹط° ط§ظ„ط­ط°ظپ' : 'Delete';
-  const cancelButton = language === 'ar' ? 'ط¥ظ„ط؛ط§ط،' : 'Cancel';
-  const overrideLabel = language === 'ar' ? 'ط§ط³طھط®ط¯ط§ظ… Override ظ„ظ‚ظپظ„ ط§ظ„ظپطھط±ط©' : 'Use period-lock override';
-  const overrideReasonLabel = language === 'ar' ? 'ط³ط¨ط¨ Override' : 'Override reason';
+  const title = language === 'ar' ? 'حذف تصحيحي' : 'Corrective delete';
+  const reasonLabel = language === 'ar' ? 'سبب الحذف' : 'Delete reason';
+  const notesLabel = language === 'ar' ? 'ملاحظات إضافية (اختياري)' : 'Additional notes (optional)';
+  const previewButton = language === 'ar' ? 'معاينة التأثير' : 'Preview impact';
+  const deleteButton = language === 'ar' ? 'تنفيذ الحذف' : 'Delete';
+  const cancelButton = language === 'ar' ? 'إلغاء' : 'Cancel';
+  const overrideLabel = language === 'ar' ? 'استخدام Override لقفل الفترة' : 'Use period-lock override';
+  const overrideReasonLabel = language === 'ar' ? 'سبب Override' : 'Override reason';
   const busy = previewMutation.isPending || deleteMutation.isPending;
 
   return (
@@ -122,7 +122,7 @@ export function DestructiveDeleteDialog({ open, entityType, entityId, entityLabe
     >
       <Stack spacing={2}>
         <Typography color='text.secondary'>
-          {language === 'ar' ? `ط³طھطھظ… ظ…ط±ط§ط¬ط¹ط© طھط£ط«ظٹط± ط­ط°ظپ ${entityLabel} ظ‚ط¨ظ„ ط§ظ„طھظ†ظپظٹط°.` : `Delete impact for ${entityLabel} will be checked before execution.`}
+          {language === 'ar' ? `ستتم مراجعة تأثير حذف ${entityLabel} قبل التنفيذ.` : `Delete impact for ${entityLabel} will be checked before execution.`}
         </Typography>
         {localError || reasonsQuery.error ? <Alert severity='error'>{localError ?? (reasonsQuery.error as Error).message}</Alert> : null}
         <TextField
@@ -143,10 +143,10 @@ export function DestructiveDeleteDialog({ open, entityType, entityId, entityLabe
         {overrideLock ? <TextField label={overrideReasonLabel} value={overrideReason} onChange={(event) => setOverrideReason(event.target.value)} multiline minRows={2} disabled={busy} /> : null}
         {previewReady ? (
           <Alert severity={canDelete ? 'success' : 'warning'}>
-            <Typography>{canDelete ? (language === 'ar' ? 'ط§ظ„ط­ط°ظپ ظ…ط³ظ…ظˆط­ ط¨ط¹ط¯ ط§ظ„ظپط­طµ.' : 'Delete is eligible after checks.') : language === 'ar' ? 'ط§ظ„ط­ط°ظپ ط؛ظٹط± ظ…ط³ظ…ظˆط­ ط¨ط³ط¨ط¨ ط±ظˆط§ط¨ط· طھط´ط؛ظٹظ„ظٹط©.' : 'Delete is blocked due to operational links.'}</Typography>
+            <Typography>{canDelete ? (language === 'ar' ? 'الحذف مسموح بعد الفحص.' : 'Delete is eligible after checks.') : language === 'ar' ? 'الحذف غير مسموح بسبب روابط تشغيلية.' : 'Delete is blocked due to operational links.'}</Typography>
             {impactEntries.length ? (
               <Typography sx={{ mt: 1 }}>
-                {language === 'ar' ? 'ظ…ظ„ط®طµ ط§ظ„طھط£ط«ظٹط±' : 'Impact summary'}: {impactEntries.map(([key, value]) => `${key.replaceAll('_', ' ')}=${value}`).join(', ')}
+                {language === 'ar' ? 'ملخص التأثير' : 'Impact summary'}: {impactEntries.map(([key, value]) => `${key.replaceAll('_', ' ')}=${value}`).join(', ')}
               </Typography>
             ) : null}
             {preview?.blockers?.length ? <Typography sx={{ mt: 1 }}>{preview.blockers.join(' | ')}</Typography> : null}

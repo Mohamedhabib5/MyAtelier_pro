@@ -39,6 +39,8 @@ def search_payment_targets(db: Session, session: dict, query: str, branch_id: st
                 'label': f'{customer.full_name} - {customer.phone}',
                 'customer_id': customer.id,
                 'customer_name': customer.full_name,
+                'customer_phone': customer.phone,
+                'customer_address': customer.address,
                 'booking_id': None,
                 'booking_number': None,
             }
@@ -52,6 +54,8 @@ def search_payment_targets(db: Session, session: dict, query: str, branch_id: st
                 'label': f'{booking.booking_number} - {booking.customer.full_name}',
                 'customer_id': booking.customer_id,
                 'customer_name': booking.customer.full_name,
+                'customer_phone': booking.customer.phone,
+                'customer_address': booking.customer.address,
                 'booking_id': booking.id,
                 'booking_number': booking.booking_number,
             }
@@ -67,9 +71,9 @@ def get_customer_payment_target(db: Session, session: dict, customer_id: str, br
         customer = CustomersRepository(db).get_customer(customer_id)
         if customer is None or customer.company_id != company.id:
             raise NotFoundError('لم يتم العثور على العميل')
-        return _serialize_target('customer', customer.id, customer.full_name, branch.id, branch.name, [], ignore_payment_document_id)
-    customer_name = bookings[0].customer.full_name
-    return _serialize_target('customer', customer_id, customer_name, branch.id, branch.name, bookings, ignore_payment_document_id)
+        return _serialize_target('customer', customer.id, customer.full_name, customer.phone, customer.address, branch.id, branch.name, [], ignore_payment_document_id)
+    customer = bookings[0].customer
+    return _serialize_target('customer', customer_id, customer.full_name, customer.phone, customer.address, branch.id, branch.name, bookings, ignore_payment_document_id)
 
 
 def get_booking_payment_target(db: Session, session: dict, booking_id: str, branch_id: str | None = None, ignore_payment_document_id: str | None = None) -> dict:
@@ -78,10 +82,11 @@ def get_booking_payment_target(db: Session, session: dict, booking_id: str, bran
     booking = BookingsRepository(db).get_booking(booking_id)
     if booking is None or booking.company_id != company.id or booking.branch_id != branch.id:
         raise NotFoundError('لم يتم العثور على الحجز')
-    return _serialize_target('booking', booking.id, booking.customer.full_name, branch.id, branch.name, [booking], ignore_payment_document_id)
+    customer = booking.customer
+    return _serialize_target('booking', booking.id, customer.full_name, customer.phone, customer.address, branch.id, branch.name, [booking], ignore_payment_document_id)
 
 
-def _serialize_target(scope_kind: str, scope_id: str, customer_name: str, branch_id: str, branch_name: str, bookings: list, ignore_payment_document_id: str | None) -> dict:
+def _serialize_target(scope_kind: str, scope_id: str, customer_name: str, customer_phone: str | None, customer_address: str | None, branch_id: str, branch_name: str, bookings: list, ignore_payment_document_id: str | None) -> dict:
     booking_items = []
     total_remaining = 0.0
     customer_id = bookings[0].customer_id if bookings else scope_id
@@ -139,6 +144,8 @@ def _serialize_target(scope_kind: str, scope_id: str, customer_name: str, branch
         'scope_id': scope_id,
         'customer_id': customer_id,
         'customer_name': customer_name,
+        'customer_phone': customer_phone,
+        'customer_address': customer_address,
         'branch_id': branch_id,
         'branch_name': branch_name,
         'total_remaining': total_remaining,

@@ -14,7 +14,7 @@ const brokenPatterns = [
   { label: 'encoded-dash', matcher: (text) => text.includes('â€”') },
   { label: 'encoded-bullet', matcher: (text) => text.includes('â€¢') },
   { label: 'encoded-quotes', matcher: (text) => text.includes('â€œ') || text.includes('â€') },
-  { label: 'mojibake-pattern', matcher: (text) => ((text.match(/(?:ط·.{0,1}ط¸|ط¸.{0,1}ط·)/gu) ?? []).length >= 3) },
+  { label: 'mojibake-pattern', matcher: (text) => ((text.match(/(?:ط·.{0,1}ط¸|ط¸.{0,1}ط·|ط¨ط­ط«|ط§ظ„|طھطµط¯ظٹط±|ط¥ط؛ظ„ط§ظ‚)/gu) ?? []).length >= 1) },
   { label: 'english-date-message', matcher: (text) => text.includes('Date is required') || text.includes('Invalid date value') },
   {
     label: 'hardcoded-rtl-document',

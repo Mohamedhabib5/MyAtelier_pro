@@ -8,14 +8,14 @@ ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 ENV PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
 COPY package.json package-lock.json* ./
-RUN npm ci
+RUN npm install --legacy-peer-deps
 
 COPY . .
 
 # Ensure permissions for node user
-RUN chown -R node:node /app
+# RUN chown -R node:node /app
 
-USER node
+# USER node
 
 EXPOSE 5173
 

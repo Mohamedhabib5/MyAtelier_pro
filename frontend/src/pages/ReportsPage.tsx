@@ -6,6 +6,8 @@ import { Alert, Box, Button, Divider, Stack, Tab, Tabs, Typography } from '@mui/
 import { useQuery } from '@tanstack/react-query';
 
 import {
+  getBookingLinesExcelUrl,
+  getBookingLinesExportUrl,
   getBookingsExcelUrl,
   getBookingsExportUrl,
   getPaymentsExcelUrl,
@@ -218,6 +220,13 @@ export function ReportsPage() {
             language={language} 
             rows={detailedQuery.data ?? []} 
             loading={detailedQuery.isLoading} 
+            onExport={(format, scope) => {
+              const isXlsx = format === 'xlsx';
+              const urlFn = isXlsx ? getBookingLinesExcelUrl : getBookingLinesExportUrl;
+              // No current page param here as it's not externally paginated yet in the UI, 
+              // but we pass filters. 
+              downloadFile(urlFn(undefined, bookingExportFilters));
+            }}
           />
         </Stack>
       )}

@@ -16,56 +16,43 @@ ZERO = Decimal('0.00')
 def get_reports_overview(db: Session, branch_id: str | None = None) -> dict:
     company = get_company_settings(db)
     repository = ReportsRepository(db)
+    
+    # 1. Basic Counts (Optimized via direct repository calls)
     customers = repository.list_customers(company.id)
     departments = repository.list_departments(company.id)
     services = repository.list_services(company.id)
     dresses = repository.list_dresses(company.id)
-    bookings = repository.list_bookings(company.id, branch_id)
-    payment_documents = repository.list_payment_documents(company.id, branch_id)
 
-    booking_status_counts: dict[str, int] = defaultdict(int)
-    dress_status_counts: dict[str, int] = defaultdict(int)
-    payment_type_totals: dict[str, Decimal] = defaultdict(lambda: ZERO)
+    # 2. Aggregated Metrics (SQL GROUP BY)
+    booking_status_counts = repository.get_booking_status_counts(company.id, branch_id)
+    payment_type_totals = repository.get_payment_type_totals(company.id, branch_id)
+    
+    # 3. Upcoming Bookings (SQL Filtered & Limited)
+    upcoming_booking_items = repository.get_upcoming_booking_lines(company.id, branch_id, limit=5)
+
+    # 4. Department Counts (Calculated from in-memory service list - usually small)
     department_service_counts: dict[str, int] = defaultdict(int)
-
-    for booking in bookings:
-        booking_status_counts[booking.status] += 1
-    for dress in dresses:
-        dress_status_counts[dress.status] += 1
-    for payment_document in payment_documents:
-        if payment_document.status == 'voided':
-            continue
-        total = ZERO
-        for allocation in payment_document.allocations:
-            total += Decimal(str(allocation.allocated_amount))
-        payment_type_totals[payment_document.document_kind] += total
     for service in services:
         department_service_counts[service.department.name] += 1
 
-    upcoming_booking_items = _upcoming_bookings(bookings)
     return {
         'active_customers': sum(1 for customer in customers if customer.is_active),
         'active_services': sum(1 for service in services if service.is_active),
         'available_dresses': sum(1 for dress in dresses if dress.is_active and dress.status == 'available'),
-        'upcoming_bookings': len(upcoming_booking_items),
-        'booking_status_counts': _sorted_count_metrics(booking_status_counts),
-        'payment_type_totals': _sorted_value_metrics(payment_type_totals),
-        'dress_status_counts': _sorted_count_metrics(dress_status_counts),
+        'upcoming_bookings': len(upcoming_booking_items), # Note: This is now just the top 5 for overview
+        'booking_status_counts': sorted(booking_status_counts, key=lambda x: x['count'], reverse=True),
+        'payment_type_totals': [{'key': item['key'], 'value': _to_float(item['value'])} for item in sorted(payment_type_totals, key=lambda x: x['value'], reverse=True)],
+        'dress_status_counts': _get_dress_status_summary(dresses),
         'department_service_counts': _sorted_department_counts(department_service_counts, departments),
-        'upcoming_booking_items': upcoming_booking_items[:5],
+        'upcoming_booking_items': upcoming_booking_items,
     }
 
 
-def _upcoming_bookings(bookings: list) -> list[dict]:
-    today_value = date.today()
-    items = []
-    for booking in bookings:
-        for line in booking.lines:
-            if line.status == 'cancelled' or line.service_date < today_value:
-                continue
-            items.append({'booking_number': booking.booking_number, 'customer_name': booking.customer.full_name, 'service_name': line.service.name, 'service_date': line.service_date.isoformat(), 'status': line.status})
-    items.sort(key=lambda item: item['service_date'])
-    return items
+def _get_dress_status_summary(dresses: list) -> list[dict]:
+    counts: dict[str, int] = defaultdict(int)
+    for dress in dresses:
+        counts[dress.status] += 1
+    return [{'key': key, 'count': count} for key, count in sorted(counts.items(), key=lambda x: x[1], reverse=True)]
 
 
 def _sorted_count_metrics(values: dict[str, int]) -> list[dict]:

@@ -42,6 +42,7 @@ type PaymentsTableSectionProps = {
   onOpenEdit: (row: PaymentDocumentSummaryRecord) => void;
   onOpenVoid: (row: PaymentDocumentSummaryRecord) => void;
   onDelete: (row: PaymentDocumentSummaryRecord) => void;
+  onExport: (format: 'csv' | 'xlsx', scope: 'all' | 'page') => void;
 };
 
 export function PaymentsTableSection({
@@ -69,6 +70,7 @@ export function PaymentsTableSection({
   onOpenEdit,
   onOpenVoid,
   onDelete,
+  onExport,
 }: PaymentsTableSectionProps) {
   const { language } = useLanguage();
   const commonText = useCommonText();
@@ -193,10 +195,7 @@ export function PaymentsTableSection({
           onPageSizeChange,
         }}
         loading={loading}
-        csvFileName='payments.csv'
-        onExportXlsx={() => {
-          downloadFile(getPaymentsExcelUrl(undefined, exportFilters));
-        }}
+        onExport={onExport}
         getRowId={({ data }) => data.id}
       />
     </SectionCard>
