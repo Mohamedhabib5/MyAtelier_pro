@@ -43,6 +43,7 @@ WRITE_ROUTE_AUDIT_POLICY: dict[WriteRouteKey, tuple[str, ...]] = {
     ("PATCH", "/api/dresses/{dress_id}"): ("dress.updated",),
     ("POST", "/api/dresses/{dress_id}/archive"): ("dress.archived",),
     ("POST", "/api/dresses/{dress_id}/restore"): ("dress.restored",),
+    ("POST", "/api/exports/tickets"): ("export.ticket_created",),
     ("POST", "/api/exports/schedules"): ("export.schedule_created",),
     ("POST", "/api/exports/schedules/run-due"): ("automation.job_run",),
     ("POST", "/api/exports/schedules/{schedule_id}/run"): ("export.schedule_run",),

@@ -270,6 +270,7 @@ def run_due_export_schedules_route(
         delivery_dry_run=payload.delivery_dry_run,
         trigger_source=payload.trigger_source,
     )
+    return ExportScheduleRunDueResponse.model_validate(result)
 
 
 @router.post('/tickets')
@@ -290,6 +291,18 @@ def generate_download_ticket(
         path=parsed.path,
         params=params
     )
+    
+    from app.modules.core_platform.audit import record_audit
+    record_audit(
+        db,
+        actor_user_id=current_user.id,
+        action="export.ticket_created",
+        target_type="export_ticket",
+        target_id=ticket_id,
+        summary=f"Generated download ticket for {parsed.path}",
+        diff={"path": parsed.path, "params": params}
+    )
+    
     return {"ticket": ticket_id, "download_url": f"/api/exports/download/{ticket_id}"}
 
 
@@ -435,7 +448,6 @@ def consume_download_ticket(
 
     from fastapi import HTTPException
     raise HTTPException(status_code=400, detail="Unsupported export path in ticket")
-    return ExportScheduleRunDueResponse.model_validate(result)
 
 
 @router.get('/finance.pdf')

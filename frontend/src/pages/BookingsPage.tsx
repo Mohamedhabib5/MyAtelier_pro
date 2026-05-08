@@ -1,83 +1,41 @@
 import { Alert, Stack } from '@mui/material';
-import { useQuery } from '@tanstack/react-query';
-import { useDeferredValue, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import { PeriodLockOverrideDialog } from '../components/PeriodLockOverrideDialog';
 import { BookingCancellationDialog } from '../features/bookings/BookingCancellationDialog';
 import { BookingEditorDialog } from '../features/bookings/BookingEditorDialog';
 import { BookingsPageHeader } from '../features/bookings/BookingsPageHeader';
 import { BookingRevenueOverrideDialog } from '../features/bookings/BookingRevenueOverrideDialog';
-import { BookingsTableSection, type BookingSortField } from '../features/bookings/BookingsTableSection';
+import { BookingsTableSection } from '../features/bookings/BookingsTableSection';
 import { useBookingActions } from '../features/bookings/useBookingActions';
-import {
-  getBooking,
-  listBookingsPage,
-  type BookingSummaryRecord,
-  type BookingCancellationPayload,
-} from '../features/bookings/api';
-import { listDepartments, listServices } from '../features/catalog/api';
-import { listCustomers } from '../features/customers/api';
-import { listDresses } from '../features/dresses/api';
 import { getBookingsExcelUrl, getBookingsExportUrl } from '../features/exports/api';
 import { useLanguage } from '../features/language/LanguageProvider';
 import { downloadFile } from '../lib/api';
-import { listPaymentMethods } from '../features/paymentMethods/api';
 import { useBookingsText } from '../text/bookings';
+import { useBookingsPageState } from '../features/bookings/useBookingsPageState';
+import { useBookingsQueries } from '../features/bookings/useBookingsQueries';
 
 export function BookingsPage() {
   const { language } = useLanguage();
   const bookingsText = useBookingsText();
-  const [searchParams] = useSearchParams();
-  const urlEditId = searchParams.get('edit');
-
-  const [error, setError] = useState<string | null>(null);
-  const [editingBookingId, setEditingBookingId] = useState<string | null>(urlEditId);
-  const [creatingNew, setCreatingNew] = useState(false);
-  const [searchInput, setSearchInput] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
-  const [page, setPage] = useState(0);
-  const [pageSize, setPageSize] = useState(10);
-  const [sortBy, setSortBy] = useState<BookingSortField>('booking_date');
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
-  const [reverseOverrideLineId, setReverseOverrideLineId] = useState<string | null>(null);
-  const [cancellingBooking, setCancellingBooking] = useState<BookingSummaryRecord | null>(null);
-  const [cancellingLineId, setCancellingLineId] = useState<string | null>(null);
-  const [editorMode, setEditorMode] = useState<'edit' | 'cancel'>('edit');
-  const [pendingCancelPayload, setPendingCancelPayload] = useState<{ bookingId: string; lineId?: string; payload: BookingCancellationPayload } | null>(null);
-  const deferredSearch = useDeferredValue(searchInput.trim());
-
-  const customersQuery = useQuery({ queryKey: ['customers'], queryFn: listCustomers });
-  const departmentsQuery = useQuery({ queryKey: ['catalog', 'departments'], queryFn: listDepartments });
-  const servicesQuery = useQuery({ queryKey: ['catalog', 'services'], queryFn: listServices });
-  const dressesQuery = useQuery({ queryKey: ['dresses'], queryFn: listDresses });
-  const paymentMethodsQuery = useQuery({ queryKey: ['payment-methods', 'active'], queryFn: () => listPaymentMethods('active') });
-  const bookingsQuery = useQuery({
-    queryKey: ['bookings', 'table', deferredSearch, statusFilter, dateFrom, dateTo, page, pageSize, sortBy, sortDir],
-    queryFn: () =>
-      listBookingsPage({
-        search: deferredSearch || undefined,
-        status: statusFilter || undefined,
-        dateFrom: dateFrom || undefined,
-        dateTo: dateTo || undefined,
-        page: page + 1,
-        pageSize,
-        sortBy,
-        sortDir,
-      }),
-  });
-  const bookingDocumentQuery = useQuery({
-    queryKey: ['bookings', editingBookingId],
-    queryFn: () => getBooking(editingBookingId!),
-    enabled: Boolean(editingBookingId),
+  
+  const state = useBookingsPageState();
+  const queries = useBookingsQueries({
+    deferredSearch: state.deferredSearch,
+    statusFilter: state.statusFilter,
+    dateFrom: state.dateFrom,
+    dateTo: state.dateTo,
+    page: state.page,
+    pageSize: state.pageSize,
+    sortBy: state.sortBy,
+    sortDir: state.sortDir,
+    editingBookingId: state.editingBookingId,
   });
 
   function closeEditor() {
-    setCreatingNew(false);
-    setEditingBookingId(null);
-    setEditorMode('edit');
+    state.setCreatingNew(false);
+    state.setEditingBookingId(null);
+    state.setEditorMode('edit');
   }
+
   const {
     handleSave,
     handleCreateCustomer,
@@ -92,19 +50,19 @@ export function BookingsPage() {
     handleUndoCancellation,
     saving,
   } = useBookingActions({
-    creatingNew,
-    editingBookingId,
-    reverseOverrideLineId,
-    setError,
-    setReverseOverrideLineId,
-    setPendingCancelPayload,
+    creatingNew: state.creatingNew,
+    editingBookingId: state.editingBookingId,
+    reverseOverrideLineId: state.reverseOverrideLineId,
+    setError: state.setError,
+    setReverseOverrideLineId: state.setReverseOverrideLineId,
+    setPendingCancelPayload: state.setPendingCancelPayload,
     closeEditor,
   });
 
-  const document = creatingNew ? null : bookingDocumentQuery.data ?? null;
-  const editorOpen = creatingNew || Boolean(editingBookingId);
-  const bookingRows = bookingsQuery.data?.items ?? [];
-  const bookingTotal = bookingsQuery.data?.total ?? 0;
+  const document = state.creatingNew ? null : queries.bookingDocumentQuery.data ?? null;
+  const editorOpen = state.creatingNew || Boolean(state.editingBookingId);
+  const bookingRows = queries.bookingsQuery.data?.items ?? [];
+  const bookingTotal = queries.bookingsQuery.data?.total ?? 0;
 
   return (
     <Stack spacing={3}>
@@ -113,71 +71,63 @@ export function BookingsPage() {
         subtitle={bookingsText.page.subtitle}
         createLabel={bookingsText.page.createDocument}
         onCreate={() => {
-          setCreatingNew(true);
-          setEditingBookingId(null);
-          setEditorMode('edit');
+          state.setCreatingNew(true);
+          state.setEditingBookingId(null);
+          state.setEditorMode('edit');
         }}
       />
-
-      {error ? <Alert severity='error'>{error}</Alert> : null}
-      {paymentMethodsQuery.error instanceof Error ? <Alert severity='error'>{paymentMethodsQuery.error.message}</Alert> : null}
+      {state.error ? <Alert severity='error'>{state.error}</Alert> : null}
+      {queries.paymentMethodsQuery.error instanceof Error ? <Alert severity='error'>{queries.paymentMethodsQuery.error.message}</Alert> : null}
 
       <BookingsTableSection
         language={language}
         rows={bookingRows}
         total={bookingTotal}
-        loading={bookingsQuery.isLoading}
-        searchInput={searchInput}
+        loading={queries.bookingsQuery.isLoading}
+        searchInput={state.searchInput}
         onSearchChange={(value) => {
-          setSearchInput(value);
-          setPage(0);
+          state.setSearchInput(value);
+          state.setPage(0);
         }}
-        statusFilter={statusFilter}
+        statusFilter={state.statusFilter}
         onStatusFilterChange={(value) => {
-          setStatusFilter(value);
-          setPage(0);
+          state.setStatusFilter(value);
+          state.setPage(0);
         }}
-        dateFrom={dateFrom}
+        dateFrom={state.dateFrom}
         onDateFromChange={(value) => {
-          setDateFrom(value);
-          setPage(0);
+          state.setDateFrom(value);
+          state.setPage(0);
         }}
-        dateTo={dateTo}
+        dateTo={state.dateTo}
         onDateToChange={(value) => {
-          setDateTo(value);
-          setPage(0);
+          state.setDateTo(value);
+          state.setPage(0);
         }}
-        page={page}
-        pageSize={pageSize}
-        onPageChange={setPage}
+        page={state.page}
+        pageSize={state.pageSize}
+        onPageChange={state.setPage}
         onPageSizeChange={(nextPageSize) => {
-          setPageSize(nextPageSize);
-          setPage(0);
+          state.setPageSize(nextPageSize);
+          state.setPage(0);
         }}
-        sortBy={sortBy}
-        sortDir={sortDir}
+        sortBy={state.sortBy}
+        sortDir={state.sortDir}
         onSortChange={(nextSortBy, nextSortDir) => {
-          setSortBy(nextSortBy);
-          setSortDir(nextSortDir);
-          setPage(0);
+          state.setSortBy(nextSortBy);
+          state.setSortDir(nextSortDir);
+          state.setPage(0);
         }}
-        exportFilters={{
-          search: deferredSearch || undefined,
-          status: statusFilter || undefined,
-          dateFrom: dateFrom || undefined,
-          dateTo: dateTo || undefined,
-          sortBy,
-          sortDir,
-        }}
+        exportFilters={{ search: state.deferredSearch || undefined, status: state.statusFilter || undefined, dateFrom: state.dateFrom || undefined, dateTo: state.dateTo || undefined, sortBy: state.sortBy, sortDir: state.sortDir }}
         onOpenEdit={(record) => {
-          setCreatingNew(false);
-          setEditingBookingId(record.id);
-          setEditorMode('edit');
+          state.setCreatingNew(false);
+          state.setEditingBookingId(record.id);
+          state.setEditorMode('edit');
         }}
         onOpenCancel={(record) => {
-          setCreatingNew(false);
-          setEditingBookingId(record.id);
-          setEditorMode('cancel');
+          state.setCreatingNew(false);
+          state.setEditingBookingId(record.id);
+          state.setEditorMode('cancel');
         }}
         onDelete={async (record) => {
           if (window.confirm(`هل أنت متأكد من حذف الحجز ${record.booking_number} نهائياً؟ لا يمكن التراجع عن هذه العملية.`)) {
@@ -187,16 +137,16 @@ export function BookingsPage() {
         onExport={(format, scope) => {
           const isXlsx = format === 'xlsx';
           const urlFn = isXlsx ? getBookingsExcelUrl : getBookingsExportUrl;
-          const exportPage = scope === 'page' ? page + 1 : undefined;
-          const exportPageSize = scope === 'page' ? pageSize : undefined;
+          const exportPage = scope === 'page' ? state.page + 1 : undefined;
+          const exportPageSize = scope === 'page' ? state.pageSize : undefined;
           
           downloadFile(urlFn(undefined, {
-            search: deferredSearch || undefined,
-            status: statusFilter || undefined,
-            dateFrom: dateFrom || undefined,
-            dateTo: dateTo || undefined,
-            sortBy,
-            sortDir,
+            search: state.deferredSearch || undefined,
+            status: state.statusFilter || undefined,
+            dateFrom: state.dateFrom || undefined,
+            dateTo: state.dateTo || undefined,
+            sortBy: state.sortBy,
+            sortDir: state.sortDir,
           }, exportPage, exportPageSize));
         }}
       />
@@ -205,25 +155,25 @@ export function BookingsPage() {
         open={editorOpen}
         title={bookingsText.page.editorTitle}
         subtitle={bookingsText.page.editorSubtitle}
-        loading={bookingDocumentQuery.isLoading}
-        creatingNew={creatingNew}
+        loading={queries.bookingDocumentQuery.isLoading}
+        creatingNew={state.creatingNew}
         document={document}
-        customers={customersQuery.data ?? []}
-        departments={departmentsQuery.data ?? []}
-        services={servicesQuery.data ?? []}
-        dresses={dressesQuery.data ?? []}
-        paymentMethods={paymentMethodsQuery.data ?? []}
-        error={error}
+        customers={queries.customersQuery.data ?? []}
+        departments={queries.departmentsQuery.data ?? []}
+        services={queries.servicesQuery.data ?? []}
+        dresses={queries.dressesQuery.data ?? []}
+        paymentMethods={queries.paymentMethodsQuery.data ?? []}
+        error={state.error}
         saving={saving}
         onClose={closeEditor}
         onSave={handleSave}
         onCreateCustomer={handleCreateCustomer}
         onCompleteLine={handleCompleteLine}
         onCancelLine={async (lineId) => {
-          const bookingSummary = bookingRows.find(b => b.id === editingBookingId);
+          const bookingSummary = bookingRows.find(b => b.id === state.editingBookingId);
           if (bookingSummary) {
-            setCancellingBooking(bookingSummary);
-            setCancellingLineId(lineId);
+            state.setCancellingBooking(bookingSummary);
+            state.setCancellingLineId(lineId);
           }
         }}
         onReverseRevenueLine={handleReverseRevenueLine}
@@ -237,55 +187,55 @@ export function BookingsPage() {
             await handleUndoCancellation(lineIds);
           }
         }}
-        mode={editorMode}
+        mode={state.editorMode}
         onCancelFull={() => {
-          const bookingSummary = bookingRows.find(b => b.id === editingBookingId);
+          const bookingSummary = bookingRows.find(b => b.id === state.editingBookingId);
           if (bookingSummary) {
-            setCancellingBooking(bookingSummary);
-            setCancellingLineId(null);
+            state.setCancellingBooking(bookingSummary);
+            state.setCancellingLineId(null);
           }
         }}
       />
 
       <BookingRevenueOverrideDialog
-        open={Boolean(reverseOverrideLineId)}
-        onClose={() => setReverseOverrideLineId(null)}
+        open={Boolean(state.reverseOverrideLineId)}
+        onClose={() => state.setReverseOverrideLineId(null)}
         onConfirm={handleConfirmRevenueOverride}
       />
 
       <PeriodLockOverrideDialog
-        open={Boolean(pendingCancelPayload)}
+        open={Boolean(state.pendingCancelPayload)}
         titleAr='Override لإلغاء حجز'
         titleEn='Override booking cancellation'
         descriptionAr='تاريخ الإلغاء يقع في فترة محاسبية مقفولة. أدخل سبب Override للتنفيذ.'
         descriptionEn='Cancellation date is in a locked period. Enter override reason to proceed.'
-        onClose={() => setPendingCancelPayload(null)}
-        onConfirm={async (reason) => { await handleConfirmCancelOverride(reason, pendingCancelPayload); }}
+        onClose={() => state.setPendingCancelPayload(null)}
+        onConfirm={async (reason) => { await handleConfirmCancelOverride(reason, state.pendingCancelPayload); }}
       />
 
       <BookingCancellationDialog
-        open={Boolean(cancellingBooking)}
-        booking={cancellingBooking}
-        detailedDocument={editingBookingId === cancellingBooking?.id ? bookingDocumentQuery.data : undefined}
-        lineId={cancellingLineId ?? undefined}
-        paymentMethods={paymentMethodsQuery.data ?? []}
+        open={Boolean(state.cancellingBooking)}
+        booking={state.cancellingBooking}
+        detailedDocument={state.editingBookingId === state.cancellingBooking?.id ? queries.bookingDocumentQuery.data : undefined}
+        lineId={state.cancellingLineId ?? undefined}
+        paymentMethods={queries.paymentMethodsQuery.data ?? []}
         saving={saving}
         onClose={() => {
-          setCancellingBooking(null);
-          setCancellingLineId(null);
+          state.setCancellingBooking(null);
+          state.setCancellingLineId(null);
         }}
         onConfirm={async (payload) => {
-          if (!cancellingBooking) return;
+          if (!state.cancellingBooking) return;
           let success = false;
-          if (cancellingLineId) {
-            await handleCancelLine(cancellingLineId, payload);
-            success = true; // handleCancelLine doesn't return boolean yet, but it throws on error
+          if (state.cancellingLineId) {
+            await handleCancelLine(state.cancellingLineId, payload);
+            success = true;
           } else {
-            success = await handleCancelWorkflow(cancellingBooking.id, payload);
+            success = await handleCancelWorkflow(state.cancellingBooking.id, payload);
           }
           if (success) {
-            setCancellingBooking(null);
-            setCancellingLineId(null);
+            state.setCancellingBooking(null);
+            state.setCancellingLineId(null);
           }
         }}
       />
