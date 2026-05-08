@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
@@ -202,7 +202,7 @@ def test_overallocation_and_cross_customer_mix_are_blocked(app_client: TestClien
     assert overpay.status_code == 422
     assert 'المتبقي' in overpay.json()['detail']
 
-    second_customer = app_client.post('/api/customers', json={'full_name': 'Bride Two', 'phone': '01010010011'})
+    second_customer = app_client.post('/api/customers', json={'full_name': 'Bride Two', 'phone': '01010010011', 'address': 'Giza'})
     assert second_customer.status_code == 201, second_customer.text
     second_context = seed_booking_context(app_client, customer_id=second_customer.json()['id'], dress_code='PAY-DR-002')
 
@@ -251,7 +251,7 @@ def test_regular_user_can_manage_payments(app_client: TestClient) -> None:
 def test_payment_table_endpoint_supports_search_filters_and_paging(app_client: TestClient) -> None:
     login(app_client)
     primary = seed_booking_context(app_client, dress_code='PAY-TABLE-1')
-    secondary_customer = app_client.post('/api/customers', json={'full_name': 'Payment Search', 'phone': '01010010013'})
+    secondary_customer = app_client.post('/api/customers', json={'full_name': 'Payment Search', 'phone': '01010010013', 'address': 'Nasr City'})
     assert secondary_customer.status_code == 201, secondary_customer.text
     secondary = seed_booking_context(app_client, customer_id=secondary_customer.json()['id'], dress_code='PAY-TABLE-2', service_date='2026-07-02')
 

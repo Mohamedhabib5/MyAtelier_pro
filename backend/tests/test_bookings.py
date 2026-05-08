@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from uuid import uuid4
 
@@ -8,7 +8,7 @@ from .test_foundation import login
 
 
 def seed_customer(client: TestClient) -> str:
-    response = client.post('/api/customers', json={'full_name': 'Bride One', 'phone': '01010010010'})
+    response = client.post('/api/customers', json={'full_name': 'Bride One', 'phone': '01010010010', 'address': 'Cairo'})
     assert response.status_code == 201, response.text
     return response.json()['id']
 
@@ -237,7 +237,7 @@ def test_booking_initial_payment_uses_selected_payment_method(app_client: TestCl
 def test_duplicate_dress_same_date_is_blocked(app_client: TestClient) -> None:
     login(app_client)
     customer_id = seed_customer(app_client)
-    second_customer = app_client.post('/api/customers', json={'full_name': 'Bride Two', 'phone': '01010010011'})
+    second_customer = app_client.post('/api/customers', json={'full_name': 'Bride Two', 'phone': '01010010011', 'address': 'Giza'})
     assert second_customer.status_code == 201
     second_customer_id = second_customer.json()['id']
     service_bundle = seed_service_bundle(app_client)
@@ -293,7 +293,7 @@ def test_regular_user_can_manage_bookings(app_client: TestClient) -> None:
 def test_booking_table_endpoint_supports_search_filters_and_paging(app_client: TestClient) -> None:
     login(app_client)
     first_customer = seed_customer(app_client)
-    second_customer_response = app_client.post('/api/customers', json={'full_name': 'Bride Search', 'phone': '01010010012'})
+    second_customer_response = app_client.post('/api/customers', json={'full_name': 'Bride Search', 'phone': '01010010012', 'address': 'Alex'})
     assert second_customer_response.status_code == 201, second_customer_response.text
     second_customer = second_customer_response.json()['id']
     service_bundle = seed_service_bundle(app_client)

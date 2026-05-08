@@ -230,21 +230,38 @@ def _execute_cancellation(db: Session, actor: User, booking_id: str, payload: Bo
             except Exception:
                 pass
     
-    record_audit(
-        db,
-        actor_user_id=actor.id,
-        action="booking.cancelled" if not payload.line_ids else "booking.line_cancelled",
-        target_type="booking",
-        target_id=booking.id,
-        summary=f"Cancelled {'booking' if not payload.line_ids else 'lines'} for {booking.booking_number}. Refund: {refund_amount}, Transfer: {transfer_amount}",
-        diff={
-            "refund_amount": float(refund_amount),
-            "transfer_amount": float(transfer_amount),
-            "forfeit_amount": float(forfeit_amount),
-            "reason": reason,
-            "partial": bool(payload.line_ids)
-        },
-    )
+    if not payload.line_ids:
+        record_audit(
+            db,
+            actor_user_id=actor.id,
+            action="booking.cancelled",
+            target_type="booking",
+            target_id=booking.id,
+            summary=f"Cancelled booking for {booking.booking_number}. Refund: {refund_amount}, Transfer: {transfer_amount}",
+            diff={
+                "refund_amount": float(refund_amount),
+                "transfer_amount": float(transfer_amount),
+                "forfeit_amount": float(forfeit_amount),
+                "reason": reason,
+                "partial": False
+            },
+        )
+    else:
+        record_audit(
+            db,
+            actor_user_id=actor.id,
+            action="booking.line_cancelled",
+            target_type="booking",
+            target_id=booking.id,
+            summary=f"Cancelled lines for {booking.booking_number}. Refund: {refund_amount}, Transfer: {transfer_amount}",
+            diff={
+                "refund_amount": float(refund_amount),
+                "transfer_amount": float(transfer_amount),
+                "forfeit_amount": float(forfeit_amount),
+                "reason": reason,
+                "partial": True
+            },
+        )
 
 
 def undo_cancellation_workflow(db: Session, actor: User, booking_id: str, line_ids: list[str] | None, branch_id: str) -> dict:

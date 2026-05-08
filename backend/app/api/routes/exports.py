@@ -9,7 +9,23 @@ from app.db.session import get_db
 from app.modules.exports.schemas import ExportScheduleCreateRequest, ExportScheduleResponse, ExportScheduleRunDueRequest, ExportScheduleRunDueResponse, ExportScheduleRunResponse, ExportScheduleToggleResponse
 from app.modules.exports.schedule_service import create_export_schedule, list_export_schedules, run_due_export_schedules, run_export_schedule, toggle_export_schedule
 from app.modules.exports.pdf_service import build_simple_pdf_report, finance_pdf_lines, reports_pdf_lines
-from app.modules.exports.service import export_booking_lines_csv, export_booking_lines_xlsx, export_bookings_csv, export_bookings_xlsx, export_custody_csv, export_custody_xlsx, export_customers_csv, export_customers_xlsx, export_payment_allocations_csv, export_payment_allocations_xlsx, export_payments_csv, export_payments_xlsx
+from app.modules.exports.service import (
+    export_advanced_bi_csv,
+    export_advanced_bi_xlsx,
+    export_booking_lines_csv,
+    export_booking_lines_xlsx,
+    export_bookings_csv,
+    export_bookings_xlsx,
+    export_custody_csv,
+    export_custody_xlsx,
+    export_customers_csv,
+    export_customers_xlsx,
+    export_payment_allocations_csv,
+    export_payment_allocations_xlsx,
+    export_payments_csv,
+    export_payments_xlsx,
+)
+from app.modules.exports.ticket_service import ticket_store
 from app.modules.dashboard.service import get_finance_dashboard
 from app.modules.reports.service import get_reports_overview
 from app.modules.identity.models import User
@@ -70,6 +86,7 @@ def download_customers_export_xlsx(db: Session = Depends(get_db), current_user: 
 
 @router.get('/bookings.csv')
 def download_bookings_export(
+    request: Request,
     branch_id: str | None = Query(default=None),
     filters: dict = Depends(_booking_export_filters),
     page: int | None = Query(default=None),
@@ -77,12 +94,14 @@ def download_bookings_export(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_exports_view),
 ) -> Response:
-    filename, content = export_bookings_csv(db, current_user, branch_id, page=page, page_size=page_size, **filters)
+    branch = resolve_branch_scope(db, request.session, branch_id)
+    filename, content = export_bookings_csv(db, current_user, branch.id, page=page, page_size=page_size, **filters)
     return _csv_response(filename, content)
 
 
 @router.get('/bookings.xlsx')
 def download_bookings_export_xlsx(
+    request: Request,
     branch_id: str | None = Query(default=None),
     filters: dict = Depends(_booking_export_filters),
     page: int | None = Query(default=None),
@@ -90,12 +109,14 @@ def download_bookings_export_xlsx(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_exports_view),
 ) -> Response:
-    filename, content = export_bookings_xlsx(db, current_user, branch_id, page=page, page_size=page_size, **filters)
+    branch = resolve_branch_scope(db, request.session, branch_id)
+    filename, content = export_bookings_xlsx(db, current_user, branch.id, page=page, page_size=page_size, **filters)
     return _xlsx_response(filename, content)
 
 
 @router.get('/booking-lines.csv')
 def download_booking_lines_export(
+    request: Request,
     branch_id: str | None = Query(default=None),
     filters: dict = Depends(_booking_export_filters),
     page: int | None = Query(default=None),
@@ -103,7 +124,8 @@ def download_booking_lines_export(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_exports_view),
 ) -> Response:
-    filename, content = export_booking_lines_csv(db, current_user, branch_id, page=page, page_size=page_size, **filters)
+    branch = resolve_branch_scope(db, request.session, branch_id)
+    filename, content = export_booking_lines_csv(db, current_user, branch.id, page=page, page_size=page_size, **filters)
     return _csv_response(filename, content)
 
 
@@ -123,6 +145,7 @@ def download_booking_lines_export_xlsx(
 @router.get('/payments.csv')
 @router.get('/payment-documents.csv')
 def download_payments_export(
+    request: Request,
     branch_id: str | None = Query(default=None),
     filters: dict = Depends(_payment_export_filters),
     page: int | None = Query(default=None),
@@ -130,13 +153,15 @@ def download_payments_export(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_exports_view),
 ) -> Response:
-    filename, content = export_payments_csv(db, current_user, branch_id, page=page, page_size=page_size, **filters)
+    branch = resolve_branch_scope(db, request.session, branch_id)
+    filename, content = export_payments_csv(db, current_user, branch.id, page=page, page_size=page_size, **filters)
     return _csv_response(filename, content)
 
 
 @router.get('/payments.xlsx')
 @router.get('/payment-documents.xlsx')
 def download_payments_export_xlsx(
+    request: Request,
     branch_id: str | None = Query(default=None),
     filters: dict = Depends(_payment_export_filters),
     page: int | None = Query(default=None),
@@ -144,12 +169,14 @@ def download_payments_export_xlsx(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_exports_view),
 ) -> Response:
-    filename, content = export_payments_xlsx(db, current_user, branch_id, page=page, page_size=page_size, **filters)
+    branch = resolve_branch_scope(db, request.session, branch_id)
+    filename, content = export_payments_xlsx(db, current_user, branch.id, page=page, page_size=page_size, **filters)
     return _xlsx_response(filename, content)
 
 
 @router.get('/payment-allocations.csv')
 def download_payment_allocations_export(
+    request: Request,
     branch_id: str | None = Query(default=None),
     filters: dict = Depends(_payment_export_filters),
     page: int | None = Query(default=None),
@@ -157,12 +184,14 @@ def download_payment_allocations_export(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_exports_view),
 ) -> Response:
-    filename, content = export_payment_allocations_csv(db, current_user, branch_id, page=page, page_size=page_size, **filters)
+    branch = resolve_branch_scope(db, request.session, branch_id)
+    filename, content = export_payment_allocations_csv(db, current_user, branch.id, page=page, page_size=page_size, **filters)
     return _csv_response(filename, content)
 
 
 @router.get('/payment-allocations.xlsx')
 def download_payment_allocations_export_xlsx(
+    request: Request,
     branch_id: str | None = Query(default=None),
     filters: dict = Depends(_payment_export_filters),
     page: int | None = Query(default=None),
@@ -170,31 +199,36 @@ def download_payment_allocations_export_xlsx(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_exports_view),
 ) -> Response:
-    filename, content = export_payment_allocations_xlsx(db, current_user, branch_id, page=page, page_size=page_size, **filters)
+    branch = resolve_branch_scope(db, request.session, branch_id)
+    filename, content = export_payment_allocations_xlsx(db, current_user, branch.id, page=page, page_size=page_size, **filters)
     return _xlsx_response(filename, content)
 
 
 @router.get('/custody.csv')
 def download_custody_export(
+    request: Request,
     branch_id: str | None = Query(default=None),
     page: int | None = Query(default=None),
     page_size: int | None = Query(default=None),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_exports_view),
 ) -> Response:
-    filename, content = export_custody_csv(db, current_user, branch_id, page=page, page_size=page_size)
+    branch = resolve_branch_scope(db, request.session, branch_id)
+    filename, content = export_custody_csv(db, current_user, branch.id, page=page, page_size=page_size)
     return _csv_response(filename, content)
 
 
 @router.get('/custody.xlsx')
 def download_custody_export_xlsx(
+    request: Request,
     branch_id: str | None = Query(default=None),
     page: int | None = Query(default=None),
     page_size: int | None = Query(default=None),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_exports_view),
 ) -> Response:
-    filename, content = export_custody_xlsx(db, current_user, branch_id, page=page, page_size=page_size)
+    branch = resolve_branch_scope(db, request.session, branch_id)
+    filename, content = export_custody_xlsx(db, current_user, branch.id, page=page, page_size=page_size)
     return _xlsx_response(filename, content)
 
 
@@ -236,6 +270,171 @@ def run_due_export_schedules_route(
         delivery_dry_run=payload.delivery_dry_run,
         trigger_source=payload.trigger_source,
     )
+
+
+@router.post('/tickets')
+def generate_download_ticket(
+    request: Request,
+    target_path: str = Query(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_exports_view),
+) -> dict:
+    # Parse query parameters from the target path if any
+    from urllib.parse import parse_qs, urlparse
+    parsed = urlparse(target_path)
+    params = {k: v[0] if len(v) == 1 else v for k, v in parse_qs(parsed.query).items()}
+    
+    # Store the ticket
+    ticket_id = ticket_store.create_ticket(
+        user_id=str(current_user.id),
+        path=parsed.path,
+        params=params
+    )
+    return {"ticket": ticket_id, "download_url": f"/api/exports/download/{ticket_id}"}
+
+
+@router.get('/download/{ticket_id}')
+def consume_download_ticket(
+    ticket_id: str,
+    db: Session = Depends(get_db),
+) -> Response:
+    ticket = ticket_store.consume_ticket(ticket_id)
+    if not ticket:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=403, detail="Invalid or expired download ticket")
+
+    # Re-fetch user to verify permissions if necessary (ticket store has user_id)
+    # For now, having the valid UUID ticket is proof of authorized generation
+    user_id = ticket["user_id"]
+    path = ticket["path"]
+    params = ticket["params"]
+    
+    # Cast pagination parameters to int to avoid TypeError in repository calculations
+    if 'page' in params and params['page'] is not None:
+        try:
+            params['page'] = int(params['page'])
+        except (ValueError, TypeError):
+            params.pop('page')
+    if 'page_size' in params and params['page_size'] is not None:
+        try:
+            params['page_size'] = int(params['page_size'])
+        except (ValueError, TypeError):
+            params.pop('page_size')
+    
+    # Map path to service function
+    if path.endswith('customers.csv'):
+        from app.modules.exports.service import export_customers_csv
+        from app.modules.identity.service import get_user_or_404
+        user = get_user_or_404(db, user_id)
+        filename, content = export_customers_csv(db, user)
+        return _csv_response(filename, content)
+    
+    elif path.endswith('customers.xlsx'):
+        from app.modules.exports.service import export_customers_xlsx
+        from app.modules.identity.service import get_user_or_404
+        user = get_user_or_404(db, user_id)
+        filename, content = export_customers_xlsx(db, user)
+        return _xlsx_response(filename, content)
+
+    elif path.endswith('bookings.csv'):
+        from app.modules.exports.service import export_bookings_csv
+        from app.modules.identity.service import get_user_or_404
+        user = get_user_or_404(db, user_id)
+        # Resolve branch from params
+        branch_id = params.get('branch_id')
+        filename, content = export_bookings_csv(db, user, branch_id, **params)
+        return _csv_response(filename, content)
+
+    elif path.endswith('bookings.xlsx'):
+        from app.modules.exports.service import export_bookings_xlsx
+        from app.modules.identity.service import get_user_or_404
+        user = get_user_or_404(db, user_id)
+        branch_id = params.get('branch_id')
+        filename, content = export_bookings_xlsx(db, user, branch_id, **params)
+        return _xlsx_response(filename, content)
+
+    elif path.endswith('booking-lines.csv'):
+        from app.modules.exports.service import export_booking_lines_csv
+        from app.modules.identity.service import get_user_or_404
+        user = get_user_or_404(db, user_id)
+        branch_id = params.get('branch_id')
+        filename, content = export_booking_lines_csv(db, user, branch_id, **params)
+        return _csv_response(filename, content)
+
+    elif path.endswith('booking-lines.xlsx'):
+        from app.modules.exports.service import export_booking_lines_xlsx
+        from app.modules.identity.service import get_user_or_404
+        user = get_user_or_404(db, user_id)
+        branch_id = params.get('branch_id')
+        filename, content = export_booking_lines_xlsx(db, user, branch_id, **params)
+        return _xlsx_response(filename, content)
+
+    elif path.endswith('payment-documents.csv') or path.endswith('payments.csv'):
+        from app.modules.exports.service import export_payments_csv
+        from app.modules.identity.service import get_user_or_404
+        user = get_user_or_404(db, user_id)
+        branch_id = params.get('branch_id')
+        filename, content = export_payments_csv(db, user, branch_id, **params)
+        return _csv_response(filename, content)
+
+    elif path.endswith('payment-documents.xlsx') or path.endswith('payments.xlsx'):
+        from app.modules.exports.service import export_payments_xlsx
+        from app.modules.identity.service import get_user_or_404
+        user = get_user_or_404(db, user_id)
+        branch_id = params.get('branch_id')
+        filename, content = export_payments_xlsx(db, user, branch_id, **params)
+        return _xlsx_response(filename, content)
+
+    elif path.endswith('payment-allocations.csv'):
+        from app.modules.exports.service import export_payment_allocations_csv
+        from app.modules.identity.service import get_user_or_404
+        user = get_user_or_404(db, user_id)
+        branch_id = params.get('branch_id')
+        filename, content = export_payment_allocations_csv(db, user, branch_id, **params)
+        return _csv_response(filename, content)
+
+    elif path.endswith('payment-allocations.xlsx'):
+        from app.modules.exports.service import export_payment_allocations_xlsx
+        from app.modules.identity.service import get_user_or_404
+        user = get_user_or_404(db, user_id)
+        branch_id = params.get('branch_id')
+        filename, content = export_payment_allocations_xlsx(db, user, branch_id, **params)
+        return _xlsx_response(filename, content)
+
+    elif path.endswith('custody.csv'):
+        from app.modules.exports.service import export_custody_csv
+        from app.modules.identity.service import get_user_or_404
+        user = get_user_or_404(db, user_id)
+        branch_id = params.get('branch_id')
+        filename, content = export_custody_csv(db, user, branch_id, **params)
+        return _csv_response(filename, content)
+
+    elif path.endswith('custody.xlsx'):
+        from app.modules.exports.service import export_custody_xlsx
+        from app.modules.identity.service import get_user_or_404
+        user = get_user_or_404(db, user_id)
+        branch_id = params.get('branch_id')
+        filename, content = export_custody_xlsx(db, user, branch_id, **params)
+        return _xlsx_response(filename, content)
+
+    elif path.endswith('advanced-bi.csv'):
+        from app.modules.exports.service import export_advanced_bi_csv
+        from app.modules.identity.service import get_user_or_404
+        user = get_user_or_404(db, user_id)
+        branch_id = params.get('branch_id')
+        filename, content = export_advanced_bi_csv(db, user, branch_id=branch_id, **params)
+        return _csv_response(filename, content)
+
+    elif path.endswith('advanced-bi.xlsx'):
+        from app.modules.exports.service import export_advanced_bi_xlsx
+        from app.modules.identity.service import get_user_or_404
+        user = get_user_or_404(db, user_id)
+        branch_id = params.get('branch_id')
+        filename, content = export_advanced_bi_xlsx(db, user, branch_id=branch_id, **params)
+        return _xlsx_response(filename, content)
+
+    from fastapi import HTTPException
+    raise HTTPException(status_code=400, detail="Unsupported export path in ticket")
     return ExportScheduleRunDueResponse.model_validate(result)
 
 
@@ -267,6 +466,7 @@ def download_reports_pdf(
 
 @router.get('/advanced-bi.csv')
 def download_advanced_bi_export_csv(
+    request: Request,
     date_from: str | None = Query(default=None),
     date_to: str | None = Query(default=None),
     branch_id: str | None = Query(default=None),
@@ -274,10 +474,11 @@ def download_advanced_bi_export_csv(
     current_user: User = Depends(require_exports_view),
 ):
     from app.modules.exports.service import export_advanced_bi_csv
+    branch = resolve_branch_scope(db, request.session, branch_id)
     filename, content = export_advanced_bi_csv(
         db,
         current_user,
-        branch_id=branch_id,
+        branch_id=branch.id,
         date_from=date_from,
         date_to=date_to,
     )
@@ -286,6 +487,7 @@ def download_advanced_bi_export_csv(
 
 @router.get('/advanced-bi.xlsx')
 def download_advanced_bi_export_xlsx(
+    request: Request,
     date_from: str | None = Query(default=None),
     date_to: str | None = Query(default=None),
     branch_id: str | None = Query(default=None),
@@ -293,10 +495,11 @@ def download_advanced_bi_export_xlsx(
     current_user: User = Depends(require_exports_view),
 ):
     from app.modules.exports.service import export_advanced_bi_xlsx
+    branch = resolve_branch_scope(db, request.session, branch_id)
     filename, content = export_advanced_bi_xlsx(
         db,
         current_user,
-        branch_id=branch_id,
+        branch_id=branch.id,
         date_from=date_from,
         date_to=date_to,
     )
@@ -329,8 +532,8 @@ def _pdf_response(filename: str, content: bytes) -> Response:
 def _xlsx_response(filename: str, content: bytes) -> Response:
     ascii_filename = filename.encode('ascii', 'ignore').decode('ascii') or 'download.xlsx'
     encoded_filename = quote(filename)
-    # Simplified disposition (no quotes for ascii) to avoid some parser issues
-    disposition = f'attachment; filename={ascii_filename}; filename*=UTF-8\'\'{encoded_filename}'
+    # Ensure quotes around filename for compatibility with filenames containing spaces
+    disposition = f'attachment; filename="{ascii_filename}"; filename*=UTF-8\'\'{encoded_filename}'
     headers = {
         'Content-Disposition': disposition,
         'Access-Control-Expose-Headers': 'Content-Disposition'

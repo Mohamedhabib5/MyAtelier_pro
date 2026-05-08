@@ -72,66 +72,35 @@ export async function apiRequest<T>(input: string, init?: RequestInit): Promise<
  * correct filename, we can point the anchor directly at the API URL and let
  * the browser handle the download natively — same-origin, inside user gesture.
  */
+/**
+ * Trigger a file download using a secure, short-lived ticket.
+ * 
+ * WHY:
+ * Previous blob-based downloads were fragile in strict security environments (CSP) 
+ * and often failed to preserve filenames on Windows when intercepted by IDM.
+ * The ticket system allows a native browser navigation download which is 
+ * 100% compatible with all browsers and security policies while remaining secure.
+ */
 export async function downloadFile(url: string): Promise<void> {
-  console.log(`[Download] Initiating download for: ${url}`);
+  console.log(`[Download] Initiating ticket request for: ${url}`);
   try {
-    const response = await fetch(url, {
-      credentials: 'include',
-      // No X-CSRF-Token needed for GET exports, avoids potential 403 mismatch
-    });
+    // 1. Request a short-lived download ticket from the backend
+    // This is a secure POST request that includes the user session and CSRF token.
+    const ticketResult = await apiRequest<{ ticket: string; download_url: string }>(
+      `/api/exports/tickets?target_path=${encodeURIComponent(url)}`,
+      { method: 'POST' }
+    );
 
-    if (!response.ok) {
-      throw new Error(`Download failed with status ${response.status}: ${response.statusText}`);
-    }
-
-    const contentDisposition = response.headers.get('Content-Disposition');
-    let filename = '';
+    console.log(`[Download] Ticket received, triggering native download: ${ticketResult.ticket}`);
     
-    if (contentDisposition) {
-      const filenameStarMatch = contentDisposition.match(/filename\*=UTF-8''([^;,\n]*)/i);
-      if (filenameStarMatch && filenameStarMatch[1]) {
-        filename = decodeURIComponent(filenameStarMatch[1]);
-      } else {
-        const filenameMatch = contentDisposition.match(/filename="?([^";,\n]*)"?/i);
-        if (filenameMatch && filenameMatch[1]) {
-          filename = filenameMatch[1];
-        }
-      }
-    }
+    // 2. Trigger native browser download via location redirection.
+    // Since the download route has Content-Disposition and is exempted from restrictive CSP,
+    // the browser will handle it perfectly (showing the Save As dialog with the correct name).
+    window.location.href = ticketResult.download_url;
 
-    if (!filename) {
-      const parts = url.split('?')[0].split('/');
-      filename = parts[parts.length - 1] || 'download';
-    }
-
-    if (!filename.includes('.')) {
-      const contentType = response.headers.get('Content-Type');
-      if (contentType?.includes('spreadsheetml')) filename += '.xlsx';
-      else if (contentType?.includes('csv')) filename += '.csv';
-      else if (contentType?.includes('pdf')) filename += '.pdf';
-    }
-
-    const blob = await response.blob();
-    const blobUrl = window.URL.createObjectURL(blob);
-    
-    const a = document.createElement('a');
-    a.href = blobUrl;
-    a.download = filename;
-    a.style.display = 'none';
-    document.body.appendChild(a);
-    a.click();
-    
-    console.log(`[Download] Triggered: ${filename}`);
-
-    // Increased timeout to 60s for maximum safety on slow systems
-    setTimeout(() => {
-      window.URL.revokeObjectURL(blobUrl);
-      if (a.parentNode) {
-        document.body.removeChild(a);
-      }
-    }, 60000);
   } catch (error) {
-    console.error('[Download] Error:', error);
+    console.error('[Download] Ticket system error, falling back to direct URL:', error);
+    // Fallback to direct URL if the ticket system fails for any reason
     window.location.href = url;
   }
 }

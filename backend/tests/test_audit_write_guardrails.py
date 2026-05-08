@@ -46,7 +46,7 @@ def test_customer_write_actions_always_leave_audit_evidence(app_client: TestClie
 
     create_response = app_client.post(
         "/api/customers",
-        json={"full_name": "Audit Guardrail Customer", "phone": "01019000011"},
+        json={"full_name": "Audit Guardrail Customer", "phone": "01019000011", "address": "New Cairo"},
     )
     assert create_response.status_code == 201, create_response.text
     customer_id = create_response.json()["id"]

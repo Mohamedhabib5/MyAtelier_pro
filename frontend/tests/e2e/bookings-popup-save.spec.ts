@@ -21,11 +21,28 @@ test('user flow: open booking popup, edit, save', async ({ page }) => {
   await expect(page.getByText(/محرر وثيقة الحجز|Booking document editor/)).toBeVisible();
 
   const dialog = page.getByRole('dialog').last();
+  
+  // Select Customer
+  const customerInput = dialog.locator('input[placeholder*="عميل"]');
+  await customerInput.click();
+  await customerInput.fill('Stress');
+  await page.getByRole('option', { name: /Stress Test Customer 0/i }).first().click();
+
   const dateInputs = dialog.locator('input[type="date"]');
   await expect(dateInputs).toHaveCount(2);
   await dateInputs.nth(1).fill('2026-12-20');
 
-  const saveButton = page.getByRole('button', { name: /حفظ الوثيقة|Save document/ }).first();
+  // Select Department and Service in the first line
+  // Note: These are native select elements in the ag-grid cells
+  const deptSelect = dialog.locator('.ag-row [col-id="department_id"] select').first();
+  await deptSelect.selectOption({ label: 'الفساتين' });
+  
+  const serviceSelect = dialog.locator('.ag-row [col-id="service_id"] select').first();
+  await serviceSelect.selectOption({ label: 'فستان زفاف' });
+
+  const saveButton = page.getByRole('button', { name: /حفظ الوثيقة|Save document/i }).first();
+  await expect(saveButton).toBeEnabled();
+  
   const createResponsePromise = page.waitForResponse((response) => response.url().includes('/api/bookings') && response.request().method() === 'POST' && response.ok());
   await clickByEvaluate(saveButton);
   const createResponse = await createResponsePromise;

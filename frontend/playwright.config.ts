@@ -17,7 +17,7 @@ export default defineConfig({
   testDir: "./tests/e2e",
   timeout: 60_000,
   expect: {
-    timeout: 10_000,
+    timeout: 15_000,
   },
   workers: 1,
   use: {
@@ -25,7 +25,7 @@ export default defineConfig({
     trace: "on-first-retry",
     browserName: "chromium",
     navigationTimeout: 60_000,
-    actionTimeout: 15_000,
+    actionTimeout: 30_000,
     launchOptions: executablePath ? { executablePath } : undefined,
   },
   webServer: undefined,

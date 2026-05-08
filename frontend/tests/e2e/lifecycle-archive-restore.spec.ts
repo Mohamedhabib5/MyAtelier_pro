@@ -30,7 +30,7 @@ test.describe('archive and restore lifecycle smoke', () => {
     const runId = `${Date.now()}`;
     const customer = await api<{ id: string; full_name: string }>(page.context().request, '/api/customers', {
       method: 'POST',
-      data: { full_name: `Lifecycle ${runId}`, phone: `01${runId.slice(-9)}` },
+      data: { full_name: `Lifecycle ${runId}`, phone: `01${runId.slice(-9)}`, address: 'Smoke Test Address' },
     });
 
     await page.goto('/customers');

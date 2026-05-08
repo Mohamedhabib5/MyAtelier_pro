@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
@@ -10,7 +10,7 @@ def test_admin_can_create_list_and_update_customer(app_client: TestClient) -> No
 
     create_response = app_client.post(
         '/api/customers',
-        json={'full_name': 'Nour Hassan', 'phone': '01000000001', 'email': 'nour@example.com'},
+        json={'full_name': 'Nour Hassan', 'phone': '01000000001', 'email': 'nour@example.com', 'address': 'Heliopolis'},
     )
     assert create_response.status_code == 201, create_response.text
     created = create_response.json()
@@ -46,12 +46,12 @@ def test_admin_can_create_list_and_update_customer(app_client: TestClient) -> No
 
 def test_duplicate_customer_phone_is_blocked(app_client: TestClient) -> None:
     login(app_client)
-    payload = {'full_name': 'First Customer', 'phone': '01000000002'}
+    payload = {'full_name': 'First Customer', 'phone': '01000000002', 'address': 'Nasr City'}
 
     first_response = app_client.post('/api/customers', json=payload)
     assert first_response.status_code == 201
 
-    second_response = app_client.post('/api/customers', json={'full_name': 'Second Customer', 'phone': '01000000002'})
+    second_response = app_client.post('/api/customers', json={'full_name': 'Second Customer', 'phone': '01000000002', 'address': 'Nasr City'})
     assert second_response.status_code == 422
     assert 'مستخدم بالفعل' in second_response.json()['detail']
 
@@ -67,7 +67,7 @@ def test_regular_user_can_manage_customers(app_client: TestClient) -> None:
     app_client.post('/api/auth/logout')
     login(app_client, username='crm.user', password='secret123')
 
-    create_response = app_client.post('/api/customers', json={'full_name': 'Layla Saber', 'phone': '01000000003'})
+    create_response = app_client.post('/api/customers', json={'full_name': 'Layla Saber', 'phone': '01000000003', 'address': 'Maadi'})
     assert create_response.status_code == 201, create_response.text
 
     list_response = app_client.get('/api/customers')
@@ -78,11 +78,11 @@ def test_regular_user_can_manage_customers(app_client: TestClient) -> None:
 def test_customer_archive_restore_and_status_filter(app_client: TestClient) -> None:
     auth_user = login(app_client)
 
-    first_create = app_client.post('/api/customers', json={'full_name': 'Archived Customer', 'phone': '01000000004'})
+    first_create = app_client.post('/api/customers', json={'full_name': 'Archived Customer', 'phone': '01000000004', 'address': 'Giza'})
     assert first_create.status_code == 201, first_create.text
     first_customer = first_create.json()
 
-    second_create = app_client.post('/api/customers', json={'full_name': 'Active Customer', 'phone': '01000000005'})
+    second_create = app_client.post('/api/customers', json={'full_name': 'Active Customer', 'phone': '01000000005', 'address': 'Dokki'})
     assert second_create.status_code == 201, second_create.text
     second_customer = second_create.json()
 

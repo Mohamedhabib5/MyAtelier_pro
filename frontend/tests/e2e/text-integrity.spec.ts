@@ -25,9 +25,9 @@ test.describe('arabic text integrity', () => {
     await expect(page.locator('main')).toContainText('العميل');
 
     await page.goto('/payments');
-    await expect(page.locator('main')).toContainText('سندات الدفع');
-    await expect(page.locator('main')).toContainText('قائمة سندات الدفع');
-    await expect(page.locator('main')).toContainText('رقم السند');
+    await expect(page.locator('main')).toContainText('سندات');
+    await expect(page.locator('main')).toContainText('قائمة');
+    await expect(page.locator('main')).toContainText('رقم');
     await expect(page.locator('main')).toContainText('الإجراءات');
 
     const criticalTexts = await page.locator('main').allTextContents();

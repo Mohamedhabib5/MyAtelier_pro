@@ -18,6 +18,7 @@ def build_test_client(
 ) -> Iterator[TestClient]:
     import os
     monkeypatch.setenv("TESTING", "true")
+    monkeypatch.setenv("APP_ENV", "testing")
     monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path.as_posix()}")
     monkeypatch.setenv("APP_SECRET_KEY", "test-secret")
     monkeypatch.setenv("STORAGE_ROOT", storage_root.as_posix())

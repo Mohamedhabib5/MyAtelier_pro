@@ -166,24 +166,34 @@ def create_app(settings_obj: Settings | None = None) -> FastAPI:
     @app.middleware('http')
     async def add_security_headers(request: Request, call_next):
         response = await call_next(request)
+        
+        # Security: Skip restrictive headers for file downloads to allow native browser handling and IDM
+        is_download = request.url.path.startswith('/api/exports/download/')
+        
         response.headers.setdefault('X-Content-Type-Options', 'nosniff')
-        response.headers.setdefault('X-Frame-Options', 'DENY')
+        if not is_download:
+            response.headers.setdefault('X-Frame-Options', 'DENY')
+        else:
+            # Allow SAMEORIGIN for downloads if needed, or just omit DENY
+            response.headers.setdefault('X-Frame-Options', 'SAMEORIGIN')
+            
         response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
         
         # Content Security Policy (CSP)
-        # Allow self, data: for images, and unsafe-inline for MUI styles
-        csp = (
-            "default-src 'self'; "
-            "script-src 'self'; "
-            "style-src 'self' 'unsafe-inline'; "
-            "img-src 'self' data: blob:; "
-            "connect-src 'self'; "
-            "font-src 'self' data:; "
-            "frame-ancestors 'none'; "
-            "base-uri 'self'; "
-            "form-action 'self';"
-        )
-        response.headers.setdefault('Content-Security-Policy', csp)
+        if not is_download:
+            # Allow self, data: for images, and unsafe-inline for MUI styles
+            csp = (
+                "default-src 'self'; "
+                "script-src 'self'; "
+                "style-src 'self' 'unsafe-inline'; "
+                "img-src 'self' data: blob:; "
+                "connect-src 'self'; "
+                "font-src 'self' data:; "
+                "frame-ancestors 'none'; "
+                "base-uri 'self'; "
+                "form-action 'self';"
+            )
+            response.headers.setdefault('Content-Security-Policy', csp)
         
         if request.url.path.startswith('/api/auth'):
             response.headers.setdefault('Cache-Control', 'no-store')

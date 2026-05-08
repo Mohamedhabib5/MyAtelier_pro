@@ -12,7 +12,7 @@ def test_admin_can_list_and_filter_audit_events(app_client: TestClient) -> None:
     login(app_client)
     create_customer = app_client.post(
         "/api/customers",
-        json={"full_name": "Audit Explorer Customer", "phone": "01019000001"},
+        json={"full_name": "Audit Explorer Customer", "phone": "01019000001", "address": "Maadi"},
     )
     assert create_customer.status_code == 201, create_customer.text
     customer_id = create_customer.json()["id"]

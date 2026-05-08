@@ -17,7 +17,7 @@ def line_paid_total(line: BookingLine, *, ignore_payment_document_id: str | None
     total = ZERO
     for allocation in line.payment_allocations:
         document = allocation.payment_document
-        if document.status == 'voided':
+        if not document or document.status == 'voided':
             continue
         if ignore_payment_document_id and document.id == ignore_payment_document_id:
             continue

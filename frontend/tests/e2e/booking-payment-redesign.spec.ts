@@ -37,7 +37,7 @@ test.describe('booking and payment document redesign smoke', () => {
 
     const customer = await api<{ id: string; full_name: string }>(request, '/api/customers', {
       method: 'POST',
-      data: { full_name: `Customer ${runId}`, phone },
+      data: { full_name: `Customer ${runId}`, phone, address: 'Smoke Test Address' },
     });
 
     const department = await api<{ id: string }>(request, '/api/catalog/departments', {

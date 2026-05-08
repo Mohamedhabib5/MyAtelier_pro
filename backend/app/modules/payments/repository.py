@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import date
+from decimal import Decimal
 
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, joinedload, selectinload

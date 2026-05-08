@@ -60,6 +60,15 @@ def materialize_line(
         raise ValidationAppError("لا يمكن أن تكون الدفعة الأولى سالبة")
 
     current_paid_total = line_paid_total(existing_line) if existing_line is not None else ZERO
+
+    # Smart Auto-Confirm Logic:
+    # 1. If there is ANY payment (previous or initial), force status to 'confirmed'.
+    # 2. Otherwise (no payment), respect the manual status choice from payload (handles VIP/Promo cases).
+    if (current_paid_total + initial_payment_amount) > ZERO:
+        status = "confirmed"
+    else:
+        status = clean_line_status(payload.status)
+
     if line_price < current_paid_total:
         raise ValidationAppError("لا يمكن أن يكون سعر السطر أقل من المدفوع المحصل")
     if status == "cancelled" and current_paid_total > ZERO:
@@ -70,14 +79,6 @@ def materialize_line(
         raise ValidationAppError("لا يمكن أن تتجاوز الدفعة الأولى سعر السطر")
     if existing_line is not None and initial_payment_amount > quantize_amount(line_price - current_paid_total):
         raise ValidationAppError("لا يمكن أن تتجاوز الدفعة الأولى المتبقي على السطر")
-
-    # Smart Auto-Confirm Logic:
-    # 1. If there is ANY payment (previous or initial), force status to 'confirmed'.
-    # 2. Otherwise (no payment), respect the manual status choice from payload (handles VIP/Promo cases).
-    if (current_paid_total + initial_payment_amount) > ZERO:
-        status = "confirmed"
-    else:
-        status = clean_line_status(payload.status)
 
     if existing_line is not None:
         if existing_line.revenue_journal_entry_id:

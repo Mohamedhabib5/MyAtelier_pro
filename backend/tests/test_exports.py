@@ -45,16 +45,16 @@ def test_admin_can_download_customers_booking_and_payment_exports(app_client: Te
     assert 'BK' in bookings_export.text
 
     assert booking_lines_export.status_code == 200
-    assert 'booking_number,branch_name,customer_name,line_number' in booking_lines_export.text
+    assert 'booking_number,branch_name,customer_name,customer_phone,customer_address,line_number' in booking_lines_export.text
     assert 'تجربة فستان' in booking_lines_export.text
 
     assert payments_export.status_code == 200
-    assert 'payment_number,branch_name,customer_name,payment_date' in payments_export.text
+    assert 'payment_number,branch_name,customer_name,customer_phone,customer_address,payment_date' in payments_export.text
     assert 'PAY' in payments_export.text
     assert 'JV' in payments_export.text
 
     assert payment_allocations_export.status_code == 200
-    assert 'payment_number,branch_name,customer_name,payment_date,booking_number,booking_line_number' in payment_allocations_export.text
+    assert 'payment_number,branch_name,customer_name,customer_phone,customer_address,payment_date,document_kind,booking_number,booking_line_number' in payment_allocations_export.text
     assert booking['booking_number'] in payment_allocations_export.text
     assert customers_xlsx.status_code == 200
     assert customers_xlsx.headers['content-type'] == 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
@@ -137,7 +137,10 @@ def test_bookings_export_honors_table_filters(app_client: TestClient) -> None:
         [build_booking_line_payload(service_bundle, service_date='2026-08-25', dress_id=drop_dress, line_price=2500)],
         booking_date='2026-08-25',
     )
-    cancel_response = app_client.post(f"/api/bookings/{drop_booking['id']}/lines/{drop_booking['lines'][0]['id']}/cancel")
+    cancel_response = app_client.post(
+        f"/api/bookings/{drop_booking['id']}/lines/{drop_booking['lines'][0]['id']}/cancel",
+        json={'reason': 'Test Cancellation'}
+    )
     assert cancel_response.status_code == 200, cancel_response.text
 
     status_export = app_client.get('/api/exports/bookings.csv?status=cancelled')
@@ -235,7 +238,10 @@ def test_booking_lines_export_honors_booking_filters(app_client: TestClient) -> 
     service_bundle = seed_service_bundle(app_client)
     keep_booking = create_booking_in_current_branch(app_client, customer_id, service_bundle, 'EXP-LINE-KEEP', '2026-08-10')
     drop_booking = create_booking_in_current_branch(app_client, customer_id, service_bundle, 'EXP-LINE-DROP', '2026-08-12')
-    cancel_response = app_client.post(f"/api/bookings/{drop_booking['id']}/lines/{drop_booking['lines'][0]['id']}/cancel")
+    cancel_response = app_client.post(
+        f"/api/bookings/{drop_booking['id']}/lines/{drop_booking['lines'][0]['id']}/cancel",
+        json={'reason': 'Test Filter Cancellation'}
+    )
     assert cancel_response.status_code == 200, cancel_response.text
 
     filtered_export = app_client.get('/api/exports/booking-lines.csv?status=cancelled')

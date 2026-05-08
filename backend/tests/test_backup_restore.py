@@ -18,7 +18,7 @@ def test_backup_archive_contains_restorable_database_dump(tmp_path: Path, monkey
         login(client)
         create_customer = client.post(
             '/api/customers',
-            json={'full_name': 'Backup Restore User', 'phone': '01000000099'},
+            json={'full_name': 'Backup Restore User', 'phone': '01000000099', 'address': 'Zamalek'},
         )
         assert create_customer.status_code == 201, create_customer.text
 

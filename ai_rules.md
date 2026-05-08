@@ -146,8 +146,40 @@ Before making changes, the AI should mentally check:
 
 ---
 
-## 10) Starter Instruction for Every New Chat
+## 11) Docker-First Execution (Mandatory)
 
-**"Read the `ai_rules.md` file and summarize it in 5 points before starting."**
+1. **Standard Launch**: When asked to "run the program" or "start the app," the AI **must** use Docker Compose:
+   - Command: `docker compose up -d` (never use `-v` unless explicitly told to reset the database).
+2. **Docker Daemon**: Always check if the Docker daemon is running first. If not, start it (on Windows: `Start-Process "C:\Program Files\Docker\Docker\Docker Desktop.exe"`).
+3. **Data Safety**: Never perform actions that risk deleting Docker volumes (`myatelier_pro_postgres_data`) unless the user explicitly requests a database reset.
+4. **Environment**: Ensure the `.env` file exists and is correctly configured for the `db` service.
+5. **Verification**: After starting, verify that the containers are "Up" and healthy using `docker compose ps`.
+
+---
+
+## 12) Starter Instruction for Every New Chat
+
+**"Read the `ai_rules.md` file and summarize it in 5 points, including the Docker-First execution rule, before starting."**
 
 This verifies the AI has loaded the binding instructions.
+
+---
+
+## 13) Enterprise Non-Regression & Traceability (دستور الاستقرار والتدقيق المؤسسي)
+
+يجب على الذكاء الاصطناعي الالتزام بالقواعد التالية لضمان استقرار النظام وقابلية التدقيق:
+
+1. **قاعدة عدم التخريب (Non-Regression First)**:
+   - ممنوع إجراء أي تعديل قبل تثبيت خط أساس ذهبي (Golden Baseline).
+   - أي تعديل يجب أن يثبت أن السلوك الصحيح السابق لم يتغير.
+   - أي إصلاح لخطأ (Bug) يجب أن يتضمن اختبار Regression دائم يمنع عودته مستقبلاً.
+
+2. **قاعدة "لا تغيير بلا إثبات" (Proof of Auditability)**:
+   - أي مسار تعديل (Write Route) جديد يجب تسجيله فوراً في `WRITE_ROUTE_AUDIT_POLICY`.
+   - كل حركة "كتابة" في قاعدة البيانات يجب أن يرافقها سجل تدقيق (record_audit) يوضح: من، ماذا، متى، وما هو الفرق (Diff).
+   - يمنع استخدام المتغيرات الديناميكية داخل حقل `action` في `record_audit`؛ يجب استخدام Literal Strings لتسهيل الفحص الآلي.
+
+3. **قاعدة الأداء الرفيع (High-Performance Execution)**:
+   - يمنع إنشاء PRs ضخمة. يجب تقسيم التغييرات الكبيرة إلى أجزاء صغيرة (Refactor أولاً، ثم سلوك جديد).
+   - يجب تشغيل الاختبارات المؤتمتة قبل وبعد كل تعديل لضمان عدم حدوث Side-effects.
+   - أي تعديل في الـ Schema يجب أن ينعكس فوراً في الـ Test Factories.
