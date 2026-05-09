@@ -17,42 +17,33 @@ def get_reports_overview(db: Session, branch_id: str | None = None) -> dict:
     company = get_company_settings(db)
     repository = ReportsRepository(db)
     
-    # 1. Basic Counts (Optimized via direct repository calls)
-    customers = repository.list_customers(company.id)
+    # 1. Aggregated Metrics (SQL-side counting)
+    active_customers_count = repository.count_active_customers(company.id)
+    active_services_count = repository.count_active_services(company.id)
+    dress_status_counts = repository.get_dress_status_summary(company.id)
+    department_service_counts = repository.get_department_service_counts(company.id)
+    
+    # 2. Fetch small lists needed for UI structure
     departments = repository.list_departments(company.id)
-    services = repository.list_services(company.id)
-    dresses = repository.list_dresses(company.id)
 
-    # 2. Aggregated Metrics (SQL GROUP BY)
+    # 3. Domain Aggregations (SQL GROUP BY)
     booking_status_counts = repository.get_booking_status_counts(company.id, branch_id)
     payment_type_totals = repository.get_payment_type_totals(company.id, branch_id)
     
-    # 3. Upcoming Bookings (SQL Filtered & Limited)
+    # 4. Upcoming Bookings (SQL Filtered & Limited)
     upcoming_booking_items = repository.get_upcoming_booking_lines(company.id, branch_id, limit=5)
 
-    # 4. Department Counts (Calculated from in-memory service list - usually small)
-    department_service_counts: dict[str, int] = defaultdict(int)
-    for service in services:
-        department_service_counts[service.department.name] += 1
-
     return {
-        'active_customers': sum(1 for customer in customers if customer.is_active),
-        'active_services': sum(1 for service in services if service.is_active),
-        'available_dresses': sum(1 for dress in dresses if dress.is_active and dress.status == 'available'),
-        'upcoming_bookings': len(upcoming_booking_items), # Note: This is now just the top 5 for overview
+        'active_customers': active_customers_count,
+        'active_services': active_services_count,
+        'available_dresses': next((item['count'] for item in dress_status_counts if item['key'] == 'available'), 0),
+        'upcoming_bookings': len(upcoming_booking_items), 
         'booking_status_counts': sorted(booking_status_counts, key=lambda x: x['count'], reverse=True),
         'payment_type_totals': [{'key': item['key'], 'value': _to_float(item['value'])} for item in sorted(payment_type_totals, key=lambda x: x['value'], reverse=True)],
-        'dress_status_counts': _get_dress_status_summary(dresses),
+        'dress_status_counts': dress_status_counts,
         'department_service_counts': _sorted_department_counts(department_service_counts, departments),
         'upcoming_booking_items': upcoming_booking_items,
     }
-
-
-def _get_dress_status_summary(dresses: list) -> list[dict]:
-    counts: dict[str, int] = defaultdict(int)
-    for dress in dresses:
-        counts[dress.status] += 1
-    return [{'key': key, 'count': count} for key, count in sorted(counts.items(), key=lambda x: x[1], reverse=True)]
 
 
 def _sorted_count_metrics(values: dict[str, int]) -> list[dict]:

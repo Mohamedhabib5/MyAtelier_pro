@@ -4,7 +4,7 @@ import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import { Alert, Box, Button, Chip, Stack, TextField, Typography, Dialog, DialogContent, IconButton } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { DestructiveDeleteDialog } from '../components/DestructiveDeleteDialog';
 import { LifecycleReasonDialog } from '../components/LifecycleReasonDialog';
 import { AppDataTable } from '../components/data-table/AppDataTable';
@@ -15,9 +15,11 @@ import { useLanguage } from '../features/language/LanguageProvider';
 import { queryClient } from '../lib/queryClient';
 import { EMPTY_VALUE, useCommonText } from '../text/common';
 import { dressStatusLabel, useDressesText } from '../text/dresses';
+
 function emptyForm() {
   return { code: '', dress_type: '', purchase_date: '', status: 'available', description: '', image_path: '', is_active: true } satisfies DressFormState;
 }
+
 export function DressesPage() {
   const { language } = useLanguage();
   const commonText = useCommonText();
@@ -61,20 +63,20 @@ export function DressesPage() {
     onError: (mutationError: Error) => setError(mutationError.message),
   });
 
-  function closeDialog() {
+  const closeDialog = useCallback(() => {
     setDialogOpen(false);
     setEditingDress(null);
     setForm(emptyForm());
-  }
+  }, [setDialogOpen, setEditingDress, setForm]);
 
-  function openCreateDialog() {
+  const openCreateDialog = useCallback(() => {
     setError(null);
     setEditingDress(null);
     setForm(emptyForm());
     setDialogOpen(true);
-  }
+  }, [setError, setEditingDress, setForm, setDialogOpen]);
 
-  function openEditDialog(dress: DressRecord) {
+  const openEditDialog = useCallback((dress: DressRecord) => {
     setError(null);
     setEditingDress(dress);
     setForm({
@@ -87,7 +89,7 @@ export function DressesPage() {
       is_active: dress.is_active,
     });
     setDialogOpen(true);
-  }
+  }, [setError, setEditingDress, setForm, setDialogOpen]);
 
   async function saveDress() {
     setError(null);
@@ -107,17 +109,17 @@ export function DressesPage() {
     await createMutation.mutateAsync(payload);
   }
 
-  function openLifecycleDialog(dress: DressRecord, archive: boolean) {
+  const openLifecycleDialog = useCallback((dress: DressRecord, archive: boolean) => {
     setError(null);
     setLifecycleTarget(dress);
     setLifecycleMode(archive ? 'archive' : 'restore');
     setLifecycleReason('');
-  }
+  }, [setError, setLifecycleTarget, setLifecycleMode, setLifecycleReason]);
 
-  function closeLifecycleDialog() {
+  const closeLifecycleDialog = useCallback(() => {
     setLifecycleTarget(null);
     setLifecycleReason('');
-  }
+  }, [setLifecycleTarget, setLifecycleReason]);
 
   async function confirmLifecycle() {
     if (!lifecycleTarget) return;
@@ -128,19 +130,89 @@ export function DressesPage() {
     });
   }
 
-  function closeDeleteDialog() {
+  const closeDeleteDialog = useCallback(() => {
     setDeleteTarget(null);
-  }
+  }, [setDeleteTarget]);
 
   const rows = useMemo(
     () => (dressesQuery.data ?? []).filter((dress) => (statusFilter === 'all' ? true : dress.status === statusFilter)),
     [dressesQuery.data, statusFilter],
   );
 
-  const labels =
+  const labels = useMemo(() =>
     language === 'ar'
       ? { search: 'بحث', searchPlaceholder: 'ابحث بالكود أو النوع أو الوصف', filters: 'الفلاتر', columns: 'الأعمدة', export: 'تصدير', reset: 'إعادة الضبط', noRows: 'لا توجد بيانات مطابقة' }
-      : { search: 'Search', searchPlaceholder: 'Search by code, type, or description', filters: 'Filters', columns: 'Columns', export: 'Export', reset: 'Reset', noRows: 'No matching rows' };
+      : { search: 'Search', searchPlaceholder: 'Search by code, type, or description', filters: 'Filters', columns: 'Columns', export: 'Export', reset: 'Reset', noRows: 'No matching rows' }
+  , [language]);
+
+  const columns = useMemo(() => [
+    { key: 'code', header: dressesText.table.code, searchValue: (row: DressRecord) => row.code, render: (row: DressRecord) => row.code },
+    { key: 'type', header: dressesText.table.type, searchValue: (row: DressRecord) => row.dress_type, render: (row: DressRecord) => row.dress_type },
+    { key: 'description', header: dressesText.table.description, searchValue: (row: DressRecord) => row.description ?? '', render: (row: DressRecord) => row.description ?? EMPTY_VALUE },
+    {
+      key: 'status',
+      header: dressesText.table.status,
+      searchValue: (row: DressRecord) => dressStatusLabel(language, row.status),
+      render: (row: DressRecord) => <Chip label={dressStatusLabel(language, row.status)} size='small' color={row.status === 'available' ? 'success' : row.status === 'reserved' ? 'warning' : row.status === 'with_customer' ? 'info' : 'default'} />,
+    },
+    {
+      key: 'operational_status',
+      header: language === 'ar' ? 'الحالة التشغيلية' : 'Operational status',
+      searchValue: (row: DressRecord) => (row.is_active ? dressesText.status.active : dressesText.status.inactive),
+      render: (row: DressRecord) => <Chip label={row.is_active ? dressesText.status.active : dressesText.status.inactive} size='small' color={row.is_active ? 'success' : 'default'} />,
+    },
+    { key: 'purchase_date', header: dressesText.table.purchaseDate, searchValue: (row: DressRecord) => row.purchase_date ?? '', render: (row: DressRecord) => row.purchase_date ?? EMPTY_VALUE },
+    {
+      key: 'image_path',
+      header: dressesText.table.imageRef,
+      searchValue: (row: DressRecord) => row.image_path ?? '',
+      render: (row: DressRecord) => {
+        if (!row.image_path) return EMPTY_VALUE;
+        const backendUrl = `${window.location.protocol}//${window.location.hostname}:8000`;
+        const imageUrl = row.image_path.startsWith('http') ? row.image_path : `${backendUrl}/attachments/${row.image_path}`;
+        return (
+          <Box
+            component='img'
+            src={imageUrl}
+            alt={row.code}
+            onClick={() => setPreviewImage(imageUrl)}
+            sx={{
+              width: 48,
+              height: 48,
+              objectFit: 'cover',
+              borderRadius: 1.5,
+              border: '1px solid',
+              borderColor: 'divider',
+              transition: 'all 0.2s ease-in-out',
+              cursor: 'zoom-in',
+              '&:hover': {
+                transform: 'scale(1.1)',
+                zIndex: 10,
+                boxShadow: 2,
+              },
+            }}
+          />
+        );
+      },
+    },
+    {
+      key: 'action',
+      header: dressesText.table.action,
+      render: (row: DressRecord) => (
+        <Stack direction='row' spacing={1}>
+          <Button size='small' startIcon={<EditOutlinedIcon />} onClick={() => openEditDialog(row)}>
+            {commonText.edit}
+          </Button>
+          <Button size='small' color={row.is_active ? 'warning' : 'success'} onClick={() => openLifecycleDialog(row, row.is_active)}>
+            {row.is_active ? (language === 'ar' ? 'أرشفة' : 'Archive') : language === 'ar' ? 'استعادة' : 'Restore'}
+          </Button>
+          <Button size='small' color='error' startIcon={<DeleteOutlineOutlinedIcon />} onClick={() => setDeleteTarget(row)}>
+            {language === 'ar' ? 'حذف تصحيحي' : 'Corrective delete'}
+          </Button>
+        </Stack>
+      ),
+    },
+  ], [commonText.edit, dressesText.status.active, dressesText.status.inactive, dressesText.table.action, dressesText.table.code, dressesText.table.description, dressesText.table.imageRef, dressesText.table.purchaseDate, dressesText.table.status, dressesText.table.type, language, openEditDialog, openLifecycleDialog]);
 
   return (
     <Stack spacing={3}>
@@ -160,75 +232,7 @@ export function DressesPage() {
         <AppDataTable
           tableKey='dresses-list'
           rows={rows}
-          columns={[
-            { key: 'code', header: dressesText.table.code, searchValue: (row) => row.code, render: (row) => row.code },
-            { key: 'type', header: dressesText.table.type, searchValue: (row) => row.dress_type, render: (row) => row.dress_type },
-            { key: 'description', header: dressesText.table.description, searchValue: (row) => row.description ?? '', render: (row) => row.description ?? EMPTY_VALUE },
-            {
-              key: 'status',
-              header: dressesText.table.status,
-              searchValue: (row) => dressStatusLabel(language, row.status),
-              render: (row) => <Chip label={dressStatusLabel(language, row.status)} size='small' color={row.status === 'available' ? 'success' : row.status === 'reserved' ? 'warning' : row.status === 'with_customer' ? 'info' : 'default'} />,
-            },
-            {
-              key: 'operational_status',
-              header: language === 'ar' ? 'الحالة التشغيلية' : 'Operational status',
-              searchValue: (row) => (row.is_active ? dressesText.status.active : dressesText.status.inactive),
-              render: (row) => <Chip label={row.is_active ? dressesText.status.active : dressesText.status.inactive} size='small' color={row.is_active ? 'success' : 'default'} />,
-            },
-            { key: 'purchase_date', header: dressesText.table.purchaseDate, searchValue: (row) => row.purchase_date ?? '', render: (row) => row.purchase_date ?? EMPTY_VALUE },
-            {
-              key: 'image_path',
-              header: dressesText.table.imageRef,
-              searchValue: (row) => row.image_path ?? '',
-              render: (row) => {
-                if (!row.image_path) return EMPTY_VALUE;
-                // Temporary fix: point directly to the backend port (8000) for development
-                const backendUrl = `${window.location.protocol}//${window.location.hostname}:8000`;
-                const imageUrl = row.image_path.startsWith('http') ? row.image_path : `${backendUrl}/attachments/${row.image_path}`;
-                return (
-                  <Box
-                    component='img'
-                    src={imageUrl}
-                    alt={row.code}
-                    onClick={() => setPreviewImage(imageUrl)}
-                    sx={{
-                      width: 48,
-                      height: 48,
-                      objectFit: 'cover',
-                      borderRadius: 1.5,
-                      border: '1px solid',
-                      borderColor: 'divider',
-                      transition: 'all 0.2s ease-in-out',
-                      cursor: 'zoom-in',
-                      '&:hover': {
-                        transform: 'scale(1.1)',
-                        zIndex: 10,
-                        boxShadow: 2,
-                      },
-                    }}
-                  />
-                );
-              },
-            },
-            {
-              key: 'action',
-              header: dressesText.table.action,
-              render: (row) => (
-                <Stack direction='row' spacing={1}>
-                  <Button size='small' startIcon={<EditOutlinedIcon />} onClick={() => openEditDialog(row)}>
-                    {commonText.edit}
-                  </Button>
-                  <Button size='small' color={row.is_active ? 'warning' : 'success'} onClick={() => openLifecycleDialog(row, row.is_active)}>
-                    {row.is_active ? (language === 'ar' ? 'أرشفة' : 'Archive') : language === 'ar' ? 'استعادة' : 'Restore'}
-                  </Button>
-                  <Button size='small' color='error' startIcon={<DeleteOutlineOutlinedIcon />} onClick={() => setDeleteTarget(row)}>
-                    {language === 'ar' ? 'حذف تصحيحي' : 'Corrective delete'}
-                  </Button>
-                </Stack>
-              ),
-            },
-          ]}
+          columns={columns}
           searchLabel={labels.search}
           searchPlaceholder={labels.searchPlaceholder}
           resetColumnsLabel={labels.reset}
@@ -285,7 +289,7 @@ export function DressesPage() {
 
       <Dialog open={Boolean(previewImage)} onClose={() => setPreviewImage(null)} maxWidth='lg'>
         <DialogContent sx={{ p: 0, position: 'relative', bgcolor: 'black', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-          <IconButton onClick={() => setPreviewImage(null)} sx={{ position: 'absolute', top: 8, right: 8, color: 'white', bgcolor: 'rgba(0,0,0,0.5)', '&:hover': { bgcolor: 'rgba(0,0,0,0.7)' } }}>
+          <IconButton aria-label={language === 'ar' ? 'إغلاق' : 'Close'} onClick={() => setPreviewImage(null)} sx={{ position: 'absolute', top: 8, right: 8, color: 'white', bgcolor: 'rgba(0,0,0,0.5)', '&:hover': { bgcolor: 'rgba(0,0,0,0.7)' } }}>
             <CloseIcon />
           </IconButton>
           {previewImage && (

@@ -2,7 +2,7 @@ import AddCircleOutlineOutlinedIcon from '@mui/icons-material/AddCircleOutlineOu
 import PaidOutlinedIcon from '@mui/icons-material/PaidOutlined';
 import PublishedWithChangesOutlinedIcon from '@mui/icons-material/PublishedWithChangesOutlined';
 import { Alert, Button, Stack, Typography } from '@mui/material';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useCallback } from 'react';
 import { AppDialogShell } from '../components/AppDialogShell';
 import { getCustodyExcelUrl, getCustodyExportUrl } from '../features/exports/api';
 import { downloadFile } from '../lib/api';
@@ -11,11 +11,13 @@ import { CustodyCaseCreateSection } from '../features/custody/CustodyCaseCreateS
 import { CustodyCasesTableSection } from '../features/custody/CustodyCasesTableSection';
 import { CustodyCompensationSection } from '../features/custody/CustodyCompensationSection';
 import { useLanguage } from '../features/language/LanguageProvider';
+import { useAuth } from '../features/auth/AuthProvider';
 import { useCustodyText } from '../text/custody';
 import { useCustodyLogic } from '../features/custody/useCustodyLogic';
 
 export function CustodyPage() {
   const { language } = useLanguage();
+  const { user } = useAuth();
   const custodyText = useCustodyText();
   const isArabic = language === 'ar';
   const selectedLanguage = isArabic ? 'ar' : 'en';
@@ -25,8 +27,8 @@ export function CustodyPage() {
   const caseRows = queries.casesQuery.data?.items ?? [];
   const caseTotal = queries.casesQuery.data?.total ?? 0;
   const caseOptions = useMemo(() => queries.allCasesQuery.data ?? [], [queries.allCasesQuery.data]);
-  const selectedCase = useMemo(() => caseOptions.find((item) => item.id === state.targetCaseId) ?? null, [caseOptions, state.targetCaseId]);
-  const existingCaseLineIds = useMemo(() => caseOptions.map((item) => item.booking_line_id).filter((value): value is string => Boolean(value)), [caseOptions]);
+  const selectedCase = useMemo(() => caseOptions.find((item: any) => item.id === state.targetCaseId) ?? null, [caseOptions, state.targetCaseId]);
+  const existingCaseLineIds = useMemo(() => caseOptions.map((item: any) => item.booking_line_id).filter((value: any): value is string => Boolean(value)), [caseOptions]);
 
   useEffect(() => {
     if (state.action !== 'customer_return') {
@@ -66,7 +68,8 @@ export function CustodyPage() {
       {queries.paymentMethodsQuery.error instanceof Error ? <Alert severity='error'>{queries.paymentMethodsQuery.error.message}</Alert> : null}
       <CustodyCasesTableSection
         rows={caseRows} total={caseTotal} loading={queries.casesQuery.isLoading} page={state.page} pageSize={state.pageSize} onPageChange={state.setPage}
-        onPageSizeChange={(v) => { state.setPageSize(v); state.setPage(0); }} view={state.caseView} onViewChange={(v) => { state.setCaseView(v); state.setPage(0); }}
+        onPageSizeChange={useCallback((v) => { state.setPageSize(v); state.setPage(0); }, [state.setPageSize, state.setPage])} 
+        view={state.caseView} onViewChange={useCallback((v) => { state.setCaseView(v); state.setPage(0); }, [state.setCaseView, state.setPage])}
         language={selectedLanguage} title={custodyText.page.listTitle} subtitle={custodyText.page.listSubtitle} viewOpenLabel={custodyText.page.viewOpen}
         viewSettledLabel={custodyText.page.viewSettled} viewAllLabel={custodyText.page.viewAll}
         labels={{
@@ -75,13 +78,13 @@ export function CustodyPage() {
           status: custodyText.page.status, search: labels.search, searchPlaceholder: labels.searchPlaceholder, reset: labels.reset, noRows: labels.noRows, filters: labels.filters,
           columns: labels.columns, export: labels.export, rowsPerPage: labels.rowsPerPage, close: labels.close, emptyValue: custodyText.page.emptyValue,
         }}
-        onExport={(format, scope) => {
+        onExport={useCallback((format: 'csv' | 'xlsx', scope: 'page' | 'all') => {
           const isXlsx = format === 'xlsx';
           const urlFn = isXlsx ? getCustodyExcelUrl : getCustodyExportUrl;
           const exportPage = scope === 'page' ? state.page + 1 : undefined;
           const exportPageSize = scope === 'page' ? state.pageSize : undefined;
-          downloadFile(urlFn(undefined, exportPage, exportPageSize));
-        }}
+          downloadFile(urlFn(user?.active_branch_id, exportPage, exportPageSize));
+        }, [user?.active_branch_id, state.page, state.pageSize])}
       />
       <AppDialogShell open={state.createDialogOpen} onClose={() => state.setCreateDialogOpen(false)} title={custodyText.page.createTitle} subtitle={custodyText.page.createSubtitle} maxWidth='md'>
         <CustodyCaseCreateSection

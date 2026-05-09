@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.orm import Session, joinedload
 
 from app.modules.catalog.models import Department, ServiceCatalogItem
@@ -49,6 +49,32 @@ class CatalogRepository:
             stmt = stmt.where(ServiceCatalogItem.is_active == is_active)
         stmt = stmt.order_by(ServiceCatalogItem.display_order.asc(), ServiceCatalogItem.name.asc())
         return list(self.db.scalars(stmt))
+
+    def count_services(self, company_id: str, *, is_active: bool | None = None) -> int:
+        stmt = (
+            select(func.count(ServiceCatalogItem.id))
+            .join(Department, ServiceCatalogItem.department_id == Department.id)
+            .where(
+                ServiceCatalogItem.company_id == company_id,
+                Department.code != 'SYS-COMPENSATIONS'
+            )
+        )
+        if is_active is not None:
+            stmt = stmt.where(ServiceCatalogItem.is_active == is_active)
+        return self.db.scalar(stmt) or 0
+
+    def get_department_service_counts(self, company_id: str) -> dict[str, int]:
+        stmt = (
+            select(Department.name, func.count(ServiceCatalogItem.id))
+            .join(ServiceCatalogItem, ServiceCatalogItem.department_id == Department.id)
+            .where(
+                ServiceCatalogItem.company_id == company_id,
+                Department.code != 'SYS-COMPENSATIONS'
+            )
+            .group_by(Department.name)
+        )
+        results = self.db.execute(stmt).all()
+        return {r[0]: r[1] for r in results}
 
     def get_service(self, service_id: str) -> ServiceCatalogItem | None:
         return self.db.get(ServiceCatalogItem, service_id)

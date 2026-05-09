@@ -46,7 +46,7 @@ export function EventDetailsModal({ event, open, onClose }: Props) {
         <Typography variant="h6" sx={{ fontWeight: 900 }}>
           {language === 'ar' ? 'تفاصيل الحجز' : 'Booking Details'}
         </Typography>
-        <IconButton onClick={onClose} size="small">
+        <IconButton aria-label={language === 'ar' ? 'إغلاق' : 'Close'} onClick={onClose} size="small">
           <X size={20} />
         </IconButton>
       </DialogTitle>

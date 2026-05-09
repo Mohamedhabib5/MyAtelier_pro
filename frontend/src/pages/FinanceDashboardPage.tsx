@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Alert, Box, Grid, Stack, Typography } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 
@@ -14,12 +15,24 @@ export function FinanceDashboardPage() {
   const formatters = useLanguageFormatters();
   const dashboardQuery = useQuery({ queryKey: ['dashboard', 'finance'], queryFn: () => getFinanceDashboard() });
   const dashboard = dashboardQuery.data;
-  const dailyIncomeChart = (dashboard?.daily_income ?? []).map((item) => ({ label: item.label, value: item.value, valueLabel: formatters.formatCurrency(item.value) }));
-  const departmentIncomeChart = (dashboard?.department_income ?? []).map((item) => ({ label: item.label, value: item.value, valueLabel: formatters.formatCurrency(item.value) }));
-  const topServicesChart = (dashboard?.top_services ?? []).map((item) => ({ label: item.label, value: item.count, valueLabel: `${formatters.formatCount(item.count)} ${dashboardText.subtitles.bookingsSuffix}` }));
-  const dailyIncome = (dashboard?.daily_income ?? []).map((item) => ({ label: item.label, value: formatters.formatCurrency(item.value) }));
-  const departmentIncome = (dashboard?.department_income ?? []).map((item) => ({ label: item.label, value: formatters.formatCurrency(item.value) }));
-  const topServices = (dashboard?.top_services ?? []).map((item) => ({ label: item.label, value: `${formatters.formatCount(item.count)} ${dashboardText.subtitles.bookingsSuffix}` }));
+
+  const {
+    dailyIncomeChart,
+    departmentIncomeChart,
+    topServicesChart,
+    dailyIncome,
+    departmentIncome,
+    topServices
+  } = useMemo(() => {
+    return {
+      dailyIncomeChart: (dashboard?.daily_income ?? []).map((item) => ({ label: item.label, value: item.value, valueLabel: formatters.formatCurrency(item.value) })),
+      departmentIncomeChart: (dashboard?.department_income ?? []).map((item) => ({ label: item.label, value: item.value, valueLabel: formatters.formatCurrency(item.value) })),
+      topServicesChart: (dashboard?.top_services ?? []).map((item) => ({ label: item.label, value: item.count, valueLabel: `${formatters.formatCount(item.count)} ${dashboardText.subtitles.bookingsSuffix}` })),
+      dailyIncome: (dashboard?.daily_income ?? []).map((item) => ({ label: item.label, value: formatters.formatCurrency(item.value) })),
+      departmentIncome: (dashboard?.department_income ?? []).map((item) => ({ label: item.label, value: formatters.formatCurrency(item.value) })),
+      topServices: (dashboard?.top_services ?? []).map((item) => ({ label: item.label, value: `${formatters.formatCount(item.count)} ${dashboardText.subtitles.bookingsSuffix}` })),
+    };
+  }, [dashboard, formatters, dashboardText.subtitles.bookingsSuffix]);
 
   return (
     <Stack spacing={3}>

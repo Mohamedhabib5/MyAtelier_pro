@@ -1,7 +1,7 @@
 import PersonAddOutlinedIcon from '@mui/icons-material/PersonAddOutlined';
 import { Alert, Box, Button, Stack, Typography } from '@mui/material';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 
 import { useAuth } from '../features/auth/AuthProvider';
 import { useLanguage } from '../features/language/LanguageProvider';
@@ -85,14 +85,14 @@ export function UsersPage() {
     setDialogOpen(true);
   }
 
-  function openEditDialog(targetUser: UserRecord) {
+  const openEditDialog = useCallback((targetUser: UserRecord) => {
     setEditingUser(targetUser);
     setUsername(targetUser.username);
     setFullName(targetUser.full_name);
     setPassword('');
     setRole(targetUser.role_names[0] ?? 'user');
     setDialogOpen(true);
-  }
+  }, [setEditingUser, setUsername, setFullName, setPassword, setRole, setDialogOpen]);
 
   async function saveAdminDialog() {
     setError(null);
@@ -154,12 +154,12 @@ export function UsersPage() {
           setPreferredLanguage={setPreferredLanguage}
           usersText={usersText}
           commonText={commonText}
-          onSave={() =>
+          onSave={useCallback(() =>
             void selfUpdateMutation.mutateAsync({
               full_name: fullName || selfInitial.fullName,
               password: password || undefined,
               preferred_language: preferredLanguage,
-            })
+            }), [selfUpdateMutation, fullName, selfInitial.fullName, password, preferredLanguage])
           }
         />
       )}

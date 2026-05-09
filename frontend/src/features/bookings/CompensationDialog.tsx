@@ -1,4 +1,4 @@
-import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, InputLabel, MenuItem, Select, Stack, TextField, Typography, Alert } from '@mui/material';
+import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, InputLabel, MenuItem, Select, Stack, TextField, Typography, Alert, CircularProgress } from '@mui/material';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useState, useMemo } from 'react';
 import { createCompensationBooking } from './api';
@@ -136,8 +136,9 @@ export function CompensationDialog({ open, bookingId, bookingNumber, language, o
           variant="contained" 
           onClick={handleConfirm} 
           disabled={compensateMutation.isPending}
+          startIcon={compensateMutation.isPending ? <CircularProgress size={20} color="inherit" /> : undefined}
         >
-          {compensateMutation.isPending ? '...' : t.confirm}
+          {t.confirm}
         </Button>
       </DialogActions>
     </Dialog>

@@ -1,5 +1,5 @@
 import { Alert, Stack } from '@mui/material';
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 
 import { PaymentEditorDialog } from '../features/payments/PaymentEditorDialog';
 import { PaymentsOverviewSection } from '../features/payments/PaymentsOverviewSection';
@@ -12,9 +12,11 @@ import { usePaymentsPageState, type PaymentSortField } from '../features/payment
 import { usePaymentsText } from '../text/payments';
 import { getPaymentsExcelUrl, getPaymentsExportUrl, type PaymentExportFilters } from '../features/exports/api';
 import { downloadFile } from '../lib/api';
+import { useAuth } from '../features/auth/AuthProvider';
 
 export function PaymentsPage() {
   const paymentsText = usePaymentsText();
+  const { user } = useAuth();
   const state = usePaymentsPageState();
   const {
     error, setError,
@@ -160,38 +162,38 @@ export function PaymentsPage() {
         total={paymentTotal}
         loading={paymentsQuery.isLoading}
         tableSearchInput={tableSearchInput}
-        onTableSearchChange={(v) => { setTableSearchInput(v); setPage(0); }}
+        onTableSearchChange={useCallback((v) => { setTableSearchInput(v); setPage(0); }, [setTableSearchInput, setPage])}
         statusFilter={statusFilter}
-        onStatusFilterChange={(v) => { setStatusFilter(v); setPage(0); }}
+        onStatusFilterChange={useCallback((v) => { setStatusFilter(v); setPage(0); }, [setStatusFilter, setPage])}
         documentKindFilter={documentKindFilter}
-        onDocumentKindFilterChange={(v) => { setDocumentKindFilter(v); setPage(0); }}
+        onDocumentKindFilterChange={useCallback((v) => { setDocumentKindFilter(v); setPage(0); }, [setDocumentKindFilter, setPage])}
         dateFrom={dateFrom}
-        onDateFromChange={(v) => { setDateFrom(v); setPage(0); }}
+        onDateFromChange={useCallback((v) => { setDateFrom(v); setPage(0); }, [setDateFrom, setPage])}
         dateTo={dateTo}
-        onDateToChange={(v) => { setDateTo(v); setPage(0); }}
+        onDateToChange={useCallback((v) => { setDateTo(v); setPage(0); }, [setDateTo, setPage])}
         page={page}
         pageSize={pageSize}
         onPageChange={setPage}
-        onPageSizeChange={(v) => { setPageSize(v); setPage(0); }}
+        onPageSizeChange={useCallback((v) => { setPageSize(v); setPage(0); }, [setPageSize, setPage])}
         sortBy={sortBy}
         sortDir={sortDir}
         exportFilters={activeExportFilters}
-        onSortChange={(b, d) => { setSortBy(b as PaymentSortField); setSortDir(d); setPage(0); }}
-        onOpenEdit={(row) => { setCreatingNew(false); openEditDocument(row); }}
-        onOpenVoid={setVoidingPayment}
-        onDelete={async (row) => {
+        onSortChange={useCallback((b, d) => { setSortBy(b as PaymentSortField); setSortDir(d); setPage(0); }, [setSortBy, setSortDir, setPage])}
+        onOpenEdit={useCallback((row) => { setCreatingNew(false); openEditDocument(row); }, [setCreatingNew, openEditDocument])}
+        onOpenVoid={useCallback((row) => { setVoidingPayment(row); }, [setVoidingPayment])}
+        onDelete={useCallback(async (row) => {
           if (window.confirm(`هل أنت متأكد من حذف السند ${row.payment_number} نهائياً؟ سيتم إلغاء القيود المحاسبية المرتبطة أيضاً.`)) {
             await handleDeletePayment(row.id);
           }
-        }}
-        onExport={(format, scope) => {
+        }, [handleDeletePayment])}
+        onExport={useCallback((format: 'csv' | 'xlsx', scope: 'page' | 'all') => {
           const isXlsx = format === 'xlsx';
           const urlFn = isXlsx ? getPaymentsExcelUrl : getPaymentsExportUrl;
           const exportPage = scope === 'page' ? page + 1 : undefined;
           const exportPageSize = scope === 'page' ? pageSize : undefined;
           
-          downloadFile(urlFn(undefined, activeExportFilters, exportPage, exportPageSize));
-        }}
+          downloadFile(urlFn(user?.active_branch_id, activeExportFilters, exportPage, exportPageSize));
+        }, [user?.active_branch_id, page, pageSize, activeExportFilters])}
       />
 
       <PaymentVoidDialog

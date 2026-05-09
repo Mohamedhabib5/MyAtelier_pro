@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { Alert, Stack } from '@mui/material';
 import { PeriodLockOverrideDialog } from '../components/PeriodLockOverrideDialog';
 import { BookingCancellationDialog } from '../features/bookings/BookingCancellationDialog';
@@ -12,12 +13,14 @@ import { downloadFile } from '../lib/api';
 import { useBookingsText } from '../text/bookings';
 import { useBookingsPageState } from '../features/bookings/useBookingsPageState';
 import { useBookingsQueries } from '../features/bookings/useBookingsQueries';
+import { useAuth } from '../features/auth/AuthProvider';
 
 export function BookingsPage() {
   const { language } = useLanguage();
   const bookingsText = useBookingsText();
   
   const state = useBookingsPageState();
+  const { user } = useAuth();
   const queries = useBookingsQueries({
     deferredSearch: state.deferredSearch,
     statusFilter: state.statusFilter,
@@ -85,62 +88,62 @@ export function BookingsPage() {
         total={bookingTotal}
         loading={queries.bookingsQuery.isLoading}
         searchInput={state.searchInput}
-        onSearchChange={(value) => {
+        onSearchChange={useCallback((value) => {
           state.setSearchInput(value);
           state.setPage(0);
-        }}
+        }, [state.setSearchInput, state.setPage])}
         statusFilter={state.statusFilter}
-        onStatusFilterChange={(value) => {
+        onStatusFilterChange={useCallback((value) => {
           state.setStatusFilter(value);
           state.setPage(0);
-        }}
+        }, [state.setStatusFilter, state.setPage])}
         dateFrom={state.dateFrom}
-        onDateFromChange={(value) => {
+        onDateFromChange={useCallback((value) => {
           state.setDateFrom(value);
           state.setPage(0);
-        }}
+        }, [state.setDateFrom, state.setPage])}
         dateTo={state.dateTo}
-        onDateToChange={(value) => {
+        onDateToChange={useCallback((value) => {
           state.setDateTo(value);
           state.setPage(0);
-        }}
+        }, [state.setDateTo, state.setPage])}
         page={state.page}
         pageSize={state.pageSize}
         onPageChange={state.setPage}
-        onPageSizeChange={(nextPageSize) => {
+        onPageSizeChange={useCallback((nextPageSize) => {
           state.setPageSize(nextPageSize);
           state.setPage(0);
-        }}
+        }, [state.setPageSize, state.setPage])}
         sortBy={state.sortBy}
         sortDir={state.sortDir}
-        onSortChange={(nextSortBy, nextSortDir) => {
+        onSortChange={useCallback((nextSortBy, nextSortDir) => {
           state.setSortBy(nextSortBy);
           state.setSortDir(nextSortDir);
           state.setPage(0);
-        }}
+        }, [state.setSortBy, state.setSortDir, state.setPage])}
         exportFilters={{ search: state.deferredSearch || undefined, status: state.statusFilter || undefined, dateFrom: state.dateFrom || undefined, dateTo: state.dateTo || undefined, sortBy: state.sortBy, sortDir: state.sortDir }}
-        onOpenEdit={(record) => {
+        onOpenEdit={useCallback((record) => {
           state.setCreatingNew(false);
           state.setEditingBookingId(record.id);
           state.setEditorMode('edit');
-        }}
-        onOpenCancel={(record) => {
+        }, [state.setCreatingNew, state.setEditingBookingId, state.setEditorMode])}
+        onOpenCancel={useCallback((record) => {
           state.setCreatingNew(false);
           state.setEditingBookingId(record.id);
           state.setEditorMode('cancel');
-        }}
-        onDelete={async (record) => {
+        }, [state.setCreatingNew, state.setEditingBookingId, state.setEditorMode])}
+        onDelete={useCallback(async (record: any) => {
           if (window.confirm(`هل أنت متأكد من حذف الحجز ${record.booking_number} نهائياً؟ لا يمكن التراجع عن هذه العملية.`)) {
             await handleDeleteBooking(record.id);
           }
-        }}
-        onExport={(format, scope) => {
+        }, [handleDeleteBooking])}
+        onExport={useCallback((format: 'csv' | 'xlsx', scope: 'page' | 'all') => {
           const isXlsx = format === 'xlsx';
           const urlFn = isXlsx ? getBookingsExcelUrl : getBookingsExportUrl;
           const exportPage = scope === 'page' ? state.page + 1 : undefined;
           const exportPageSize = scope === 'page' ? state.pageSize : undefined;
           
-          downloadFile(urlFn(undefined, {
+          downloadFile(urlFn(user?.active_branch_id, {
             search: state.deferredSearch || undefined,
             status: state.statusFilter || undefined,
             dateFrom: state.dateFrom || undefined,
@@ -148,7 +151,7 @@ export function BookingsPage() {
             sortBy: state.sortBy,
             sortDir: state.sortDir,
           }, exportPage, exportPageSize));
-        }}
+        }, [user?.active_branch_id, state.page, state.pageSize, state.deferredSearch, state.statusFilter, state.dateFrom, state.dateTo, state.sortBy, state.sortDir])}
       />
 
       <BookingEditorDialog

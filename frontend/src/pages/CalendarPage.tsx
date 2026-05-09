@@ -80,7 +80,7 @@ export function CalendarPage() {
       <Paper sx={{ p: 2, borderRadius: 4, boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
         <Stack direction="row" justifyContent="space-between" alignItems="center">
           <Stack direction="row" spacing={2} alignItems="center">
-            <IconButton onClick={() => setShowFilters(!showFilters)} color={showFilters ? 'primary' : 'inherit'}>
+            <IconButton aria-label={language === 'ar' ? 'إظهار/إخفاء الفلاتر' : 'Toggle filters'} onClick={() => setShowFilters(!showFilters)} color={showFilters ? 'primary' : 'inherit'}>
               <Filter size={20} />
             </IconButton>
             
@@ -119,13 +119,13 @@ export function CalendarPage() {
               </Select>
             </Stack>
             <ButtonGroup variant="outlined" size="small">
-              <IconButton onClick={handlePrev}>
+              <IconButton aria-label={language === 'ar' ? 'السابق' : 'Previous'} onClick={handlePrev}>
                 {isRtl ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
               </IconButton>
               <Button onClick={handleToday} sx={{ fontWeight: 700 }}>
                 {language === 'ar' ? 'اليوم' : 'Today'}
               </Button>
-              <IconButton onClick={handleNext}>
+              <IconButton aria-label={language === 'ar' ? 'التالي' : 'Next'} onClick={handleNext}>
                 {isRtl ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
               </IconButton>
             </ButtonGroup>

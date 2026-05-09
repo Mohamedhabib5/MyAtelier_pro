@@ -3,7 +3,7 @@ import PersonAddOutlinedIcon from '@mui/icons-material/PersonAddOutlined';
 import { Alert, Box, Button, Chip, Stack, TextField, Typography } from '@mui/material';
 import type { ColDef } from 'ag-grid-community';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 
 import { AppAgGrid } from '../components/ag-grid';
 import { DestructiveDeleteDialog } from '../components/DestructiveDeleteDialog';
@@ -77,7 +77,7 @@ export function CustomersPage() {
     setDialogOpen(true);
   }
 
-  function openEditDialog(customer: CustomerRecord) {
+  const openEditDialog = useCallback((customer: CustomerRecord) => {
     setError(null);
     setEditingCustomer(customer);
     setForm({
@@ -93,7 +93,7 @@ export function CustomersPage() {
       is_active: customer.is_active,
     });
     setDialogOpen(true);
-  }
+  }, [setEditingCustomer, setForm, setDialogOpen]);
 
   async function saveCustomer() {
     setError(null);
@@ -140,12 +140,12 @@ export function CustomersPage() {
     });
   }
 
-  function openLifecycleDialog(customer: CustomerRecord, archive: boolean) {
+  const openLifecycleDialog = useCallback((customer: CustomerRecord, archive: boolean) => {
     setError(null);
     setLifecycleTarget(customer);
     setLifecycleMode(archive ? 'archive' : 'restore');
     setLifecycleReason('');
-  }
+  }, [setLifecycleTarget, setLifecycleMode, setLifecycleReason]);
 
   function closeLifecycleDialog() {
     setLifecycleTarget(null);
@@ -209,7 +209,7 @@ export function CustomersPage() {
           ) : null,
       },
     ],
-    [commonText.edit, customersText.status.active, customersText.status.inactive, customersText.table.action, customersText.table.email, customersText.table.fullName, customersText.table.phone, customersText.table.status, language],
+    [commonText.edit, customersText.status.active, customersText.status.inactive, customersText.table.action, customersText.table.email, customersText.table.fullName, customersText.table.phone, customersText.table.status, language, openEditDialog, openLifecycleDialog, setDeleteTarget],
   );
 
   return (
@@ -255,11 +255,11 @@ export function CustomersPage() {
               <option value='inactive'>{customersText.status.inactive}</option>
             </TextField>
           }
-          onExport={(format) => {
+          onExport={useCallback((format: 'csv' | 'xlsx') => {
             const isXlsx = format === 'xlsx';
             const url = isXlsx ? getCustomersExcelUrl() : getCustomersExportUrl();
             downloadFile(url);
-          }}
+          }, [])}
           getRowId={({ data }) => data.id}
         />
       </SectionCard>

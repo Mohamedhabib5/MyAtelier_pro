@@ -106,10 +106,10 @@ export function ExportsPage() {
           />
         </Stack>
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-          <Button variant='contained' startIcon={<FileDownloadOutlinedIcon />} onClick={() => downloadFile(getBookingsExportUrl(undefined, bookingFilters))}>{`${exportsText.sections.bookingsButton} CSV`}</Button>
-          <Button variant='outlined' startIcon={<FileDownloadOutlinedIcon />} onClick={() => downloadFile(getBookingsExcelUrl(undefined, bookingFilters))}>{`${exportsText.sections.bookingsButton} Excel`}</Button>
-          <Button variant='outlined' startIcon={<FileDownloadOutlinedIcon />} onClick={() => downloadFile(getBookingLinesExportUrl(undefined, bookingFilters))}>{`${exportsText.sections.bookingLinesButton} CSV`}</Button>
-          <Button variant='outlined' startIcon={<FileDownloadOutlinedIcon />} onClick={() => downloadFile(getBookingLinesExcelUrl(undefined, bookingFilters))}>{`${exportsText.sections.bookingLinesButton} Excel`}</Button>
+          <Button variant='contained' startIcon={<FileDownloadOutlinedIcon />} onClick={() => downloadFile(getBookingsExportUrl(user?.active_branch_id, bookingFilters))}>{`${exportsText.sections.bookingsButton} CSV`}</Button>
+          <Button variant='outlined' startIcon={<FileDownloadOutlinedIcon />} onClick={() => downloadFile(getBookingsExcelUrl(user?.active_branch_id, bookingFilters))}>{`${exportsText.sections.bookingsButton} Excel`}</Button>
+          <Button variant='outlined' startIcon={<FileDownloadOutlinedIcon />} onClick={() => downloadFile(getBookingLinesExportUrl(user?.active_branch_id, bookingFilters))}>{`${exportsText.sections.bookingLinesButton} CSV`}</Button>
+          <Button variant='outlined' startIcon={<FileDownloadOutlinedIcon />} onClick={() => downloadFile(getBookingLinesExcelUrl(user?.active_branch_id, bookingFilters))}>{`${exportsText.sections.bookingLinesButton} Excel`}</Button>
         </Stack>
       </SectionCard>
 
@@ -163,17 +163,17 @@ export function ExportsPage() {
           />
         </Stack>
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-          <Button variant='contained' startIcon={<FileDownloadOutlinedIcon />} onClick={() => downloadFile(getPaymentsExportUrl(undefined, paymentFilters))}>{`${exportsText.sections.paymentsButton} CSV`}</Button>
-          <Button variant='outlined' startIcon={<FileDownloadOutlinedIcon />} onClick={() => downloadFile(getPaymentsExcelUrl(undefined, paymentFilters))}>{`${exportsText.sections.paymentsButton} Excel`}</Button>
-          <Button variant='outlined' startIcon={<FileDownloadOutlinedIcon />} onClick={() => downloadFile(getPaymentAllocationsExportUrl(undefined, paymentFilters))}>{`${exportsText.sections.paymentAllocationsButton} CSV`}</Button>
-          <Button variant='outlined' startIcon={<FileDownloadOutlinedIcon />} onClick={() => downloadFile(getPaymentAllocationsExcelUrl(undefined, paymentFilters))}>{`${exportsText.sections.paymentAllocationsButton} Excel`}</Button>
+          <Button variant='contained' startIcon={<FileDownloadOutlinedIcon />} onClick={() => downloadFile(getPaymentsExportUrl(user?.active_branch_id, paymentFilters))}>{`${exportsText.sections.paymentsButton} CSV`}</Button>
+          <Button variant='outlined' startIcon={<FileDownloadOutlinedIcon />} onClick={() => downloadFile(getPaymentsExcelUrl(user?.active_branch_id, paymentFilters))}>{`${exportsText.sections.paymentsButton} Excel`}</Button>
+          <Button variant='outlined' startIcon={<FileDownloadOutlinedIcon />} onClick={() => downloadFile(getPaymentAllocationsExportUrl(user?.active_branch_id, paymentFilters))}>{`${exportsText.sections.paymentAllocationsButton} CSV`}</Button>
+          <Button variant='outlined' startIcon={<FileDownloadOutlinedIcon />} onClick={() => downloadFile(getPaymentAllocationsExcelUrl(user?.active_branch_id, paymentFilters))}>{`${exportsText.sections.paymentAllocationsButton} Excel`}</Button>
         </Stack>
       </SectionCard>
 
       <SectionCard title={custodyTitle} subtitle={custodySubtitle}>
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-          <Button variant='contained' startIcon={<FileDownloadOutlinedIcon />} onClick={() => downloadFile(getCustodyExportUrl())}>{`${custodyButton} CSV`}</Button>
-          <Button variant='outlined' startIcon={<FileDownloadOutlinedIcon />} onClick={() => downloadFile(getCustodyExcelUrl())}>{`${custodyButton} Excel`}</Button>
+          <Button variant='contained' startIcon={<FileDownloadOutlinedIcon />} onClick={() => downloadFile(getCustodyExportUrl(user?.active_branch_id))}>{`${custodyButton} CSV`}</Button>
+          <Button variant='outlined' startIcon={<FileDownloadOutlinedIcon />} onClick={() => downloadFile(getCustodyExcelUrl(user?.active_branch_id))}>{`${custodyButton} Excel`}</Button>
         </Stack>
       </SectionCard>
 

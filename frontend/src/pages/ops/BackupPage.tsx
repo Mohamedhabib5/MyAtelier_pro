@@ -35,11 +35,11 @@ import { format } from 'date-fns';
 import { ar, enUS } from 'date-fns/locale';
 
 import { useLanguage } from '../../features/language/LanguageProvider';
-import { api, downloadFile } from '../../lib/api';
+import { apiRequest, downloadFile } from '../../lib/api';
 import { useThemeSettings } from '../../features/theme/ThemeSettingsProvider';
 
 interface BackupInfo {
-  id: str;
+  id: string;
   filename: string;
   size_bytes: number;
   created_at: string;
@@ -61,7 +61,7 @@ export default function BackupPage() {
   const fetchBackups = async () => {
     try {
       setLoading(true);
-      const data = await api.get<BackupInfo[]>('/ops/backups');
+      const data = await apiRequest<BackupInfo[]>('/api/ops/backups');
       setBackups(data);
       setError(null);
     } catch (err: any) {
@@ -78,7 +78,7 @@ export default function BackupPage() {
   const handleCreateBackup = async (kind: 'db' | 'media' | 'full') => {
     try {
       setCreating(kind);
-      await api.post(`/ops/backups/${kind}`);
+      await apiRequest<void>(`/api/ops/backups/${kind}`, { method: 'POST' });
       await fetchBackups();
     } catch (err: any) {
       setError(err.message || 'Failed to create backup');
@@ -90,7 +90,7 @@ export default function BackupPage() {
   const handleDeleteBackup = async (filename: string) => {
     if (!window.confirm(language === 'ar' ? 'هل أنت متأكد من حذف هذه النسخة؟' : 'Are you sure you want to delete this backup?')) return;
     try {
-      await api.delete(`/ops/backups/${filename}`);
+      await apiRequest<void>(`/api/ops/backups/${filename}`, { method: 'DELETE' });
       await fetchBackups();
     } catch (err: any) {
       setError(err.message || 'Failed to delete backup');
@@ -98,7 +98,7 @@ export default function BackupPage() {
   };
 
   const handleDownload = async (filename: string) => {
-    await downloadFile(`/ops/backups/${filename}/download`, filename);
+    await downloadFile(`/api/ops/backups/${filename}/download`);
   };
 
   const formatSize = (bytes: number) => {
@@ -323,12 +323,12 @@ export default function BackupPage() {
                   <TableCell align="center">
                     <Stack direction="row" spacing={1} justifyContent="center">
                       <Tooltip title={language === 'ar' ? 'تحميل' : 'Download'}>
-                        <IconButton size="small" onClick={() => handleDownload(backup.filename)} sx={{ color: primaryColor }}>
+                        <IconButton aria-label={language === 'ar' ? 'تنزيل' : 'Download'} size="small" onClick={() => handleDownload(backup.filename)} sx={{ color: primaryColor }}>
                           <Download size={18} />
                         </IconButton>
                       </Tooltip>
                       <Tooltip title={language === 'ar' ? 'حذف' : 'Delete'}>
-                        <IconButton size="small" onClick={() => handleDeleteBackup(backup.filename)} color="error">
+                        <IconButton aria-label={language === 'ar' ? 'حذف' : 'Delete'} size="small" onClick={() => handleDeleteBackup(backup.filename)} color="error">
                           <Trash2 size={18} />
                         </IconButton>
                       </Tooltip>

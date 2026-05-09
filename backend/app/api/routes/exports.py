@@ -131,6 +131,7 @@ def download_booking_lines_export(
 
 @router.get('/booking-lines.xlsx')
 def download_booking_lines_export_xlsx(
+    request: Request,
     branch_id: str | None = Query(default=None),
     filters: dict = Depends(_booking_export_filters),
     page: int | None = Query(default=None),
@@ -138,7 +139,8 @@ def download_booking_lines_export_xlsx(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_exports_view),
 ) -> Response:
-    filename, content = export_booking_lines_xlsx(db, current_user, branch_id, page=page, page_size=page_size, **filters)
+    branch = resolve_branch_scope(db, request.session, branch_id)
+    filename, content = export_booking_lines_xlsx(db, current_user, branch.id, page=page, page_size=page_size, **filters)
     return _xlsx_response(filename, content)
 
 
@@ -316,13 +318,11 @@ def consume_download_ticket(
         from fastapi import HTTPException
         raise HTTPException(status_code=403, detail="Invalid or expired download ticket")
 
-    # Re-fetch user to verify permissions if necessary (ticket store has user_id)
-    # For now, having the valid UUID ticket is proof of authorized generation
     user_id = ticket["user_id"]
     path = ticket["path"]
     params = ticket["params"]
     
-    # Cast pagination parameters to int to avoid TypeError in repository calculations
+    # Cast pagination parameters to int
     if 'page' in params and params['page'] is not None:
         try:
             params['page'] = int(params['page'])
@@ -353,8 +353,7 @@ def consume_download_ticket(
         from app.modules.exports.service import export_bookings_csv
         from app.modules.identity.service import get_user_or_404
         user = get_user_or_404(db, user_id)
-        # Resolve branch from params
-        branch_id = params.get('branch_id')
+        branch_id = params.pop('branch_id', None)
         filename, content = export_bookings_csv(db, user, branch_id, **params)
         return _csv_response(filename, content)
 
@@ -362,7 +361,7 @@ def consume_download_ticket(
         from app.modules.exports.service import export_bookings_xlsx
         from app.modules.identity.service import get_user_or_404
         user = get_user_or_404(db, user_id)
-        branch_id = params.get('branch_id')
+        branch_id = params.pop('branch_id', None)
         filename, content = export_bookings_xlsx(db, user, branch_id, **params)
         return _xlsx_response(filename, content)
 
@@ -370,7 +369,7 @@ def consume_download_ticket(
         from app.modules.exports.service import export_booking_lines_csv
         from app.modules.identity.service import get_user_or_404
         user = get_user_or_404(db, user_id)
-        branch_id = params.get('branch_id')
+        branch_id = params.pop('branch_id', None)
         filename, content = export_booking_lines_csv(db, user, branch_id, **params)
         return _csv_response(filename, content)
 
@@ -378,7 +377,7 @@ def consume_download_ticket(
         from app.modules.exports.service import export_booking_lines_xlsx
         from app.modules.identity.service import get_user_or_404
         user = get_user_or_404(db, user_id)
-        branch_id = params.get('branch_id')
+        branch_id = params.pop('branch_id', None)
         filename, content = export_booking_lines_xlsx(db, user, branch_id, **params)
         return _xlsx_response(filename, content)
 
@@ -386,7 +385,7 @@ def consume_download_ticket(
         from app.modules.exports.service import export_payments_csv
         from app.modules.identity.service import get_user_or_404
         user = get_user_or_404(db, user_id)
-        branch_id = params.get('branch_id')
+        branch_id = params.pop('branch_id', None)
         filename, content = export_payments_csv(db, user, branch_id, **params)
         return _csv_response(filename, content)
 
@@ -394,7 +393,7 @@ def consume_download_ticket(
         from app.modules.exports.service import export_payments_xlsx
         from app.modules.identity.service import get_user_or_404
         user = get_user_or_404(db, user_id)
-        branch_id = params.get('branch_id')
+        branch_id = params.pop('branch_id', None)
         filename, content = export_payments_xlsx(db, user, branch_id, **params)
         return _xlsx_response(filename, content)
 
@@ -402,7 +401,7 @@ def consume_download_ticket(
         from app.modules.exports.service import export_payment_allocations_csv
         from app.modules.identity.service import get_user_or_404
         user = get_user_or_404(db, user_id)
-        branch_id = params.get('branch_id')
+        branch_id = params.pop('branch_id', None)
         filename, content = export_payment_allocations_csv(db, user, branch_id, **params)
         return _csv_response(filename, content)
 
@@ -410,7 +409,7 @@ def consume_download_ticket(
         from app.modules.exports.service import export_payment_allocations_xlsx
         from app.modules.identity.service import get_user_or_404
         user = get_user_or_404(db, user_id)
-        branch_id = params.get('branch_id')
+        branch_id = params.pop('branch_id', None)
         filename, content = export_payment_allocations_xlsx(db, user, branch_id, **params)
         return _xlsx_response(filename, content)
 
@@ -418,7 +417,7 @@ def consume_download_ticket(
         from app.modules.exports.service import export_custody_csv
         from app.modules.identity.service import get_user_or_404
         user = get_user_or_404(db, user_id)
-        branch_id = params.get('branch_id')
+        branch_id = params.pop('branch_id', None)
         filename, content = export_custody_csv(db, user, branch_id, **params)
         return _csv_response(filename, content)
 
@@ -426,7 +425,7 @@ def consume_download_ticket(
         from app.modules.exports.service import export_custody_xlsx
         from app.modules.identity.service import get_user_or_404
         user = get_user_or_404(db, user_id)
-        branch_id = params.get('branch_id')
+        branch_id = params.pop('branch_id', None)
         filename, content = export_custody_xlsx(db, user, branch_id, **params)
         return _xlsx_response(filename, content)
 
@@ -434,7 +433,7 @@ def consume_download_ticket(
         from app.modules.exports.service import export_advanced_bi_csv
         from app.modules.identity.service import get_user_or_404
         user = get_user_or_404(db, user_id)
-        branch_id = params.get('branch_id')
+        branch_id = params.pop('branch_id', None)
         filename, content = export_advanced_bi_csv(db, user, branch_id=branch_id, **params)
         return _csv_response(filename, content)
 
@@ -442,7 +441,7 @@ def consume_download_ticket(
         from app.modules.exports.service import export_advanced_bi_xlsx
         from app.modules.identity.service import get_user_or_404
         user = get_user_or_404(db, user_id)
-        branch_id = params.get('branch_id')
+        branch_id = params.pop('branch_id', None)
         filename, content = export_advanced_bi_xlsx(db, user, branch_id=branch_id, **params)
         return _xlsx_response(filename, content)
 
@@ -518,16 +517,26 @@ def download_advanced_bi_export_xlsx(
     return _xlsx_response(filename, content)
 
 
-def _csv_response(filename: str, content: str) -> Response:
-    # RFC 6266 compliant Content-Disposition
-    ascii_filename = filename.encode('ascii', 'ignore').decode('ascii') or 'download.csv'
+def _csv_response(filename: str, content: bytes | str) -> Response:
+    # Ensure content is bytes for consistent Response handling
+    if isinstance(content, str):
+        content_bytes = content.encode('utf-8-sig')
+    else:
+        content_bytes = content
+
+    basename = filename.split('.')[0]
+    ext = filename.split('.')[-1] if '.' in filename else 'csv'
+    ascii_basename = basename.encode('ascii', 'ignore').decode('ascii')
+    if not ascii_basename:
+        ascii_basename = 'download'
+    ascii_filename = f"{ascii_basename}.{ext}"
+    
     encoded_filename = quote(filename)
-    disposition = f'attachment; filename="{ascii_filename}"; filename*=UTF-8\'\'{encoded_filename}'
     headers = {
-        'Content-Disposition': disposition,
+        'Content-Disposition': f'attachment; filename="{ascii_filename}"; filename*=UTF-8\'\'{encoded_filename}',
         'Access-Control-Expose-Headers': 'Content-Disposition'
     }
-    return Response(content=content, media_type='text/csv; charset=utf-8', headers=headers)
+    return Response(content=content_bytes, media_type='text/csv; charset=utf-8', headers=headers)
 
 
 def _pdf_response(filename: str, content: bytes) -> Response:
@@ -542,12 +551,16 @@ def _pdf_response(filename: str, content: bytes) -> Response:
 
 
 def _xlsx_response(filename: str, content: bytes) -> Response:
-    ascii_filename = filename.encode('ascii', 'ignore').decode('ascii') or 'download.xlsx'
+    basename = filename.split('.')[0]
+    ext = filename.split('.')[-1] if '.' in filename else 'xlsx'
+    ascii_basename = basename.encode('ascii', 'ignore').decode('ascii')
+    if not ascii_basename:
+        ascii_basename = 'download'
+    ascii_filename = f"{ascii_basename}.{ext}"
+    
     encoded_filename = quote(filename)
-    # Ensure quotes around filename for compatibility with filenames containing spaces
-    disposition = f'attachment; filename="{ascii_filename}"; filename*=UTF-8\'\'{encoded_filename}'
     headers = {
-        'Content-Disposition': disposition,
+        'Content-Disposition': f'attachment; filename="{ascii_filename}"; filename*=UTF-8\'\'{encoded_filename}',
         'Access-Control-Expose-Headers': 'Content-Disposition'
     }
     return Response(content=content, media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', headers=headers)

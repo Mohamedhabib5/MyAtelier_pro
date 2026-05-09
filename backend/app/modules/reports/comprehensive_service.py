@@ -33,63 +33,22 @@ def get_comprehensive_report(
     date_to: date,
 ) -> dict:
     company = get_company_settings(db)
+    from app.modules.reports.repository import ReportsRepository
+    repo = ReportsRepository(db)
 
-    # --- fetch data within the date range ---
-    bookings = _list_bookings_in_range(db, company.id, branch_id, date_from, date_to)
-    payments = _list_payments_in_range(db, company.id, branch_id, date_from, date_to)
+    # --- Fetch Aggregated Stats via SQL ---
+    payment_stats = repo.get_comprehensive_payment_stats(company.id, branch_id, date_from, date_to)
+    booking_stats = repo.get_comprehensive_booking_stats(company.id, branch_id, date_from, date_to)
 
-    # --- KPI accumulators ---
-    total_collected = ZERO
-    total_remaining = ZERO
-    daily_income: dict[str, Decimal] = defaultdict(lambda: ZERO)
-    department_income: dict[str, Decimal] = defaultdict(lambda: ZERO)
-    top_services: dict[str, int] = defaultdict(int)
-    client_paid: dict[str, Decimal] = defaultdict(lambda: ZERO)
-    client_bookings: dict[str, int] = defaultdict(int)
-    client_names: dict[str, str] = {}
+    # Merge client names from both sources
+    client_names = payment_stats['client_names']
+    client_names.update(booking_stats['client_names'])
 
-    for payment in payments:
-        if payment.status == 'voided':
-            continue
-        for allocation in payment.allocations:
-            amt = Decimal(str(allocation.allocated_amount)).quantize(
-                PRICE_QUANT, rounding=ROUND_HALF_UP
-            )
-            if payment.document_kind == 'refund':
-                amt = -amt
-            total_collected += amt
-            daily_income[payment.payment_date.isoformat()] += amt
-            dept_name = allocation.booking_line.department.name if allocation.booking_line else ''
-            if dept_name:
-                department_income[dept_name] += amt
-            cust_id = payment.customer_id
-            client_paid[cust_id] += amt
-            if payment.customer:
-                client_names[cust_id] = payment.customer.full_name
-
-    booking_status: dict[str, int] = defaultdict(int)
-    total_bookings = len(bookings)
-    cancelled_bookings = 0
-
-    for booking in bookings:
-        booking_status[booking.status] += 1
-        if booking.status == 'cancelled':
-            cancelled_bookings += 1
-        for line in booking.lines:
-            if line.status == 'cancelled':
-                continue
-            paid_for_line = line_paid_total(line)
-            remaining = Decimal(str(line.line_price)) - paid_for_line
-            if remaining > ZERO:
-                total_remaining += remaining.quantize(PRICE_QUANT, rounding=ROUND_HALF_UP)
-            top_services[line.service.name] += 1
-            cust_id = booking.customer_id
-            client_bookings[cust_id] += 1
-            if booking.customer:
-                client_names[cust_id] = booking.customer.full_name
-
-    # revenue recognized = same as total_collected (cash basis) for now
+    total_collected = payment_stats['total_collected']
     total_recognized = total_collected
+
+    total_bookings = booking_stats['total_bookings']
+    cancelled_bookings = booking_stats['cancelled_bookings']
 
     cancellation_rate = (
         round(cancelled_bookings / total_bookings * 100, 1)
@@ -102,17 +61,17 @@ def get_comprehensive_report(
         'date_to': date_to.isoformat(),
         'total_collected': _to_float(total_collected),
         'total_recognized': _to_float(total_recognized),
-        'total_remaining': _to_float(total_remaining),
+        'total_remaining': _to_float(booking_stats['total_remaining']),
         'total_bookings': total_bookings,
         'cancelled_bookings': cancelled_bookings,
         'cancellation_rate': cancellation_rate,
-        'daily_income': _daily_items(daily_income),
-        'department_income': _sorted_value_items(department_income),
-        'top_services': _sorted_count_items(top_services),
-        'top_clients': _build_top_clients(client_paid, client_bookings, client_names),
+        'daily_income': _daily_items(payment_stats['daily_income']),
+        'department_income': _sorted_value_items(payment_stats['department_income']),
+        'top_services': _sorted_count_items(booking_stats['top_services']),
+        'top_clients': _build_top_clients(payment_stats['client_paid'], booking_stats['client_bookings'], client_names),
         'booking_status_counts': [
             {'key': k, 'count': v}
-            for k, v in sorted(booking_status.items(), key=lambda x: x[1], reverse=True)
+            for k, v in sorted(booking_stats['booking_status'].items(), key=lambda x: x[1], reverse=True)
         ],
     }
 
@@ -120,44 +79,6 @@ def get_comprehensive_report(
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
-
-def _list_bookings_in_range(
-    db: Session,
-    company_id: str,
-    branch_id: str | None,
-    date_from: date,
-    date_to: date,
-) -> list[Booking]:
-    repo = BookingsRepository(db)
-    rows, _ = repo.list_booking_page(
-        company_id,
-        branch_id=branch_id,
-        date_from=date_from,
-        date_to=date_to,
-        page=1,
-        page_size=10_000,  # large enough for aggregation
-    )
-    return rows
-
-
-def _list_payments_in_range(
-    db: Session,
-    company_id: str,
-    branch_id: str | None,
-    date_from: date,
-    date_to: date,
-) -> list[PaymentDocument]:
-    repo = PaymentsRepository(db)
-    rows, _ = repo.list_payment_document_page(
-        company_id,
-        branch_id=branch_id,
-        date_from=date_from,
-        date_to=date_to,
-        page=1,
-        page_size=10_000,
-    )
-    return rows
-
 
 def _daily_items(values: dict[str, Decimal]) -> list[dict]:
     items = sorted(values.items())

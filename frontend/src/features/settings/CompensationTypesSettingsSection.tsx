@@ -1,4 +1,4 @@
-import { Button, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField } from '@mui/material';
+import { Button, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, CircularProgress } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
@@ -108,7 +108,7 @@ export function CompensationTypesSettingsSection({ language, onSuccess, onError 
               <TableCell>{item.default_price}</TableCell>
               <TableCell align="center">{item.display_order}</TableCell>
               <TableCell align="right">
-                <IconButton size="small" onClick={() => handleOpen(item)}>
+                <IconButton aria-label={language === 'ar' ? 'تعديل' : 'Edit'} size="small" onClick={() => handleOpen(item)}>
                   <EditIcon fontSize="small" />
                 </IconButton>
               </TableCell>
@@ -155,8 +155,9 @@ export function CompensationTypesSettingsSection({ language, onSuccess, onError 
             variant="contained" 
             onClick={handleSave} 
             disabled={!name.trim() || saveMutation.isPending}
+            startIcon={saveMutation.isPending ? <CircularProgress size={20} color="inherit" /> : undefined}
           >
-            {saveMutation.isPending ? '...' : t.save}
+            {t.save}
           </Button>
         </DialogActions>
       </Dialog>

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import select, or_
+from sqlalchemy import select, or_, func
 from sqlalchemy.orm import Session
 
 from app.modules.customers.models import Customer
@@ -16,6 +16,12 @@ class CustomersRepository:
             stmt = stmt.where(Customer.is_active == is_active)
         stmt = stmt.order_by(Customer.full_name.asc())
         return list(self.db.scalars(stmt))
+
+    def count_customers(self, company_id: str, *, is_active: bool | None = None) -> int:
+        stmt = select(func.count(Customer.id)).where(Customer.company_id == company_id)
+        if is_active is not None:
+            stmt = stmt.where(Customer.is_active == is_active)
+        return self.db.scalar(stmt) or 0
 
     def get_customer(self, customer_id: str) -> Customer | None:
         return self.db.get(Customer, customer_id)

@@ -42,20 +42,34 @@ def record_export_download(
     db.commit()
 
 
-def build_csv(rows: list[dict], columns: list[str]) -> str:
+def build_csv(rows: list[dict], columns: list[str], translations: dict[str, str] | None = None) -> bytes:
     buffer = StringIO()
+    # If translations are provided, use them for the header row
+    display_columns = [translations.get(c, c) for c in columns] if translations else columns
+    
     writer = csv.DictWriter(buffer, fieldnames=columns, extrasaction='ignore')
-    writer.writeheader()
+    # Custom header writing to use translated names
+    if translations:
+        writer.writerow(dict(zip(columns, display_columns)))
+    else:
+        writer.writeheader()
+        
     for row in rows:
         writer.writerow({column: row.get(column) for column in columns})
-    return '\ufeff' + buffer.getvalue()
+    
+    # Return as bytes with UTF-8-SIG (BOM included)
+    return buffer.getvalue().encode('utf-8-sig')
 
 
-def build_xlsx(rows: list[dict], columns: list[str]) -> bytes:
+def build_xlsx(rows: list[dict], columns: list[str], translations: dict[str, str] | None = None) -> bytes:
     workbook = Workbook()
     worksheet = workbook.active
     worksheet.title = 'Data'
-    worksheet.append(columns)
+    
+    # If translations are provided, use them for the header row
+    display_columns = [translations.get(c, c) for c in columns] if translations else columns
+    worksheet.append(display_columns)
+    
     for row in rows:
         worksheet.append([row.get(column) for column in columns])
     buffer = BytesIO()

@@ -3,6 +3,7 @@ from __future__ import annotations
 from sqlalchemy.orm import Session
 
 from app.modules.exports.rendering import BOOKING_LINE_COLUMNS, PAYMENT_ALLOCATION_COLUMNS, build_csv, build_filename, build_xlsx, record_export_download
+from app.modules.exports.translations import EXPORT_TRANSLATIONS_AR
 from app.modules.exports.row_collectors import booking_line_rows, payment_allocation_rows
 from app.modules.identity.models import User
 from app.modules.organization.branch_context import resolve_branch_scope
@@ -36,7 +37,7 @@ def export_booking_lines_csv(
         page=page,
         page_size=page_size,
     )
-    content = build_csv(rows, BOOKING_LINE_COLUMNS)
+    content = build_csv(rows, BOOKING_LINE_COLUMNS, translations=EXPORT_TRANSLATIONS_AR)
     filename = build_filename(f'booking_lines_{branch.code.lower()}')
     record_export_download(db, actor, 'export.booking_lines_csv_downloaded', filename, len(rows), branch_id=branch.id)
     return filename, content
@@ -70,7 +71,7 @@ def export_booking_lines_xlsx(
         page=page,
         page_size=page_size,
     )
-    content = build_xlsx(rows, BOOKING_LINE_COLUMNS)
+    content = build_xlsx(rows, BOOKING_LINE_COLUMNS, translations=EXPORT_TRANSLATIONS_AR)
     filename = build_filename(f'booking_lines_{branch.code.lower()}', extension='xlsx')
     record_export_download(db, actor, 'export.booking_lines_xlsx_downloaded', filename, len(rows), branch_id=branch.id)
     return filename, content
@@ -106,7 +107,7 @@ def export_payment_allocations_csv(
         page=page,
         page_size=page_size,
     )
-    content = build_csv(rows, PAYMENT_ALLOCATION_COLUMNS)
+    content = build_csv(rows, PAYMENT_ALLOCATION_COLUMNS, translations=EXPORT_TRANSLATIONS_AR)
     filename = build_filename(f'payment_allocations_{branch.code.lower()}')
     record_export_download(db, actor, 'export.payment_allocations_csv_downloaded', filename, len(rows), branch_id=branch.id)
     return filename, content
@@ -142,7 +143,7 @@ def export_payment_allocations_xlsx(
         page=page,
         page_size=page_size,
     )
-    content = build_xlsx(rows, PAYMENT_ALLOCATION_COLUMNS)
+    content = build_xlsx(rows, PAYMENT_ALLOCATION_COLUMNS, translations=EXPORT_TRANSLATIONS_AR)
     filename = build_filename(f'payment_allocations_{branch.code.lower()}', extension='xlsx')
     record_export_download(db, actor, 'export.payment_allocations_xlsx_downloaded', filename, len(rows), branch_id=branch.id)
     return filename, content

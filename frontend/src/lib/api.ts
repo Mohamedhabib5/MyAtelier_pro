@@ -1,3 +1,18 @@
+/**
+ * @file api.ts
+ * @description Core API utilities for MyAtelier Pro frontend.
+ *
+ * ╔══════════════════════════════════════════════════════════════════════════╗
+ * ║          ⚠️  CRITICAL: READ BEFORE MODIFYING downloadFile()  ⚠️         ║
+ * ║                                                                          ║
+ * ║  The downloadFile() function uses a specific 3-step approach that was   ║
+ * ║  chosen after extensive debugging. DO NOT simplify it without           ║
+ * ║  understanding WHY each step exists.                                     ║
+ * ║                                                                          ║
+ * ║  See: docs/EXPORT_SYSTEM.md for full technical details.                 ║
+ * ╚══════════════════════════════════════════════════════════════════════════╝
+ */
+
 export class ApiError extends Error {
   status: number;
 
@@ -60,47 +75,109 @@ export async function apiRequest<T>(input: string, init?: RequestInit): Promise<
 }
 
 /**
- * Trigger a file download by clicking a temporary anchor element.
+ * ╔══════════════════════════════════════════════════════════════════════════╗
+ * ║                    downloadFile() - ARCHITECTURE NOTE                   ║
+ * ╠══════════════════════════════════════════════════════════════════════════╣
+ * ║                                                                          ║
+ * ║  This function uses a 3-step fetch+blob approach. This is NOT           ║
+ * ║  "over-engineering" — each step exists to solve a specific bug          ║
+ * ║  that was encountered in production.                                     ║
+ * ║                                                                          ║
+ * ║  ❌ DO NOT REPLACE WITH: window.location.href = url                     ║
+ * ║     → Browser ignores Content-Disposition header and uses the           ║
+ * ║       UUID ticket ID from the URL as the filename.                      ║
+ * ║       Result: Files saved as "a7960022-ccb1-4fee..." instead of        ║
+ * ║               "bookings_branch_20260509.xlsx"                           ║
+ * ║                                                                          ║
+ * ║  ❌ DO NOT REPLACE WITH: anchor.href = url; anchor.download = ''        ║
+ * ║     → anchor.download='' only hints to download; browser still uses    ║
+ * ║       the URL path as filename for http: URLs. Same UUID problem.       ║
+ * ║                                                                          ║
+ * ║  ✅ CORRECT APPROACH: fetch() → blob → blob: URL → anchor.download     ║
+ * ║     → We manually extract the filename from the Content-Disposition     ║
+ * ║       response header (RFC 5987 format), then assign it explicitly     ║
+ * ║       to anchor.download on a blob: URL. This is the ONLY method       ║
+ * ║       that guarantees the server's filename is used.                    ║
+ * ║                                                                          ║
+ * ╚══════════════════════════════════════════════════════════════════════════╝
  *
- * WHY synchronous (no async/await):
- * Browsers only allow programmatic downloads within a "user gesture context"
- * (i.e., the call stack initiated by the user's click). Using async/await
- * (e.g., awaiting fetch) breaks this context, causing the browser to
- * navigate to the URL/blob instead of saving to Downloads.
- *
- * Since the backend now sends a proper Content-Disposition header with the
- * correct filename, we can point the anchor directly at the API URL and let
- * the browser handle the download natively — same-origin, inside user gesture.
- */
-/**
- * Trigger a file download using a secure, short-lived ticket.
- * 
- * WHY:
- * Previous blob-based downloads were fragile in strict security environments (CSP) 
- * and often failed to preserve filenames on Windows when intercepted by IDM.
- * The ticket system allows a native browser navigation download which is 
- * 100% compatible with all browsers and security policies while remaining secure.
+ * @param url - The export API URL (e.g. /api/exports/bookings.xlsx?branch_id=...)
  */
 export async function downloadFile(url: string): Promise<void> {
   console.log(`[Download] Initiating ticket request for: ${url}`);
   try {
-    // 1. Request a short-lived download ticket from the backend
-    // This is a secure POST request that includes the user session and CSRF token.
+    // ── Step 1: Security ──────────────────────────────────────────────────
+    // Request a secure, single-use download ticket from the backend.
+    // The ticket expires immediately after use, preventing unauthorized access.
     const ticketResult = await apiRequest<{ ticket: string; download_url: string }>(
       `/api/exports/tickets?target_path=${encodeURIComponent(url)}`,
       { method: 'POST' }
     );
 
-    console.log(`[Download] Ticket received, triggering native download: ${ticketResult.ticket}`);
-    
-    // 2. Trigger native browser download via location redirection.
-    // Since the download route has Content-Disposition and is exempted from restrictive CSP,
-    // the browser will handle it perfectly (showing the Save As dialog with the correct name).
-    window.location.href = ticketResult.download_url;
+    console.log(`[Download] Ticket received: ${ticketResult.ticket}`);
+
+    // ── Step 2: Fetch as blob ─────────────────────────────────────────────
+    // Fetch the actual file content. We use fetch() (not location.href) so we
+    // can programmatically access the response headers, specifically
+    // Content-Disposition, which contains the real filename from the server.
+    const response = await fetch(ticketResult.download_url, { credentials: 'include' });
+
+    if (!response.ok) {
+      throw new Error(`Download failed with status: ${response.status}`);
+    }
+
+    // ── Step 3: Extract filename from Content-Disposition ─────────────────
+    // The server sends the filename in RFC 5987 format:
+    //   Content-Disposition: attachment; filename="download.xlsx"; filename*=UTF-8''bookings_branch_20260509.xlsx
+    //
+    // We MUST read this ourselves because no browser navigation method
+    // (href, anchor click) allows programmatic access to response headers.
+    const disposition = response.headers.get('Content-Disposition') ?? '';
+    let filename = 'download';
+
+    // Prefer RFC 5987 encoded filename (supports Arabic/Unicode filenames)
+    const filenameStar = disposition.match(/filename\*=UTF-8''([^;\s]+)/i);
+    if (filenameStar) {
+      try {
+        filename = decodeURIComponent(filenameStar[1]);
+      } catch {
+        filename = filenameStar[1];
+      }
+    } else {
+      // Fallback to plain ASCII filename
+      const filenameMatch = disposition.match(/filename="?([^";\s]+)"?/i);
+      if (filenameMatch) {
+        filename = filenameMatch[1];
+      }
+    }
+
+    console.log(`[Download] Saving as: "${filename}"`);
+
+    // ── Step 4: Trigger download with correct filename ────────────────────
+    // Create a temporary blob: URL. Unlike http: URLs, the browser WILL respect
+    // anchor.download on blob: URLs, using whatever name we provide.
+    // This is the KEY STEP that guarantees the correct filename is used.
+    const blob = await response.blob();
+    const blobUrl = URL.createObjectURL(blob);
+
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = filename; // ← Server-provided filename (NOT the UUID)
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+
+    // Cleanup the temporary blob URL after the browser starts the download
+    setTimeout(() => {
+      URL.revokeObjectURL(blobUrl);
+      if (link.parentNode) {
+        document.body.removeChild(link);
+      }
+    }, 1000);
 
   } catch (error) {
-    console.error('[Download] Ticket system error, falling back to direct URL:', error);
-    // Fallback to direct URL if the ticket system fails for any reason
+    console.error('[Download] Error downloading file:', error);
+    // Last-resort fallback: direct navigation (filename will be UUID, but file will download)
     window.location.href = url;
   }
 }

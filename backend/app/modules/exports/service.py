@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from app.modules.exports.detail_exports import export_booking_lines_csv, export_booking_lines_xlsx, export_payment_allocations_csv, export_payment_allocations_xlsx
 from app.modules.exports.master_data_exports import export_custody_csv, export_custody_xlsx, export_customers_csv, export_customers_xlsx
 from app.modules.exports.rendering import BOOKING_COLUMNS, PAYMENT_DOCUMENT_COLUMNS, build_csv, build_filename, build_xlsx, record_export_download
+from app.modules.exports.translations import EXPORT_TRANSLATIONS_AR
 from app.modules.exports.row_collectors import filtered_booking_rows, payment_document_rows
 from app.modules.identity.models import User
 from app.modules.organization.branch_context import resolve_branch_scope
@@ -38,7 +39,7 @@ def export_bookings_csv(
         page=page,
         page_size=page_size,
     )
-    content = build_csv(rows, BOOKING_COLUMNS)
+    content = build_csv(rows, BOOKING_COLUMNS, translations=EXPORT_TRANSLATIONS_AR)
     filename = build_filename(f'bookings_{branch.code.lower()}')
     record_export_download(db, actor, 'export.bookings_csv_downloaded', filename, len(rows), branch_id=branch.id)
     return filename, content
@@ -72,7 +73,7 @@ def export_bookings_xlsx(
         page=page,
         page_size=page_size,
     )
-    content = build_xlsx(rows, BOOKING_COLUMNS)
+    content = build_xlsx(rows, BOOKING_COLUMNS, translations=EXPORT_TRANSLATIONS_AR)
     filename = build_filename(f'bookings_{branch.code.lower()}', extension='xlsx')
     record_export_download(db, actor, 'export.bookings_xlsx_downloaded', filename, len(rows), branch_id=branch.id)
     return filename, content
@@ -108,7 +109,7 @@ def export_payments_csv(
         page=page,
         page_size=page_size,
     )
-    content = build_csv(rows, PAYMENT_DOCUMENT_COLUMNS)
+    content = build_csv(rows, PAYMENT_DOCUMENT_COLUMNS, translations=EXPORT_TRANSLATIONS_AR)
     filename = build_filename(f'payment_documents_{branch.code.lower()}')
     record_export_download(db, actor, 'export.payments_csv_downloaded', filename, len(rows), branch_id=branch.id)
     return filename, content
@@ -144,7 +145,7 @@ def export_payments_xlsx(
         page=page,
         page_size=page_size,
     )
-    content = build_xlsx(rows, PAYMENT_DOCUMENT_COLUMNS)
+    content = build_xlsx(rows, PAYMENT_DOCUMENT_COLUMNS, translations=EXPORT_TRANSLATIONS_AR)
     filename = build_filename(f'payment_documents_{branch.code.lower()}', extension='xlsx')
     record_export_download(db, actor, 'export.payments_xlsx_downloaded', filename, len(rows), branch_id=branch.id)
     return filename, content
@@ -168,7 +169,7 @@ def export_advanced_bi_csv(
     d_to = parse_date(date_to) if date_to else None
     
     rows = get_detailed_lines_report(db, branch.id, d_from, d_to)
-    content = build_csv(rows, ADVANCED_BI_COLUMNS)
+    content = build_csv(rows, ADVANCED_BI_COLUMNS, translations=EXPORT_TRANSLATIONS_AR)
     filename = build_filename(f'advanced_bi_{branch.code.lower()}')
     record_export_download(db, actor, 'export.advanced_bi_csv_downloaded', filename, len(rows), branch_id=branch.id)
     return filename, content
@@ -192,7 +193,7 @@ def export_advanced_bi_xlsx(
     d_to = parse_date(date_to) if date_to else None
     
     rows = get_detailed_lines_report(db, branch.id, d_from, d_to)
-    content = build_xlsx(rows, ADVANCED_BI_COLUMNS)
+    content = build_xlsx(rows, ADVANCED_BI_COLUMNS, translations=EXPORT_TRANSLATIONS_AR)
     filename = build_filename(f'advanced_bi_{branch.code.lower()}', extension='xlsx')
     record_export_download(db, actor, 'export.advanced_bi_xlsx_downloaded', filename, len(rows), branch_id=branch.id)
     return filename, content

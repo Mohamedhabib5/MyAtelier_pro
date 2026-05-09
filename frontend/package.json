@@ -20,6 +20,7 @@
         "ag-grid-community": "^35.1.0",
         "ag-grid-react": "^35.1.0",
         "apexcharts": "^5.10.6",
+        "date-fns": "^4.1.0",
         "framer-motion": "^12.38.0",
         "lucide-react": "^1.11.0",
         "react": "^19.0.0",
