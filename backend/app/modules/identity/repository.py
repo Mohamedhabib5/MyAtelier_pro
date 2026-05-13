@@ -3,7 +3,7 @@ from __future__ import annotations
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
-from app.modules.identity.models import Permission, Role, User, UserGridPreference, UserThemePreference
+from app.modules.identity.models import Permission, Role, User, UserGridPreference, UserThemePreference, UserBackupCode
 
 
 class IdentityRepository:
@@ -46,6 +46,21 @@ class IdentityRepository:
         self.db.add(permission)
         return permission
 
+    def list_permissions(self) -> list[Permission]:
+        stmt = select(Permission).order_by(Permission.key.asc())
+        return list(self.db.scalars(stmt))
+
+    def get_role_by_id(self, role_id: str) -> Role | None:
+        stmt = select(Role).where(Role.id == role_id).options(selectinload(Role.permissions))
+        return self.db.scalars(stmt).first()
+
+    def list_roles(self) -> list[Role]:
+        stmt = select(Role).options(selectinload(Role.permissions)).order_by(Role.name.asc())
+        return list(self.db.scalars(stmt))
+
+    def delete_role(self, role: Role) -> None:
+        self.db.delete(role)
+
     def get_user_grid_preference(self, user_id: str, table_key: str) -> UserGridPreference | None:
         stmt = select(UserGridPreference).where(UserGridPreference.user_id == user_id, UserGridPreference.table_key == table_key)
         return self.db.scalars(stmt).first()
@@ -71,3 +86,11 @@ class IdentityRepository:
         else:
             row.theme_json = theme_json
         return row
+
+    def add_backup_code(self, code: UserBackupCode) -> UserBackupCode:
+        self.db.add(code)
+        return code
+
+    def list_user_backup_codes(self, user_id: str) -> list[UserBackupCode]:
+        stmt = select(UserBackupCode).where(UserBackupCode.user_id == user_id, UserBackupCode.is_used == False)
+        return list(self.db.scalars(stmt))

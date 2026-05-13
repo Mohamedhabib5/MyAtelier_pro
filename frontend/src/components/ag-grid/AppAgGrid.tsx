@@ -222,7 +222,7 @@ export function AppAgGrid<Row>({
   const triggerLocalCsvExport = useCallback(() => {
     const api = gridApiRef.current;
     if (api) {
-      const content = api.getDataAsCsv();
+      const content = api.getDataAsCsv() ?? '';
       const filename = `${tableKey}.csv`;
       const blob = new Blob(['\uFEFF', content], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
@@ -245,7 +245,7 @@ export function AppAgGrid<Row>({
       onExport(format, scope);
     } else if (format === 'csv') {
       // Fallback to local grid export if no handler provided
-      triggerLocalCsvExport(scope === 'all');
+      triggerLocalCsvExport();
     }
     setExportAnchor(null);
     setExportSubAnchor(null);

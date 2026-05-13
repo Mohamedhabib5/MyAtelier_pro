@@ -57,25 +57,45 @@ def login(payload: LoginRequest, request: Request, db: Session = Depends(get_db)
         raise
     request.session.clear()
     branch = ensure_active_branch(db, request.session)
+    
+    # 2FA Check
+    is_2fa_required = user.is_2fa_enabled
+    
     request.session.update(
         {
             'user_id': user.id,
             'active_branch_id': branch.id,
+            '2fa_pending': is_2fa_required,
             LANGUAGE_SESSION_KEY: normalize_language(payload.language or user.preferred_language),
         }
     )
-    record_audit(
-        db,
-        actor_user_id=user.id,
-        action="auth.login_success",
-        target_type="user",
-        target_id=user.id,
-        summary=f"User {user.username} logged in",
-        diff={"username": user.username, "branch_id": branch.id},
-        success=True,
-    )
+    
+    if is_2fa_required:
+        record_audit(
+            db,
+            actor_user_id=user.id,
+            action="auth.2fa_pending",
+            target_type="user",
+            target_id=user.id,
+            summary=f"User {user.username} successfully authenticated, 2FA required.",
+            success=True,
+        )
+    else:
+        record_audit(
+            db,
+            actor_user_id=user.id,
+            action="auth.login_success",
+            target_type="user",
+            target_id=user.id,
+            summary=f"User {user.username} logged in",
+            diff={"username": user.username, "branch_id": branch.id},
+            success=True,
+        )
+    
     db.commit()
-    return AuthUserResponse(**_build_auth_payload(user, request, branch.id, branch.name))
+    auth_payload = _build_auth_payload(user, request, branch.id, branch.name)
+    auth_payload['is_2fa_required'] = is_2fa_required
+    return AuthUserResponse(**auth_payload)
 
 
 @router.post('/logout', status_code=status.HTTP_204_NO_CONTENT)
@@ -136,4 +156,6 @@ def _build_auth_payload(user: User, request: Request, branch_id: str, branch_nam
     session_language = request.session.get(LANGUAGE_SESSION_KEY)
     payload['session_language'] = normalize_language(session_language or payload['preferred_language'])
     payload['effective_language'] = normalize_language(session_language or payload['preferred_language'] or DEFAULT_LANGUAGE)
+    payload['is_2fa_enabled'] = user.is_2fa_enabled
+    payload['is_2fa_required'] = request.session.get('2fa_pending', False)
     return payload

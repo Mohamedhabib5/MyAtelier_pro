@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.core.request_context import get_audit_request_context
 from app.modules.core_platform.models import AuditLog
 from app.modules.core_platform.repository import CorePlatformRepository
+from app.modules.core_platform.security_service import calculate_log_hash
 
 
 def record_audit(
@@ -25,13 +26,20 @@ def record_audit(
 ) -> AuditLog:
     context = get_audit_request_context()
     repo = CorePlatformRepository(db)
+    
+    last_log = repo.get_latest_audit_log()
+    prev_hash = last_log.log_hash if last_log else None
+    
+    diff_json = json.dumps(diff, ensure_ascii=False) if diff else None
+    current_hash = calculate_log_hash(prev_hash, action, target_id, summary, diff_json)
+    
     entry = AuditLog(
         actor_user_id=actor_user_id,
         action=action,
         target_type=target_type,
         target_id=target_id,
         summary=summary,
-        diff_json=json.dumps(diff, ensure_ascii=False) if diff else None,
+        diff_json=diff_json,
         request_id=context.request_id if context else None,
         session_id=context.session_id if context else None,
         branch_id=(context.branch_id if context and context.branch_id else None),
@@ -41,6 +49,8 @@ def record_audit(
         reason_text=reason_text,
         success=success,
         error_code=error_code,
+        previous_log_hash=prev_hash,
+        log_hash=current_hash,
     )
     repo.add_audit_log(entry)
     return entry

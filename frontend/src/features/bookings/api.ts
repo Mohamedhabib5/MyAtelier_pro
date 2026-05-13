@@ -56,6 +56,8 @@ export type BookingTablePage = {
   page_size: number;
 };
 
+export type BookingSortField = 'booking_number' | 'booking_date' | 'customer_name' | 'total_amount' | 'paid_total' | 'remaining_amount' | 'status';
+
 export type BookingTableQuery = {
   search?: string;
   status?: string;

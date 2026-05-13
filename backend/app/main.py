@@ -17,6 +17,7 @@ from app.api.routes import (
     accounting,
     audit,
     auth,
+    auth_2fa,
     bookings,
     catalog,
     custody,
@@ -32,6 +33,7 @@ from app.api.routes import (
     payment_targets,
     payments,
     period_lock,
+    roles,
     reports,
     search,
     settings,
@@ -53,7 +55,7 @@ from app.modules.customers.models import Customer
 from app.modules.dresses.models import DressResource
 from app.modules.exports.models import ExportSchedule
 from app.modules.core_platform.audit import record_audit
-from app.modules.identity.models import Permission, Role, User, role_permissions, user_roles
+from app.modules.identity.models import Permission, Role, User, role_permissions, UserRole
 from app.modules.identity.service import ensure_identity_foundation
 from app.modules.organization.models import Branch, Company, DocumentSequence, FiscalPeriod
 from app.modules.organization.service import ensure_organization_foundation
@@ -225,7 +227,9 @@ def create_app(settings_obj: Settings | None = None) -> FastAPI:
 
     app.include_router(health.router, prefix='/api')
     app.include_router(auth.router, prefix='/api')
+    app.include_router(auth_2fa.router, prefix='/api')
     app.include_router(users.router, prefix='/api')
+    app.include_router(roles.router, prefix='/api')
     app.include_router(settings.router, prefix='/api', dependencies=[Depends(limit_sensitive_ops)])
     app.include_router(fiscal_periods.router, prefix='/api')
     app.include_router(ops_nightly.router, prefix='/api')

@@ -35,6 +35,10 @@ class AuditLog(Base, UUIDPrimaryKeyMixin):
     diff_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     success: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     error_code: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    
+    # Hash Chaining for immutability
+    previous_log_hash: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    log_hash: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
 
     actor = relationship("User", lazy="joined")
 

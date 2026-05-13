@@ -15,12 +15,14 @@ role_permissions = Table(
     Column("permission_id", ForeignKey("permissions.id", ondelete="CASCADE"), primary_key=True),
 )
 
-user_roles = Table(
-    "user_roles",
-    Base.metadata,
-    Column("user_id", ForeignKey("users.id", ondelete="CASCADE"), primary_key=True),
-    Column("role_id", ForeignKey("roles.id", ondelete="CASCADE"), primary_key=True),
-)
+class UserRole(Base, TimestampMixin):
+    __tablename__ = "user_roles"
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    role_id: Mapped[str] = mapped_column(ForeignKey("roles.id", ondelete="CASCADE"), primary_key=True)
+    branch_id: Mapped[str | None] = mapped_column(ForeignKey("branches.id", ondelete="SET NULL"), primary_key=True, nullable=True)
+
+    user = relationship("User", back_populates="user_roles")
+    role = relationship("Role", back_populates="user_roles")
 
 
 class User(Base, UUIDPrimaryKeyMixin, TimestampMixin):
@@ -31,9 +33,13 @@ class User(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     preferred_language: Mapped[str] = mapped_column(String(5), default="ar", nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    is_frozen_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    totp_secret: Mapped[str | None] = mapped_column(String(255), nullable=True)  # AES-256 encrypted
+    is_2fa_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    roles = relationship("Role", secondary=user_roles, back_populates="users", lazy="selectin")
+    user_roles = relationship("UserRole", back_populates="user", cascade="all, delete-orphan", lazy="selectin")
+    roles = relationship("Role", secondary="user_roles", viewonly=True, lazy="selectin")
 
 
 class Role(Base, UUIDPrimaryKeyMixin, TimestampMixin):
@@ -41,9 +47,11 @@ class Role(Base, UUIDPrimaryKeyMixin, TimestampMixin):
 
     name: Mapped[str] = mapped_column(String(40), unique=True, nullable=False)
     description: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    is_preset: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     permissions = relationship("Permission", secondary=role_permissions, back_populates="roles", lazy="selectin")
-    users = relationship("User", secondary=user_roles, back_populates="roles", lazy="selectin")
+    user_roles = relationship("UserRole", back_populates="role", cascade="all, delete-orphan", lazy="selectin")
+    users = relationship("User", secondary="user_roles", viewonly=True, lazy="selectin")
 
 
 class Permission(Base, UUIDPrimaryKeyMixin, TimestampMixin):
@@ -54,6 +62,16 @@ class Permission(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     description: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     roles = relationship("Role", secondary=role_permissions, back_populates="permissions", lazy="selectin")
+
+
+class UserBackupCode(Base, UUIDPrimaryKeyMixin, TimestampMixin):
+    __tablename__ = "user_2fa_backup_codes"
+
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    code_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    is_used: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
+    user = relationship("User", lazy="select")
 
 
 class UserGridPreference(Base, UUIDPrimaryKeyMixin, TimestampMixin):

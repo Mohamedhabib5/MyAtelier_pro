@@ -30,6 +30,8 @@ const ThemeSettingsView = lazy(() => import('../features/settings/views/ThemeSet
 const CatalogDepartmentsView = lazy(() => import('../features/catalog/views/CatalogDepartmentsView').then((module) => ({ default: module.CatalogDepartmentsView })));
 const CatalogServicesView = lazy(() => import('../features/catalog/views/CatalogServicesView').then((module) => ({ default: module.CatalogServicesView })));
 const SecurityUsersView = lazy(() => import('../features/users/views/SecurityUsersView').then((module) => ({ default: module.SecurityUsersView })));
+const SecurityRolesView = lazy(() => import('../features/users/views/SecurityRolesView').then((module) => ({ default: module.SecurityRolesView })));
+const SecurityConfigView = lazy(() => import('../features/settings/views/SecurityConfigView').then((module) => ({ default: module.SecurityConfigView })));
 const DataExportsView = lazy(() => import('../features/exports/views/DataExportsView').then((module) => ({ default: module.DataExportsView })));
 
 export const router = createBrowserRouter([
@@ -78,6 +80,8 @@ export const router = createBrowserRouter([
               { path: 'catalog/services', element: <CatalogServicesView /> },
               { path: 'security', element: <Navigate to='/settings/security/users' replace /> },
               { path: 'security/users', element: <SecurityUsersView /> },
+              { path: 'security/roles', element: <SecurityRolesView /> },
+              { path: 'security/config', element: <SecurityConfigView /> },
               { path: 'data', element: <Navigate to='/settings/data/exports' replace /> },
               { path: 'data/exports', element: <DataExportsView /> },
             ]

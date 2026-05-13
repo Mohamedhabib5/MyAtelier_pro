@@ -31,6 +31,8 @@ class AuthUserResponse(BaseModel):
     preferred_language: LanguageLiteral
     session_language: LanguageLiteral
     effective_language: LanguageLiteral
+    is_2fa_enabled: bool = False
+    is_2fa_required: bool = False
 
 
 class UserResponse(BaseModel):
@@ -89,3 +91,40 @@ class ThemePreferenceResponse(BaseModel):
 
 class ThemePreferenceUpdateRequest(BaseModel):
     theme_json: str
+
+class Verify2FARequest(BaseModel):
+    code: str = Field(min_length=6, max_length=12)
+
+class TwoFASetupResponse(BaseModel):
+    provisioning_uri: str
+    secret_plain: str
+
+class TwoFAActivationResponse(BaseModel):
+    backup_codes: list[str]
+
+class PermissionResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    key: str
+    description: str
+
+class RoleResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    name: str
+    description: str | None = None
+    is_preset: bool = False
+    permissions: list[PermissionResponse] = []
+
+class CreateRoleRequest(BaseModel):
+    name: str = Field(min_length=2, max_length=60)
+    description: str | None = Field(default=None, max_length=255)
+    permission_keys: list[str] = []
+
+class UpdateRoleRequest(BaseModel):
+    name: str | None = Field(default=None, min_length=2, max_length=60)
+    description: str | None = Field(default=None, max_length=255)
+    permission_keys: list[str] | None = None
+
+class FreezeUserRequest(BaseModel):
+    frozen_until: datetime | None = None  # None means indefinite until unfrozen
+    reason: str | None = Field(default=None, max_length=255)

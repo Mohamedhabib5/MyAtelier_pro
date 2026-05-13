@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import json
-from datetime import UTC, datetime
+import pyotp
+import secrets
+import string
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy.orm import Session
 
@@ -11,10 +14,18 @@ from app.core.exceptions import AuthenticationError, AuthorizationError, NotFoun
 from app.core.security import DEFAULT_ADMIN_SEEDED_KEY, hash_password, norm_text, role_list_contains, verify_password
 from app.modules.core_platform.repository import CorePlatformRepository
 from app.modules.core_platform.service import record_audit
-from app.modules.identity.models import Permission, Role, User
+from app.modules.identity.models import Permission, Role, User, UserRole, UserBackupCode
 from app.modules.identity.permission_map import DEFAULT_PERMISSIONS, ROLE_PERMISSION_MAP
 from app.modules.identity.repository import IdentityRepository
-from app.modules.identity.schemas import AdminUpdateUserRequest, CreateUserRequest, SelfUpdateUserRequest, UserGridPreferenceState
+from app.modules.identity.schemas import (
+    AdminUpdateUserRequest, 
+    CreateUserRequest, 
+    SelfUpdateUserRequest, 
+    UserGridPreferenceState,
+    CreateRoleRequest,
+    UpdateRoleRequest
+)
+from app.modules.core_platform.security_service import encrypt_secret, decrypt_secret, SecurityNotificationService
 
 
 def serialize_user(user: User) -> dict:
@@ -24,6 +35,8 @@ def serialize_user(user: User) -> dict:
         "full_name": user.full_name,
         "preferred_language": normalize_language(user.preferred_language),
         "is_active": user.is_active,
+        "is_frozen": user.is_frozen_until > datetime.now(UTC) if user.is_frozen_until else False,
+        "is_2fa_enabled": user.is_2fa_enabled,
         "last_login_at": user.last_login_at,
         "role_names": sorted(role.name for role in user.roles),
     }
@@ -45,9 +58,13 @@ def ensure_identity_foundation(db: Session, *, default_admin_username: str, defa
     for role_name, permission_keys in ROLE_PERMISSION_MAP.items():
         role = repo.get_role_by_name(role_name)
         if role is None:
-            role = Role(name=role_name, description=f"System role: {role_name}")
+            role = Role(name=role_name, description=f"دور النظام: {role_name}", is_preset=True)
             repo.add_role(role)
             db.flush()
+        else:
+            # Ensure preset roles are marked as such
+            role.is_preset = True
+        
         existing_keys = {permission.key for permission in role.permissions}
         for permission_key in permission_keys:
             if permission_key not in existing_keys:
@@ -68,7 +85,7 @@ def ensure_identity_foundation(db: Session, *, default_admin_username: str, defa
             is_active=True,
         )
         if admin_role is not None:
-            user.roles.append(admin_role)
+            user.user_roles.append(UserRole(role=admin_role, branch_id=None))
         repo.add_user(user)
         db.flush()
         record_audit(db, actor_user_id=None, action="auth.default_admin_seeded", target_type="user", target_id=user.id, summary=f"Seeded default admin user {user.username}")
@@ -82,6 +99,11 @@ def authenticate_user(db: Session, username: str, password: str) -> User:
     user = repo.get_user_by_username(norm_text(username))
     if user is None or not user.is_active or not verify_password(password, user.password_hash):
         raise AuthenticationError("اسم المستخدم أو كلمة المرور غير صحيحة")
+    
+    # Check if frozen
+    if user.is_frozen_until and user.is_frozen_until > datetime.now(UTC):
+        raise AuthenticationError("هذا الحساب مجمد مؤقتاً")
+
     user.last_login_at = datetime.now(UTC)
     db.commit()
     db.refresh(user)
@@ -127,7 +149,8 @@ def create_user(db: Session, actor: User, payload: CreateUserRequest) -> dict:
         is_active=True,
     )
     roles = _resolve_roles(repo, payload.role_names)
-    user.roles = roles
+    for role in roles:
+        user.user_roles.append(UserRole(role=role, branch_id=None))
     repo.add_user(user)
     db.flush()
     record_audit(db, actor_user_id=actor.id, action="user.created", target_type="user", target_id=user.id, summary=f"Created user {user.username}", diff={"roles": [role.name for role in roles]})
@@ -155,7 +178,10 @@ def update_user_by_admin(db: Session, actor: User, target_user_id: str, payload:
     if payload.is_active is not None:
         user.is_active = payload.is_active
     if payload.role_names is not None:
-        user.roles = _resolve_roles(repo, payload.role_names)
+        roles = _resolve_roles(repo, payload.role_names)
+        user.user_roles.clear()
+        for role in roles:
+            user.user_roles.append(UserRole(role=role, branch_id=None))
 
     record_audit(db, actor_user_id=actor.id, action="user.updated_by_admin", target_type="user", target_id=user.id, summary=f"Updated user {user.username}", diff={"roles": [role.name for role in user.roles]})
     db.commit()
@@ -272,3 +298,218 @@ def set_user_theme_preference(db: Session, actor: User, theme_json: str) -> dict
     db.commit()
     db.refresh(row)
     return {"theme_json": theme_json, "updated_at": row.updated_at}
+
+# --- 2FA Operations ---
+
+def setup_2fa(db: Session, user: User) -> dict:
+    """Generates a new TOTP secret for the user but does not enable it yet."""
+    secret = pyotp.random_base32()
+    user.totp_secret = encrypt_secret(secret)
+    db.commit()
+    
+    totp = pyotp.TOTP(secret)
+    provisioning_uri = totp.provisioning_uri(name=user.username, issuer_name="MyAtelier Pro")
+    
+    return {
+        "provisioning_uri": provisioning_uri,
+        "secret_plain": secret # Return plain for manual entry if needed
+    }
+
+def activate_2fa(db: Session, user: User, code: str) -> list[str]:
+    """Verifies the first code and permanently enables 2FA for the user."""
+    if not user.totp_secret:
+        raise ValidationAppError("لم يتم إعداد التحقق الثنائي لهذا المستخدم")
+    
+    secret = decrypt_secret(user.totp_secret)
+    totp = pyotp.TOTP(secret)
+    
+    if not totp.verify(code):
+        SecurityNotificationService.notify_security_event("2fa_setup_failed", {"user_id": user.id, "username": user.username})
+        raise ValidationAppError("رمز التحقق غير صحيح")
+    
+    user.is_2fa_enabled = True
+    
+    # Generate Backup Codes
+    backup_codes = []
+    repo = IdentityRepository(db)
+    for _ in range(10):
+        raw_code = "".join(secrets.choice(string.digits) for _ in range(8))
+        backup_codes.append(raw_code)
+        # We hash backup codes for security
+        code_hash = hash_password(raw_code)
+        repo.add_backup_code(UserBackupCode(user_id=user.id, code_hash=code_hash))
+    
+    record_audit(db, actor_user_id=user.id, action="auth.2fa_enabled", target_type="user", target_id=user.id, summary="Enabled 2FA")
+    db.commit()
+    return backup_codes
+
+def verify_2fa_login(db: Session, user: User, code: str) -> bool:
+    """Verifies a TOTP code during the login flow."""
+    if not user.is_2fa_enabled or not user.totp_secret:
+        return True # Fallback if accidentally called
+    
+    secret = decrypt_secret(user.totp_secret)
+    totp = pyotp.TOTP(secret)
+    
+    if totp.verify(code):
+        return True
+    
+    # Notify on failure
+    SecurityNotificationService.notify_security_event("2fa_login_failed", {"user_id": user.id, "username": user.username})
+    return False
+
+def verify_backup_code_login(db: Session, user: User, code: str) -> bool:
+    """Verifies a backup code and marks it as used."""
+    repo = IdentityRepository(db)
+    valid_codes = repo.list_user_backup_codes(user.id)
+    
+    for bc in valid_codes:
+        if verify_password(code, bc.code_hash):
+            bc.is_used = True
+            record_audit(db, actor_user_id=user.id, action="auth.2fa_backup_code_used", target_type="user", target_id=user.id, summary="Used backup code to login")
+            db.commit()
+            return True
+    
+    return False
+
+# --- Role CRUD Operations ---
+
+def list_roles(db: Session) -> list[Role]:
+    return IdentityRepository(db).list_roles()
+
+def list_all_permissions(db: Session) -> list[Permission]:
+    return IdentityRepository(db).list_permissions()
+
+def get_role_or_404(db: Session, role_id: str) -> Role:
+    role = IdentityRepository(db).get_role_by_id(role_id)
+    if role is None:
+        raise NotFoundError("لم يتم العثور على الدور")
+    return role
+
+def create_role(db: Session, actor: User, payload: CreateRoleRequest) -> Role:
+    repo = IdentityRepository(db)
+    if repo.get_role_by_name(norm_text(payload.name).lower()):
+        raise ValidationAppError("اسم الدور موجود بالفعل")
+    
+    role = Role(
+        name=norm_text(payload.name).lower(),
+        description=norm_text(payload.description) if payload.description else None,
+        is_preset=False
+    )
+    if payload.permission_keys:
+        for key in payload.permission_keys:
+            perm = repo.get_permission_by_key(key)
+            if perm:
+                role.permissions.append(perm)
+                
+    repo.add_role(role)
+    db.flush()
+    record_audit(db, actor_user_id=actor.id, action="role.created", target_type="role", target_id=role.id, summary=f"Created role {role.name}")
+    db.commit()
+    return role
+
+def update_role(db: Session, actor: User, role_id: str, payload: UpdateRoleRequest) -> Role:
+    repo = IdentityRepository(db)
+    role = get_role_or_404(db, role_id)
+    
+    if role.is_preset and payload.name is not None:
+        raise ValidationAppError("لا يمكن تعديل اسم الأدوار النظامية")
+
+    if payload.name is not None:
+        name = norm_text(payload.name).lower()
+        existing = repo.get_role_by_name(name)
+        if existing and existing.id != role.id:
+            raise ValidationAppError("اسم الدور موجود بالفعل")
+        role.name = name
+        
+    if payload.description is not None:
+        role.description = norm_text(payload.description)
+        
+    if payload.permission_keys is not None:
+        old_keys = [p.key for p in role.permissions]
+        role.permissions = []
+        for key in payload.permission_keys:
+            perm = repo.get_permission_by_key(key)
+            if perm:
+                role.permissions.append(perm)
+        
+        # Notify on permission changes
+        SecurityNotificationService.notify_security_event("role_permissions_changed", {
+            "role_name": role.name,
+            "old_permissions": old_keys,
+            "new_permissions": payload.permission_keys,
+            "actor_id": actor.id
+        })
+                
+    record_audit(db, actor_user_id=actor.id, action="role.updated", target_type="role", target_id=role.id, summary=f"Updated role {role.name}")
+    db.commit()
+    return role
+
+def delete_role(db: Session, actor: User, role_id: str) -> None:
+    repo = IdentityRepository(db)
+    role = get_role_or_404(db, role_id)
+    
+    if role.is_preset:
+        raise ValidationAppError("لا يمكن حذف الأدوار النظامية")
+        
+    record_audit(db, actor_user_id=actor.id, action="role.deleted", target_type="role", target_id=role.id, summary=f"Deleted role {role.name}")
+    repo.delete_role(role)
+    db.commit()
+
+def clone_role(db: Session, actor: User, role_id: str, new_name: str) -> Role:
+    repo = IdentityRepository(db)
+    source_role = get_role_or_404(db, role_id)
+    
+    if repo.get_role_by_name(norm_text(new_name).lower()):
+        raise ValidationAppError("الاسم الجديد للدور موجود بالفعل")
+        
+    new_role = Role(
+        name=norm_text(new_name).lower(),
+        description=f"نسخة من {source_role.name}",
+        is_preset=False
+    )
+    new_role.permissions = list(source_role.permissions)
+    
+    repo.add_role(new_role)
+    db.flush()
+    record_audit(db, actor_user_id=actor.id, action="role.cloned", target_type="role", target_id=new_role.id, summary=f"Cloned role {source_role.name} to {new_role.name}")
+    db.commit()
+    return new_role
+
+# --- Account Freezing ---
+
+def freeze_user(db: Session, actor: User, user_id: str, payload: FreezeUserRequest) -> User:
+    repo = IdentityRepository(db)
+    user = repo.get_user_by_id(user_id)
+    if not user:
+        raise NotFoundError("المستخدم غير موجود")
+        
+    if user.id == actor.id:
+        raise ValidationAppError("لا يمكنك تجميد حسابك الخاص")
+        
+    user.is_frozen_until = payload.frozen_until or datetime.now(UTC).replace(year=9999)
+    
+    # Notify
+    SecurityNotificationService.notify_security_event("account_frozen", {
+        "user_id": user.id, 
+        "username": user.username,
+        "frozen_until": str(user.is_frozen_until),
+        "reason": payload.reason,
+        "actor_id": actor.id
+    })
+    
+    record_audit(db, actor_user_id=actor.id, action="user.frozen", target_type="user", target_id=user.id, summary=f"Frozen user {user.username} until {user.is_frozen_until}")
+    db.commit()
+    return user
+
+def unfreeze_user(db: Session, actor: User, user_id: str) -> User:
+    repo = IdentityRepository(db)
+    user = repo.get_user_by_id(user_id)
+    if not user:
+        raise NotFoundError("المستخدم غير موجود")
+        
+    user.is_frozen_until = None
+    
+    record_audit(db, actor_user_id=actor.id, action="user.unfrozen", target_type="user", target_id=user.id, summary=f"Unfrozen user {user.username}")
+    db.commit()
+    return user

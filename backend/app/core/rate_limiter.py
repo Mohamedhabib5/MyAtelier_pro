@@ -108,5 +108,6 @@ def get_rate_limiter(requests: int, window_seconds: int):
 # Global instances for specific use cases
 # Note: These are now factory-initialized
 login_rate_limiter = get_rate_limiter(requests=5, window_seconds=60)
+two_fa_rate_limiter = get_rate_limiter(requests=5, window_seconds=300)
 sensitive_ops_rate_limiter = get_rate_limiter(requests=10, window_seconds=60)
 api_rate_limiter = get_rate_limiter(requests=100, window_seconds=60)

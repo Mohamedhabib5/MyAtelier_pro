@@ -8,7 +8,7 @@ import { useLanguage } from '../features/language/LanguageProvider';
 import { UserAdminDialog } from '../features/users/UserAdminDialog';
 import { UsersAdminSection } from '../features/users/UsersAdminSection';
 import { UsersProfileSection } from '../features/users/UsersProfileSection';
-import { createUser, getMyUser, listUsers, updateMyUser, updateUser, type UserRecord } from '../features/users/api';
+import { createUser, getMyUser, listUsers, updateMyUser, updateUser, freezeUser, unfreezeUser, type UserRecord } from '../features/users/api';
 import { userIsAdmin } from '../lib/auth';
 import { type LanguageCode } from '../lib/language';
 import { queryClient } from '../lib/queryClient';
@@ -64,6 +64,22 @@ export function UsersPage() {
       await queryClient.invalidateQueries({ queryKey: ['users'] });
       await queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
       setPassword('');
+    },
+    onError: (mutationError: Error) => setError(mutationError.message),
+  });
+
+  const freezeMutation = useMutation({
+    mutationFn: ({ userId, until }: { userId: string; until?: string }) => freezeUser(userId, until),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+    onError: (mutationError: Error) => setError(mutationError.message),
+  });
+
+  const unfreezeMutation = useMutation({
+    mutationFn: (userId: string) => unfreezeUser(userId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['users'] });
     },
     onError: (mutationError: Error) => setError(mutationError.message),
   });
@@ -141,7 +157,16 @@ export function UsersPage() {
       {error ? <Alert severity='error'>{error}</Alert> : null}
 
       {isAdmin ? (
-        <UsersAdminSection rows={rows} language={language} currentLanguage={currentLanguage} usersText={usersText} commonText={commonText} onEditUser={openEditDialog} />
+        <UsersAdminSection 
+          rows={rows} 
+          language={language} 
+          currentLanguage={currentLanguage} 
+          usersText={usersText} 
+          commonText={commonText} 
+          onEditUser={openEditDialog}
+          onFreezeUser={(id, until) => void freezeMutation.mutateAsync({ userId: id, until })}
+          onUnfreezeUser={(id) => void unfreezeMutation.mutateAsync(id)}
+        />
       ) : (
         <UsersProfileSection
           selfInitial={selfInitial}

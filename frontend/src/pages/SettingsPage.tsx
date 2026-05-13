@@ -31,6 +31,8 @@ export function SettingsPage() {
       path: '/settings/security',
       subTabs: [
         { label: settingsText.tabs.users, path: '/settings/security/users' },
+        { label: settingsText.tabs.roles, path: '/settings/security/roles' },
+        { label: settingsText.tabs.twoFactor, path: '/settings/security/config' },
       ]
     },
     {

@@ -6,8 +6,8 @@ from sqlalchemy.orm import Session
 from app.api.deps import require_self_manage, require_users_manage
 from app.db.session import get_db
 from app.modules.identity.models import User
-from app.modules.identity.schemas import AdminUpdateUserRequest, CreateUserRequest, SelfUpdateUserRequest, UserGridPreferenceResponse, UserGridPreferenceUpdateRequest, UserResponse, ThemePreferenceResponse, ThemePreferenceUpdateRequest
-from app.modules.identity.service import create_user, get_user_grid_preference, get_user_profile, list_visible_users, set_user_grid_preference, update_own_profile, update_user_by_admin, get_user_theme_preference, set_user_theme_preference
+from app.modules.identity.schemas import AdminUpdateUserRequest, CreateUserRequest, SelfUpdateUserRequest, UserGridPreferenceResponse, UserGridPreferenceUpdateRequest, UserResponse, ThemePreferenceResponse, ThemePreferenceUpdateRequest, FreezeUserRequest
+from app.modules.identity.service import create_user, get_user_grid_preference, get_user_profile, list_visible_users, set_user_grid_preference, update_own_profile, update_user_by_admin, get_user_theme_preference, set_user_theme_preference, freeze_user, unfreeze_user
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -84,3 +84,20 @@ def update_my_theme_preference(
     db: Session = Depends(get_db),
 ) -> ThemePreferenceResponse:
     return ThemePreferenceResponse.model_validate(set_user_theme_preference(db, current_user, payload.theme_json))
+
+@router.post("/{user_id}/freeze", response_model=UserResponse)
+def freeze_user_route(
+    user_id: str,
+    payload: FreezeUserRequest,
+    manager_user: User = Depends(require_users_manage),
+    db: Session = Depends(get_db),
+) -> UserResponse:
+    return UserResponse(**get_user_profile(freeze_user(db, manager_user, user_id, payload)))
+
+@router.post("/{user_id}/unfreeze", response_model=UserResponse)
+def unfreeze_user_route(
+    user_id: str,
+    manager_user: User = Depends(require_users_manage),
+    db: Session = Depends(get_db),
+) -> UserResponse:
+    return UserResponse(**get_user_profile(unfreeze_user(db, manager_user, user_id)))

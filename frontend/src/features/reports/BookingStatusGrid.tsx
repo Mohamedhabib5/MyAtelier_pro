@@ -63,7 +63,6 @@ export function BookingStatusGrid({ statuses, language, text, statusLabel }: Pro
       rowsPerPageLabel={language === 'ar' ? 'صفوف في الصفحة' : 'Rows per page'}
       getRowId={(p) => p.data.key}
       height={280}
-      csvFileName="booking-statuses.csv"
       pagination={false}
     />
   );

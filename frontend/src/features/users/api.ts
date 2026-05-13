@@ -9,6 +9,7 @@ export type UserRecord = {
   last_login_at: string | null;
   role_names: string[];
   preferred_language: LanguageCode;
+  is_frozen_until: string | null;
 };
 
 export type CreateUserPayload = {
@@ -92,4 +93,17 @@ export async function setMyGridPreference(tableKey: string, state: GridPreferenc
     body: JSON.stringify({ state }),
   });
   return { state: response.state, updatedAt: response.updated_at };
+}
+
+export function freezeUser(userId: string, frozenUntil?: string): Promise<UserRecord> {
+  return apiRequest<UserRecord>(`/api/users/${userId}/freeze`, {
+    method: 'POST',
+    body: JSON.stringify({ frozen_until: frozenUntil }),
+  });
+}
+
+export function unfreezeUser(userId: string): Promise<UserRecord> {
+  return apiRequest<UserRecord>(`/api/users/${userId}/unfreeze`, {
+    method: 'POST',
+  });
 }

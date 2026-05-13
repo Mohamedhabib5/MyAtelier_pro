@@ -30,6 +30,9 @@ class CorePlatformRepository:
         self.db.add(entry)
         return entry
 
+    def get_latest_audit_log(self) -> AuditLog | None:
+        return self.db.scalar(select(AuditLog).order_by(AuditLog.occurred_at.desc(), AuditLog.id.desc()).limit(1))
+
     def add_backup_record(self, entry: BackupRecord) -> BackupRecord:
         self.db.add(entry)
         return entry

@@ -83,7 +83,6 @@ export function AppDataTable<Row>({
         noRowsLabel={noRowsLabel}
         rowsPerPageLabel={rowsPerPageLabel}
         toolbarFilters={filterContent}
-        csvFileName={`${tableKey}.csv`}
       />
       {footerContent}
     </>

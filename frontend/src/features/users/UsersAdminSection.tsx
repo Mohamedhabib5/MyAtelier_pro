@@ -1,5 +1,6 @@
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
-import { Button, Chip, Stack } from '@mui/material';
+import { Button, Chip, Stack, Tooltip, IconButton } from '@mui/material';
+import { Snowflake, Flame } from 'lucide-react';
 
 import { AppDataTable } from '../../components/data-table/AppDataTable';
 import { SectionCard } from '../../components/SectionCard';
@@ -15,9 +16,14 @@ type Props = {
   usersText: ReturnType<typeof useUsersText>;
   commonText: ReturnType<typeof useCommonText>;
   onEditUser: (targetUser: UserRecord) => void;
+  onFreezeUser: (userId: string, until?: string) => void;
+  onUnfreezeUser: (userId: string) => void;
 };
 
-export function UsersAdminSection({ rows, language, currentLanguage, usersText, commonText, onEditUser }: Props) {
+export function UsersAdminSection({ 
+  rows, language, currentLanguage, usersText, commonText, 
+  onEditUser, onFreezeUser, onUnfreezeUser 
+}: Props) {
   const tableLabels =
     language === 'ar'
       ? {
@@ -66,17 +72,41 @@ export function UsersAdminSection({ rows, language, currentLanguage, usersText, 
           {
             key: 'status',
             header: commonText.status,
-            searchValue: (row) => (row.is_active ? usersText.status.active : usersText.status.inactive),
-            render: (row) => <Chip label={row.is_active ? usersText.status.active : usersText.status.inactive} size='small' color={row.is_active ? 'success' : 'default'} />,
+            searchValue: (row) => (row.is_frozen_until ? 'frozen' : (row.is_active ? usersText.status.active : usersText.status.inactive)),
+            render: (row) => {
+              const isFrozen = row.is_frozen_until && new Date(row.is_frozen_until) > new Date();
+              if (isFrozen) {
+                return <Chip label="مجمد" size="small" color="error" variant="filled" icon={<Snowflake size={14} />} />;
+              }
+              return <Chip label={row.is_active ? usersText.status.active : usersText.status.inactive} size="small" color={row.is_active ? 'success' : 'default'} />;
+            }
           },
           {
             key: 'actions',
             header: commonText.actions,
-            render: (row) => (
-              <Button startIcon={<EditOutlinedIcon />} onClick={() => onEditUser(row)}>
-                {commonText.edit}
-              </Button>
-            ),
+            render: (row) => {
+              const isFrozen = row.is_frozen_until && new Date(row.is_frozen_until) > new Date();
+              return (
+                <Stack direction="row" spacing={1}>
+                  <Button startIcon={<EditOutlinedIcon />} onClick={() => onEditUser(row)} size="small">
+                    {commonText.edit}
+                  </Button>
+                  {isFrozen ? (
+                    <Tooltip title="فك التجميد">
+                      <IconButton size="small" color="success" onClick={() => onUnfreezeUser(row.id)}>
+                        <Flame size={18} />
+                      </IconButton>
+                    </Tooltip>
+                  ) : (
+                    <Tooltip title="تجميد الحساب">
+                      <IconButton size="small" color="error" onClick={() => onFreezeUser(row.id)}>
+                        <Snowflake size={18} />
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                </Stack>
+              );
+            }
           },
         ]}
         searchLabel={tableLabels.search}

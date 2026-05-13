@@ -29,6 +29,7 @@ interface Props {
   setDrillDownPath: (path: any[]) => void;
   selectedBookingId: string | null;
   setSelectedBookingId: (id: string | null) => void;
+  availableGroups?: any[];
 }
 
 type GroupField = { id: keyof AdvancedBIRecord; label: string };
