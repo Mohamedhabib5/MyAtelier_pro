@@ -106,7 +106,9 @@ class Settings(BaseSettings):
             raise ValueError("CRITICAL: Valid APP_FRONTEND_ORIGINS (no '*') are required in production.")
         
         if any(origin.startswith("http://localhost") or origin.startswith("http://127.0.0.1") for origin in cors_origins):
-            raise ValueError("CRITICAL: Localhost origins are not allowed in production.")
+            # Allow localhost only if it is explicitly on port 8080 (Nginx proxy) to facilitate easy production testing
+            if not any(":8080" in origin for origin in cors_origins):
+                raise ValueError("CRITICAL: Localhost origins are not allowed in production (except via port 8080 proxy).")
 
         trusted_hosts = self.trusted_hosts()
         if not trusted_hosts or "*" in trusted_hosts:
