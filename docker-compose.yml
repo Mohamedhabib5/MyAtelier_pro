@@ -16,6 +16,21 @@ services:
       timeout: 5s
       retries: 5
 
+  redis:
+    image: redis:7-alpine
+    container_name: myatelier_redis
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-your-super-strong-redis-password-here-2026}
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-your-super-strong-redis-password-here-2026}
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--pass", "${REDIS_PASSWORD:-your-super-strong-redis-password-here-2026}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
   backend:
     build:
       context: ./backend
@@ -49,3 +64,4 @@ services:
 volumes:
   postgres_data:
   frontend_node_modules:
+  redis_data:
