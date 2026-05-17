@@ -106,3 +106,5 @@ class CorePlatformRepository:
             )
         )
         return rows, total
+    def list_audit_logs_ascending(self) -> Sequence[AuditLog]:
+        return self.db.scalars(select(AuditLog).order_by(AuditLog.occurred_at.asc(), AuditLog.id.asc())).all()

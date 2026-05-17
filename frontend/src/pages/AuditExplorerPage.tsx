@@ -1,10 +1,11 @@
-import { Alert, Button, Grid, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Button, Grid, Stack, TextField, Typography, CircularProgress, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
+import { ShieldCheck, AlertTriangle, CheckCircle2 } from 'lucide-react';
 
 import { AppDataTable } from '../components/data-table/AppDataTable';
 import { SectionCard } from '../components/SectionCard';
-import { buildNightlyOpsCsvUrl, listAuditEvents, listDestructiveActions, listNightlyOpsEvents } from '../features/audit/api';
+import { buildNightlyOpsCsvUrl, listAuditEvents, listDestructiveActions, listNightlyOpsEvents, verifyAuditIntegrity, type IntegrityVerifyResponse } from '../features/audit/api';
 import { NightlyExportSummary } from '../features/audit/NightlyExportSummary';
 import { useLanguage } from '../features/language/LanguageProvider';
 import { useAuditText } from '../text/audit';
@@ -25,6 +26,9 @@ export function AuditExplorerPage() {
   const [dateTo, setDateTo] = useState('');
   const [mode, setMode] = useState<AuditFilterMode>('all');
   const [filtersVersion, setFiltersVersion] = useState(0);
+  const [verifying, setVerifying] = useState(false);
+  const [integrityResult, setIntegrityResult] = useState<IntegrityVerifyResponse | null>(null);
+  const [showIntegrityDialog, setShowIntegrityDialog] = useState(false);
 
   const auditQuery = useQuery({
     queryKey: ['audit', 'events', filtersVersion, search, actorUserId, action, targetType, targetId, branchId, dateFrom, dateTo],
@@ -108,6 +112,19 @@ export function AuditExplorerPage() {
     window.location.assign(url);
   }
 
+  async function handleVerifyIntegrity() {
+    setVerifying(true);
+    try {
+      const result = await verifyAuditIntegrity();
+      setIntegrityResult(result);
+      setShowIntegrityDialog(true);
+    } catch (err: any) {
+      alert(`فشل التحقق: ${err.message}`);
+    } finally {
+      setVerifying(false);
+    }
+  }
+
   const activeFilterPairs: string[] = [
     search ? `search=${search}` : '',
     actorUserId ? `actor_user_id=${actorUserId}` : '',
@@ -120,9 +137,21 @@ export function AuditExplorerPage() {
 
   return (
     <Stack spacing={3}>
-      <Stack spacing={0.5}>
-        <Typography variant='h4'>{auditText.page.title}</Typography>
-        <Typography color='text.secondary'>{auditText.page.subtitle}</Typography>
+      <Stack direction="row" justifyContent="space-between" alignItems="center">
+        <Stack spacing={0.5}>
+          <Typography variant='h4'>{auditText.page.title}</Typography>
+          <Typography color='text.secondary'>{auditText.page.subtitle}</Typography>
+        </Stack>
+        <Button 
+          variant="contained" 
+          color="secondary" 
+          startIcon={verifying ? <CircularProgress size={20} color="inherit" /> : <ShieldCheck size={20} />}
+          onClick={handleVerifyIntegrity}
+          disabled={verifying}
+          sx={{ borderRadius: 3, fontWeight: 'bold' }}
+        >
+          {verifying ? 'جاري التحقق...' : 'التحقق من نزاهة السجل'}
+        </Button>
       </Stack>
 
       {auditQuery.error instanceof Error ? <Alert severity='error'>{auditQuery.error.message}</Alert> : null}
@@ -250,6 +279,45 @@ export function AuditExplorerPage() {
           searchFields={[(row) => row.action, (row) => row.summary, (row) => row.target_type, (row) => row.target_id ?? '']}
         />
       </SectionCard>
+
+      <Dialog open={showIntegrityDialog} onClose={() => setShowIntegrityDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          {integrityResult?.success ? <CheckCircle2 color="green" /> : <AlertTriangle color="red" />}
+          نتيجة التحقق من النزاهة
+        </DialogTitle>
+        <DialogContent dividers>
+          {integrityResult?.success ? (
+            <Stack spacing={2} alignItems="center" sx={{ py: 2 }}>
+              <Typography variant="h6" color="success.main" fontWeight="bold">
+                سلسلة السجلات سليمة تماماً
+              </Typography>
+              <Typography variant="body2" textAlign="center">
+                تم التحقق من <strong>{integrityResult.total_verified}</strong> سجل تدقيق. 
+                لم يتم العثور على أي تلاعب أو فجوات في سلسلة التشفير (Hash Chain).
+              </Typography>
+            </Stack>
+          ) : (
+            <Stack spacing={2}>
+              <Typography variant="h6" color="error.main" fontWeight="bold">
+                تم اكتشاف مشكلات في نزاهة السجل!
+              </Typography>
+              <Alert severity="error">
+                تم العثور على {integrityResult?.issues.length} مشكلة. قد يشير هذا إلى تلاعب في قاعدة البيانات أو خطأ في النظام.
+              </Alert>
+              <Box sx={{ maxHeight: 200, overflowY: 'auto', bgcolor: '#fff5f5', p: 1, borderRadius: 1 }}>
+                {integrityResult?.issues.map((issue, idx) => (
+                  <Typography key={idx} variant="caption" display="block" sx={{ mb: 1, borderBottom: '1px solid #fed7d7' }}>
+                    <strong>سجل {issue.log_id}:</strong> {issue.error}
+                  </Typography>
+                ))}
+              </Box>
+            </Stack>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowIntegrityDialog(false)}>إغلاق</Button>
+        </DialogActions>
+      </Dialog>
     </Stack>
   );
 }

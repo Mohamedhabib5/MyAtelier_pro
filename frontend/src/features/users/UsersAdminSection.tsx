@@ -1,6 +1,6 @@
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
-import { Button, Chip, Stack, Tooltip, IconButton } from '@mui/material';
-import { Snowflake, Flame } from 'lucide-react';
+import { Button, Chip, Stack, Tooltip, IconButton, Box, Typography, useTheme } from '@mui/material';
+import { Snowflake, Flame, Shield, ShieldAlert, UserCheck, UserMinus } from 'lucide-react';
 
 import { AppDataTable } from '../../components/data-table/AppDataTable';
 import { SectionCard } from '../../components/SectionCard';
@@ -24,6 +24,8 @@ export function UsersAdminSection({
   rows, language, currentLanguage, usersText, commonText, 
   onEditUser, onFreezeUser, onUnfreezeUser 
 }: Props) {
+  const theme = useTheme();
+  
   const tableLabels =
     language === 'ar'
       ? {
@@ -50,24 +52,59 @@ export function UsersAdminSection({
         };
 
   return (
-    <SectionCard title={usersText.admin.listTitle} subtitle={usersText.admin.listSubtitle}>
+    <SectionCard 
+      title={usersText.admin.listTitle} 
+      subtitle={usersText.admin.listSubtitle}
+    >
       <AppDataTable
         tableKey='users-admin-list'
         rows={rows}
         columns={[
-          { key: 'username', header: usersText.fields.username, searchValue: (row) => row.username, render: (row) => row.username },
+          { 
+            key: 'username', 
+            header: usersText.fields.username, 
+            searchValue: (row) => row.username, 
+            render: (row) => (
+              <Box>
+                <Typography variant="body2" fontWeight="bold">{row.username}</Typography>
+                <Typography variant="caption" color="text.secondary">ID: {row.id.slice(0, 8)}...</Typography>
+              </Box>
+            ) 
+          },
           { key: 'full_name', header: usersText.fields.fullName, searchValue: (row) => row.full_name, render: (row) => row.full_name },
           {
             key: 'role_names',
             header: usersText.fields.role,
             searchValue: (row) => row.role_names.join(' '),
             render: (row) => (
-              <Stack direction='row' spacing={1} flexWrap='wrap' useFlexGap>
+              <Stack direction='row' spacing={0.5} flexWrap='wrap' useFlexGap>
                 {row.role_names.map((roleName) => (
-                  <Chip key={roleName} label={userRoleLabel(currentLanguage, roleName)} size='small' />
+                  <Chip 
+                    key={roleName} 
+                    label={userRoleLabel(currentLanguage, roleName)} 
+                    size='small' 
+                    variant="soft"
+                    color={roleName === 'admin' ? 'error' : 'primary'}
+                    sx={{ fontWeight: 'bold', fontSize: '0.7rem' }}
+                  />
                 ))}
               </Stack>
             ),
+          },
+          {
+            key: 'security',
+            header: 'الأمان',
+            render: (row) => (
+              <Tooltip title={row.is_2fa_enabled ? "التحقق الثنائي مفعل" : "التحقق الثنائي غير مفعل"}>
+                <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                  {row.is_2fa_enabled ? (
+                    <ShieldCheck size={20} color={theme.palette.success.main} />
+                  ) : (
+                    <Shield size={20} color={theme.palette.text.disabled} />
+                  )}
+                </Box>
+              </Tooltip>
+            )
           },
           {
             key: 'status',
@@ -76,9 +113,28 @@ export function UsersAdminSection({
             render: (row) => {
               const isFrozen = row.is_frozen_until && new Date(row.is_frozen_until) > new Date();
               if (isFrozen) {
-                return <Chip label="مجمد" size="small" color="error" variant="filled" icon={<Snowflake size={14} />} />;
+                return (
+                  <Tooltip title={`مجمد حتى: ${new Date(row.is_frozen_until!).toLocaleDateString()}`}>
+                    <Chip 
+                      label="مجمد" 
+                      size="small" 
+                      color="error" 
+                      variant="filled" 
+                      icon={<Snowflake size={14} />} 
+                      sx={{ fontWeight: 'bold' }}
+                    />
+                  </Tooltip>
+                );
               }
-              return <Chip label={row.is_active ? usersText.status.active : usersText.status.inactive} size="small" color={row.is_active ? 'success' : 'default'} />;
+              return (
+                <Chip 
+                  label={row.is_active ? usersText.status.active : usersText.status.inactive} 
+                  size="small" 
+                  variant="outlined"
+                  color={row.is_active ? 'success' : 'default'}
+                  icon={row.is_active ? <UserCheck size={14} /> : <UserMinus size={14} />}
+                />
+              );
             }
           },
           {
@@ -87,18 +143,20 @@ export function UsersAdminSection({
             render: (row) => {
               const isFrozen = row.is_frozen_until && new Date(row.is_frozen_until) > new Date();
               return (
-                <Stack direction="row" spacing={1}>
-                  <Button startIcon={<EditOutlinedIcon />} onClick={() => onEditUser(row)} size="small">
-                    {commonText.edit}
-                  </Button>
+                <Stack direction="row" spacing={0.5}>
+                  <Tooltip title={commonText.edit}>
+                    <IconButton size="small" color="primary" onClick={() => onEditUser(row)}>
+                      <EditOutlinedIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
                   {isFrozen ? (
-                    <Tooltip title="فك التجميد">
+                    <Tooltip title="فك التجميد (إلغاء تقييد الحساب)">
                       <IconButton size="small" color="success" onClick={() => onUnfreezeUser(row.id)}>
                         <Flame size={18} />
                       </IconButton>
                     </Tooltip>
                   ) : (
-                    <Tooltip title="تجميد الحساب">
+                    <Tooltip title="تجميد الحساب (تقييد الدخول مؤقتاً)">
                       <IconButton size="small" color="error" onClick={() => onFreezeUser(row.id)}>
                         <Snowflake size={18} />
                       </IconButton>

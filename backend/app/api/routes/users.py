@@ -7,7 +7,7 @@ from app.api.deps import require_self_manage, require_users_manage
 from app.db.session import get_db
 from app.modules.identity.models import User
 from app.modules.identity.schemas import AdminUpdateUserRequest, CreateUserRequest, SelfUpdateUserRequest, UserGridPreferenceResponse, UserGridPreferenceUpdateRequest, UserResponse, ThemePreferenceResponse, ThemePreferenceUpdateRequest, FreezeUserRequest
-from app.modules.identity.service import create_user, get_user_grid_preference, get_user_profile, list_visible_users, set_user_grid_preference, update_own_profile, update_user_by_admin, get_user_theme_preference, set_user_theme_preference, freeze_user, unfreeze_user
+from app.modules.identity.user_service import create_user, get_user_grid_preference, get_user_profile, list_visible_users, set_user_grid_preference, update_own_profile, update_user_by_admin, get_user_theme_preference, set_user_theme_preference, freeze_user, unfreeze_user
 
 router = APIRouter(prefix="/users", tags=["users"])
 

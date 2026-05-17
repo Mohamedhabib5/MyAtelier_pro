@@ -14,6 +14,7 @@ DEFAULT_PERMISSIONS = {
     
     # Financial & Ops
     "finance.view": "عرض مؤشرات لوحة القيادة المالية",
+    "finance.reconcile_cash": "تسوية النقدية والعهد المالية",
     "reports.view": "عرض التقارير التشغيلية الواسعة",
     "exports.view": "تحميل وفتح الصادرات",
     "exports.manage": "إدارة جداول التصدير المحفوظة",
@@ -80,6 +81,7 @@ ROLE_PERMISSION_MAP = {
         "bookings.manage",
         "payments.view",
         "payments.manage",
+        "accounting.view",
         "atelier.view_reservations",
         "atelier.view_fittings",
         "salon.view_appointments",

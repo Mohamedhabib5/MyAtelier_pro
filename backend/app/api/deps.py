@@ -12,6 +12,8 @@ from app.db.session import get_db
 from app.modules.identity.access import ensure_permission
 from app.modules.identity.models import User
 from app.modules.identity.service import get_user_or_404, user_has_role
+from app.core.redis_client import redis_client
+import json
 
 
 def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
@@ -57,7 +59,26 @@ def PermissionRequired(permission_key: str):
     Usage: Depends(PermissionRequired("atelier.view_reservations"))
     """
     def _dependency(current_user: User = Depends(get_current_user)) -> User:
-        ensure_permission(current_user, permission_key)
+        cache_key = f"user_perms:{current_user.id}"
+        try:
+            cached_perms = redis_client.get(cache_key)
+            if cached_perms:
+                perms = set(json.loads(cached_perms))
+            else:
+                from app.modules.identity.access import permission_keys_for_user
+                perms_set = permission_keys_for_user(current_user)
+                perms = list(perms_set)
+                redis_client.setex(cache_key, 300, json.dumps(perms))
+                perms = perms_set
+        except Exception:
+            # Fallback to DB if Redis fails
+            from app.modules.identity.access import permission_keys_for_user
+            perms = permission_keys_for_user(current_user)
+
+        from app.core.messages import missing_permission_message
+        if permission_key not in perms:
+            raise AuthorizationError(missing_permission_message(permission_key))
+            
         return current_user
     return _dependency
 
@@ -79,6 +100,9 @@ def require_settings_manage(current_user: User = Depends(get_current_user)) -> U
 
 def require_finance_view(current_user: User = Depends(get_current_user)) -> User:
     return PermissionRequired("finance.view")(current_user)
+
+def require_reconcile_cash(current_user: User = Depends(get_current_user)) -> User:
+    return PermissionRequired("finance.reconcile_cash")(current_user)
 
 def require_reports_view(current_user: User = Depends(get_current_user)) -> User:
     return PermissionRequired("reports.view")(current_user)

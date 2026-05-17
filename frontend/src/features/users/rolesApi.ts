@@ -48,7 +48,6 @@ export function deleteRole(roleId: string): Promise<void> {
 }
 
 export function cloneRole(roleId: string, newName: string): Promise<Role> {
-  const url = new URL(`${window.location.origin}/api/roles/${roleId}/clone`);
-  url.searchParams.append('new_name', newName);
-  return apiRequest<Role>(url.toString().replace(window.location.origin, ''), { method: 'POST' });
+  const params = new URLSearchParams({ new_name: newName });
+  return apiRequest<Role>(`/api/roles/${roleId}/clone?${params.toString()}`, { method: 'POST' });
 }

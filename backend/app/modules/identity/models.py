@@ -15,11 +15,13 @@ role_permissions = Table(
     Column("permission_id", ForeignKey("permissions.id", ondelete="CASCADE"), primary_key=True),
 )
 
-class UserRole(Base, TimestampMixin):
+class UserRole(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     __tablename__ = "user_roles"
-    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
-    role_id: Mapped[str] = mapped_column(ForeignKey("roles.id", ondelete="CASCADE"), primary_key=True)
-    branch_id: Mapped[str | None] = mapped_column(ForeignKey("branches.id", ondelete="SET NULL"), primary_key=True, nullable=True)
+    __table_args__ = (UniqueConstraint("user_id", "role_id", "branch_id", name="uq_user_roles_user_role_branch"),)
+
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    role_id: Mapped[str] = mapped_column(ForeignKey("roles.id", ondelete="CASCADE"), nullable=False)
+    branch_id: Mapped[str | None] = mapped_column(ForeignKey("branches.id", ondelete="SET NULL"), nullable=True)
 
     user = relationship("User", back_populates="user_roles")
     role = relationship("Role", back_populates="user_roles")
@@ -33,7 +35,7 @@ class User(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     preferred_language: Mapped[str] = mapped_column(String(5), default="ar", nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-    is_frozen_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    is_frozen_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
     totp_secret: Mapped[str | None] = mapped_column(String(255), nullable=True)  # AES-256 encrypted
     is_2fa_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

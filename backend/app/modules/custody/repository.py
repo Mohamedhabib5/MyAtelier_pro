@@ -32,7 +32,7 @@ class CustodyRepository:
         stmt = stmt.order_by(CustodyCase.custody_date.desc(), CustodyCase.created_at.desc())
         
         if page is not None and page_size is not None:
-            stmt = stmt.limit(page_size).offset(page * page_size)
+            stmt = stmt.limit(page_size).offset((page - 1) * page_size)
             
         return self.db.execute(stmt).all(), total
 

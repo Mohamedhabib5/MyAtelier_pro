@@ -93,3 +93,17 @@ export function buildNightlyOpsCsvUrl(query: AuditEventQuery, limit = 1000, expo
   params.set('limit', String(limit));
   return `/api/audit/nightly-ops.csv?${params.toString()}`;
 }
+export type IntegrityVerifyResponse = {
+  success: boolean;
+  total_verified: number;
+  issues: Array<{
+    log_id: string;
+    error: string;
+    expected: string | null;
+    actual: string | null;
+  }>;
+};
+
+export function verifyAuditIntegrity(): Promise<IntegrityVerifyResponse> {
+  return apiRequest<IntegrityVerifyResponse>('/api/audit/verify-integrity', { method: 'POST' });
+}

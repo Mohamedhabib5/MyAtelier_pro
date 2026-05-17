@@ -38,6 +38,7 @@ from app.api.routes import (
     search,
     settings,
     users,
+    reconciliation,
 )
 from app.core.config import Settings, get_settings
 from app.core.exceptions import AppError, AuthorizationError
@@ -249,6 +250,7 @@ def create_app(settings_obj: Settings | None = None) -> FastAPI:
     app.include_router(payment_methods.router, prefix='/api')
     app.include_router(payment_targets.router, prefix='/api')
     app.include_router(payments.router, prefix='/api')
+    app.include_router(reconciliation.router, prefix='/api')
     return app
 
 

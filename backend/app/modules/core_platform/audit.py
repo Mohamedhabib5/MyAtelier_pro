@@ -55,3 +55,50 @@ def record_audit(
     repo.add_audit_log(entry)
     return entry
 
+def verify_chain_integrity(db: Session) -> dict:
+    """
+    Verifies the integrity of the audit log hash chain.
+    Returns a status report.
+    """
+    repo = CorePlatformRepository(db)
+    logs = repo.list_audit_logs_ascending() # Need to ensure this exists or use query
+    
+    issues = []
+    last_hash = None
+    count = 0
+    
+    for log in logs:
+        # 1. Verify previous_log_hash matches our last_hash
+        if log.previous_log_hash != last_hash:
+            issues.append({
+                "log_id": log.id,
+                "error": "Mismatched previous_log_hash",
+                "expected": last_hash,
+                "actual": log.previous_log_hash
+            })
+        
+        # 2. Recalculate hash and verify
+        recalculated = calculate_log_hash(
+            log.previous_log_hash,
+            log.action,
+            log.target_id,
+            log.summary,
+            log.diff_json
+        )
+        
+        if log.log_hash != recalculated:
+            issues.append({
+                "log_id": log.id,
+                "error": "Invalid log_hash (recalculation mismatch)",
+                "expected": recalculated,
+                "actual": log.log_hash
+            })
+            
+        last_hash = log.log_hash
+        count += 1
+        
+    return {
+        "success": len(issues) == 0,
+        "total_verified": count,
+        "issues": issues
+    }

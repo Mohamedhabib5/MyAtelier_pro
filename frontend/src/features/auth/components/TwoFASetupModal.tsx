@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { 
   Dialog, DialogTitle, DialogContent, DialogActions, 
   Button, Typography, Box, TextField, Alert,
-  Stepper, Step, StepLabel, Divider, IconButton
+  Stepper, Step, StepLabel, Divider, IconButton,
+  Paper, useTheme, Fade
 } from '@mui/material';
 import { QRCodeSVG } from 'qrcode.react';
-import { Copy, Check, Download, AlertTriangle } from 'lucide-react';
+import { Copy, Check, Download, AlertTriangle, ShieldCheck, Key, Smartphone, Lock } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { setup2FA, activate2FA, type TwoFASetupResponse } from '../api';
 
 type Props = {
@@ -14,15 +16,17 @@ type Props = {
   onComplete: () => void;
 };
 
-const steps = ['الإعداد', 'المسح الضوئي', 'التحقق', 'أكواد النسخ الاحتياطي'];
+const steps = ['الإعداد', 'المسح الضوئي', 'التحقق', 'الأمان الإضافي'];
 
 export const TwoFASetupModal: React.FC<Props> = ({ open, onClose, onComplete }) => {
+  const theme = useTheme();
   const [activeStep, setActiveStep] = useState(0);
   const [setupData, setSetupData] = useState<TwoFASetupResponse | null>(null);
   const [verificationCode, setVerificationCode] = useState('');
   const [backupCodes, setBackupCodes] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const handleStartSetup = async () => {
     setLoading(true);
@@ -55,10 +59,13 @@ export const TwoFASetupModal: React.FC<Props> = ({ open, onClose, onComplete }) 
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const downloadBackupCodes = () => {
-    const blob = new Blob([backupCodes.join('\n')], { type: 'text/plain' });
+    const content = `MyAtelier Pro - Backup Codes\nGenerated at: ${new Date().toLocaleString()}\n\n${backupCodes.join('\n')}\n\nKeep these codes safe!`;
+    const blob = new Blob([content], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -67,13 +74,35 @@ export const TwoFASetupModal: React.FC<Props> = ({ open, onClose, onComplete }) 
   };
 
   return (
-    <Dialog open={open} maxWidth="sm" fullWidth disableEscapeKeyDown>
-      <DialogTitle sx={{ textAlign: 'center', fontWeight: 'bold' }}>
-        تفعيل التحقق الثنائي (2FA)
+    <Dialog 
+      open={open} 
+      maxWidth="sm" 
+      fullWidth 
+      disableEscapeKeyDown
+      PaperProps={{
+        sx: {
+          borderRadius: 4,
+          background: 'rgba(255, 255, 255, 0.95)',
+          backdropFilter: 'blur(10px)',
+          boxShadow: '0 20px 40px rgba(0,0,0,0.1)'
+        }
+      }}
+    >
+      <DialogTitle sx={{ 
+        textAlign: 'center', 
+        pt: 4, 
+        fontWeight: 800, 
+        fontSize: '1.5rem',
+        color: theme.palette.primary.dark
+      }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, mb: 1 }}>
+          <ShieldCheck size={32} color={theme.palette.primary.main} />
+          تفعيل التحقق الثنائي
+        </Box>
       </DialogTitle>
       
-      <DialogContent>
-        <Stepper activeStep={activeStep} alternativeLabel sx={{ mb: 4, mt: 2 }}>
+      <DialogContent sx={{ overflow: 'hidden' }}>
+        <Stepper activeStep={activeStep} alternativeLabel sx={{ mb: 4, mt: 1 }}>
           {steps.map((label) => (
             <Step key={label}>
               <StepLabel>{label}</StepLabel>
@@ -81,113 +110,276 @@ export const TwoFASetupModal: React.FC<Props> = ({ open, onClose, onComplete }) 
           ))}
         </Stepper>
 
-        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+        <AnimatePresence mode="wait">
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+            >
+              <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>{error}</Alert>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-        {activeStep === 0 && (
-          <Box sx={{ textAlign: 'center', py: 2 }}>
-            <Typography variant="body1" gutterBottom>
-              يحمي التحقق الثنائي حسابك عبر طلب رمز إضافي عند تسجيل الدخول.
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              سنستخدم تطبيق Google Authenticator أو أي تطبيق TOTP آخر.
-            </Typography>
-            <Button variant="contained" onClick={handleStartSetup} disabled={loading}>
-              ابدأ الإعداد الآن
-            </Button>
-          </Box>
-        )}
+        <Box sx={{ minHeight: 320, display: 'flex', flexDirection: 'column' }}>
+          <AnimatePresence mode="wait">
+            {activeStep === 0 && (
+              <motion.div
+                key="step0"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3 }}
+              >
+                <Box sx={{ textAlign: 'center', py: 2 }}>
+                  <Typography variant="h6" gutterBottom fontWeight="bold" color="text.primary">
+                    عزز أمان حسابك
+                  </Typography>
+                  <Typography variant="body1" color="text.secondary" sx={{ mb: 4, px: 4 }}>
+                    يحمي التحقق الثنائي حسابك عبر طلب رمز إضافي عند تسجيل الدخول من جهاز جديد. 
+                    ستحتاج إلى تطبيق مثل Google Authenticator أو Microsoft Authenticator.
+                  </Typography>
+                  <Box sx={{ display: 'flex', justifyContent: 'center', gap: 4, mb: 4 }}>
+                    <Box sx={{ textAlign: 'center' }}>
+                      <Smartphone size={40} color={theme.palette.text.disabled} />
+                      <Typography variant="caption" display="block">تطبيق الهاتف</Typography>
+                    </Box>
+                    <Box sx={{ alignSelf: 'center' }}>
+                      <Typography variant="h4" color="text.disabled">→</Typography>
+                    </Box>
+                    <Box sx={{ textAlign: 'center' }}>
+                      <Lock size={40} color={theme.palette.primary.main} />
+                      <Typography variant="caption" display="block">حساب محمي</Typography>
+                    </Box>
+                  </Box>
+                  <Button 
+                    variant="contained" 
+                    size="large"
+                    onClick={handleStartSetup} 
+                    disabled={loading}
+                    sx={{ 
+                      borderRadius: 10, 
+                      px: 6, 
+                      py: 1.5,
+                      boxShadow: theme.shadows[4]
+                    }}
+                  >
+                    بدء الإعداد الآن
+                  </Button>
+                </Box>
+              </motion.div>
+            )}
 
-        {activeStep === 1 && setupData && (
-          <Box sx={{ textAlign: 'center' }}>
-            <Typography variant="subtitle1" gutterBottom fontWeight="bold">
-              1. امسح رمز QR التالي
-            </Typography>
-            <Box sx={{ bgcolor: 'white', p: 2, display: 'inline-block', borderRadius: 2, mb: 2, border: '1px solid #eee' }}>
-              <QRCodeSVG value={setupData.provisioning_uri} size={200} />
-            </Box>
-            <Typography variant="body2" gutterBottom>
-              أو أدخل الرمز يدوياً في التطبيق:
-            </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, mb: 3 }}>
-              <Typography sx={{ bgcolor: '#f5f5f5', p: 1, borderRadius: 1, letterSpacing: 2, fontFamily: 'monospace' }}>
-                {setupData.secret_plain}
-              </Typography>
-              <IconButton size="small" onClick={() => copyToClipboard(setupData.secret_plain)}>
-                <Copy size={16} />
-              </IconButton>
-            </Box>
-            <Button variant="contained" onClick={() => setActiveStep(2)}>
-              تم المسح، التالي
-            </Button>
-          </Box>
-        )}
+            {activeStep === 1 && setupData && (
+              <motion.div
+                key="step1"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3 }}
+              >
+                <Box sx={{ textAlign: 'center' }}>
+                  <Typography variant="subtitle1" gutterBottom fontWeight="bold">
+                    1. امسح رمز QR من هاتفك
+                  </Typography>
+                  <Paper 
+                    elevation={0}
+                    sx={{ 
+                      bgcolor: 'white', 
+                      p: 3, 
+                      display: 'inline-block', 
+                      borderRadius: 4, 
+                      mb: 2, 
+                      border: `2px solid ${theme.palette.divider}` 
+                    }}
+                  >
+                    <QRCodeSVG value={setupData.provisioning_uri} size={180} />
+                  </Paper>
+                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                    أو أدخل الرمز يدوياً إذا كنت لا تستطيع المسح:
+                  </Typography>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    gap: 1, 
+                    mb: 3,
+                    bgcolor: 'rgba(0,0,0,0.04)',
+                    p: 1.5,
+                    borderRadius: 2
+                  }}>
+                    <Typography sx={{ letterSpacing: 2, fontFamily: 'monospace', fontWeight: 'bold' }}>
+                      {setupData.secret_plain}
+                    </Typography>
+                    <IconButton size="small" onClick={() => copyToClipboard(setupData.secret_plain)}>
+                      {copied ? <Check size={18} color={theme.palette.success.main} /> : <Copy size={18} />}
+                    </IconButton>
+                  </Box>
+                  <Button variant="contained" onClick={() => setActiveStep(2)} sx={{ borderRadius: 10, px: 4 }}>
+                    تم المسح، التالي
+                  </Button>
+                </Box>
+              </motion.div>
+            )}
 
-        {activeStep === 2 && (
-          <Box sx={{ textAlign: 'center', py: 2 }}>
-            <Typography variant="subtitle1" gutterBottom fontWeight="bold">
-              2. أدخل رمز التحقق من التطبيق
-            </Typography>
-            <TextField
-              fullWidth
-              label="رمز التحقق (6 أرقام)"
-              value={verificationCode}
-              onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ''))}
-              inputProps={{ maxLength: 6, style: { textAlign: 'center', fontSize: '1.5rem', letterSpacing: '0.5rem' } }}
-              sx={{ mb: 3, maxWidth: 300 }}
-              autoFocus
-            />
-            <Box>
-              <Button variant="outlined" onClick={() => setActiveStep(1)} sx={{ mr: 1 }}>
-                رجوع
-              </Button>
-              <Button variant="contained" onClick={handleVerify} disabled={loading || verificationCode.length < 6}>
-                تأكيد التفعيل
-              </Button>
-            </Box>
-          </Box>
-        )}
+            {activeStep === 2 && (
+              <motion.div
+                key="step2"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3 }}
+              >
+                <Box sx={{ textAlign: 'center', py: 2 }}>
+                  <Typography variant="subtitle1" gutterBottom fontWeight="bold">
+                    2. أدخل الرمز المكون من 6 أرقام
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                    أدخل الرمز الذي يظهر الآن في تطبيق المصادقة الخاص بك.
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    placeholder="000000"
+                    value={verificationCode}
+                    onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ''))}
+                    inputProps={{ 
+                      maxLength: 6, 
+                      style: { 
+                        textAlign: 'center', 
+                        fontSize: '2rem', 
+                        letterSpacing: '0.8rem',
+                        fontWeight: 'bold',
+                        color: theme.palette.primary.main
+                      } 
+                    }}
+                    sx={{ 
+                      mb: 4, 
+                      maxWidth: 300,
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 3,
+                        bgcolor: 'rgba(0,0,0,0.02)'
+                      }
+                    }}
+                    autoFocus
+                  />
+                  <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2 }}>
+                    <Button variant="text" onClick={() => setActiveStep(1)} sx={{ borderRadius: 10 }}>
+                      رجوع
+                    </Button>
+                    <Button 
+                      variant="contained" 
+                      onClick={handleVerify} 
+                      disabled={loading || verificationCode.length < 6}
+                      sx={{ borderRadius: 10, px: 4 }}
+                    >
+                      تأكيد التفعيل
+                    </Button>
+                  </Box>
+                </Box>
+              </motion.div>
+            )}
 
-        {activeStep === 3 && (
-          <Box>
-            <Alert severity="warning" icon={<AlertTriangle />} sx={{ mb: 2 }}>
-              احتفظ بهذه الأكواد في مكان آمن. ستحتاجها إذا فقدت الوصول إلى هاتفك.
-            </Alert>
-            <Typography variant="subtitle2" gutterBottom fontWeight="bold">
-              أكواد النسخ الاحتياطي:
-            </Typography>
-            <Box sx={{ 
-              display: 'grid', 
-              gridTemplateColumns: '1fr 1fr', 
-              gap: 1, 
-              bgcolor: '#f9f9f9', 
-              p: 2, 
-              borderRadius: 1,
-              fontFamily: 'monospace',
-              mb: 3
-            }}>
-              {backupCodes.map((code, idx) => (
-                <Typography key={idx} variant="body2">{code}</Typography>
-              ))}
-            </Box>
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              <Button startIcon={<Copy />} onClick={() => copyToClipboard(backupCodes.join('\n'))}>
-                نسخ الكل
-              </Button>
-              <Button startIcon={<Download />} onClick={downloadBackupCodes}>
-                تحميل كملف نصي
-              </Button>
-            </Box>
-          </Box>
-        )}
+            {activeStep === 3 && (
+              <motion.div
+                key="step3"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.4 }}
+              >
+                <Box>
+                  <Alert 
+                    severity="warning" 
+                    icon={<AlertTriangle />} 
+                    sx={{ 
+                      mb: 3, 
+                      borderRadius: 3,
+                      '& .MuiAlert-message': { fontWeight: 'bold' }
+                    }}
+                  >
+                    هام: احتفظ بهذه الأكواد في مكان آمن للغاية. لن نتمكن من عرضها لك مرة أخرى!
+                  </Alert>
+                  
+                  <Paper 
+                    variant="outlined" 
+                    sx={{ 
+                      p: 2.5, 
+                      borderRadius: 3, 
+                      bgcolor: 'rgba(0,0,0,0.02)',
+                      borderStyle: 'dashed',
+                      borderWidth: 2,
+                      mb: 3
+                    }}
+                  >
+                    <Grid container spacing={1}>
+                      {backupCodes.map((code, idx) => (
+                        <Grid item xs={6} key={idx}>
+                          <Box sx={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: 1,
+                            p: 1,
+                            bgcolor: 'white',
+                            borderRadius: 1.5,
+                            border: '1px solid rgba(0,0,0,0.05)'
+                          }}>
+                            <Key size={14} color={theme.palette.text.disabled} />
+                            <Typography variant="body2" sx={{ fontFamily: 'monospace', fontWeight: 'bold' }}>{code}</Typography>
+                          </Box>
+                        </Grid>
+                      ))}
+                    </Grid>
+                  </Paper>
+
+                  <Stack direction="row" spacing={2} justifyContent="center">
+                    <Button 
+                      variant="outlined" 
+                      startIcon={<Copy size={18} />} 
+                      onClick={() => copyToClipboard(backupCodes.join('\n'))}
+                      sx={{ borderRadius: 10 }}
+                    >
+                      نسخ الكل
+                    </Button>
+                    <Button 
+                      variant="outlined" 
+                      startIcon={<Download size={18} />} 
+                      onClick={downloadBackupCodes}
+                      sx={{ borderRadius: 10 }}
+                    >
+                      تحميل كملف
+                    </Button>
+                  </Stack>
+                </Box>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </Box>
       </DialogContent>
 
-      <DialogActions sx={{ p: 3 }}>
+      <DialogActions sx={{ p: 4, pt: 0 }}>
         {activeStep === 3 ? (
-          <Button variant="contained" fullWidth size="large" onClick={onComplete} color="success">
+          <Button 
+            variant="contained" 
+            fullWidth 
+            size="large" 
+            onClick={onComplete} 
+            color="success"
+            sx={{ 
+              borderRadius: 10, 
+              py: 1.5, 
+              fontWeight: 'bold',
+              boxShadow: '0 8px 16px rgba(46, 125, 50, 0.2)'
+            }}
+          >
             إكمال وإنهاء
           </Button>
         ) : (
-          <Button onClick={onClose} disabled={loading}>
+          <Button 
+            onClick={onClose} 
+            disabled={loading}
+            color="inherit"
+            sx={{ borderRadius: 10 }}
+          >
             إلغاء
           </Button>
         )}

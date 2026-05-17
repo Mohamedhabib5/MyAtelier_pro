@@ -12,7 +12,7 @@ from app.modules.identity.schemas import (
     UpdateRoleRequest, 
     PermissionResponse
 )
-from app.modules.identity.service import (
+from app.modules.identity.role_service import (
     list_roles, 
     get_role_or_404, 
     create_role, 

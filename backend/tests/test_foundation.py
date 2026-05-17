@@ -8,24 +8,31 @@ from fastapi.testclient import TestClient
 from .conftest import build_test_client
 
 
-def login(client: TestClient, username: str = "admin", password: str = "admin123") -> dict:
+from app.core.config import get_settings
+
+def login(client: TestClient, username: str | None = None, password: str | None = None) -> dict:
+    settings = get_settings()
+    username = username or settings.default_admin_username
+    password = password or settings.default_admin_password
     response = client.post("/api/auth/login", json={"username": username, "password": password})
     assert response.status_code == 200, response.text
     return response.json()
 
 
 def test_health_and_default_admin_login(app_client: TestClient) -> None:
+    settings = get_settings()
     health_response = app_client.get("/api/health")
     assert health_response.status_code == 200
     assert health_response.json()["database_ok"] is True
     assert health_response.json()["migrations_ok"] is True
 
     payload = login(app_client)
-    assert payload["username"] == "admin"
+    assert payload["username"] == settings.default_admin_username
     assert "admin" in payload["role_names"]
 
 
 def test_default_admin_seeded_once(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    settings = get_settings()
     db_path = tmp_path / "seed-once.db"
     storage_root = tmp_path / "storage"
 
@@ -33,13 +40,13 @@ def test_default_admin_seeded_once(tmp_path: Path, monkeypatch: pytest.MonkeyPat
         login(first_client)
         users_first = first_client.get("/api/users").json()
         assert len(users_first) == 1
-        assert users_first[0]["username"] == "admin"
+        assert users_first[0]["username"] == settings.default_admin_username
 
     with build_test_client(db_path, storage_root, monkeypatch) as second_client:
         login(second_client)
         users_second = second_client.get("/api/users").json()
         assert len(users_second) == 1
-        assert users_second[0]["username"] == "admin"
+        assert users_second[0]["username"] == settings.default_admin_username
 
 
 def test_login_failure(app_client: TestClient) -> None:

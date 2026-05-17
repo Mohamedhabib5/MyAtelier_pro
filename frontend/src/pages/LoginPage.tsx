@@ -1,7 +1,12 @@
 import { FormEvent, useState } from 'react';
-
-import { Alert, Box, Button, Card, CardContent, Stack, TextField, Typography } from '@mui/material';
+import { 
+  Alert, Box, Button, Card, CardContent, Stack, 
+  TextField, Typography, useTheme, InputAdornment,
+  IconButton, Fade, CircularProgress, Paper
+} from '@mui/material';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { Lock, User as UserIcon, ShieldCheck, Key, ArrowRight, Languages } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 import { useAuth } from '../features/auth/AuthProvider';
 import { LanguageSwitcher } from '../features/language/LanguageSwitcher';
@@ -13,9 +18,11 @@ import { verify2FA, verifyBackup2FA } from '../features/auth/api';
 export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const theme = useTheme();
   const { language } = useLanguage();
   const { loginAction } = useAuth();
   const loginText = useLoginText();
+  
   const [username, setUsername] = useState('admin');
   const [password, setPassword] = useState('admin123');
   const [error, setError] = useState<string | null>(null);
@@ -23,6 +30,7 @@ export function LoginPage() {
   const [is2FARequired, setIs2FARequired] = useState(false);
   const [twoFACode, setTwoFACode] = useState('');
   const [useBackupCode, setUseBackupCode] = useState(false);
+  
   const targetPath = (location.state as { from?: string } | undefined)?.from ?? '/dashboard';
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -38,7 +46,6 @@ export function LoginPage() {
           navigate(targetPath, { replace: true });
         }
       } else {
-        // Handle 2FA verification
         if (useBackupCode) {
           await verifyBackup2FA(twoFACode);
         } else {
@@ -54,52 +61,195 @@ export function LoginPage() {
   }
 
   return (
-    <Box sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center', bgcolor: 'grey.100', p: 2 }}>
-      <Card sx={{ width: '100%', maxWidth: 460 }}>
-        <CardContent>
-          <Stack spacing={3} component='form' onSubmit={handleSubmit}>
-            <Stack direction='row' justifyContent='space-between' alignItems='center'>
-              <Box />
-              <LanguageSwitcher />
-            </Stack>
-            <Stack spacing={1}>
-              <Typography variant='h4'>{loginText.title}</Typography>
-              <Typography color='text.secondary'>{loginText.subtitle}</Typography>
-            </Stack>
-            {error ? <Alert severity='error'>{error}</Alert> : null}
-            {!is2FARequired ? (
-              <>
-                <TextField label={loginText.username} value={username} onChange={(event) => setUsername(event.target.value)} required />
-                <TextField label={loginText.password} type='password' value={password} onChange={(event) => setPassword(event.target.value)} required />
-              </>
-            ) : (
-              <>
-                <Typography variant="body1" textAlign="center" fontWeight="bold">
-                  {useBackupCode ? 'أدخل كود النسخ الاحتياطي' : 'التحقق الثنائي مطلوب'}
-                </Typography>
-                <TextField 
-                  label={useBackupCode ? 'كود النسخ الاحتياطي' : 'رمز التحقق (6 أرقام)'} 
-                  value={twoFACode} 
-                  onChange={(event) => setTwoFACode(event.target.value)} 
-                  autoFocus
-                  required 
-                />
-                <Button variant="text" size="small" onClick={() => { setUseBackupCode(!useBackupCode); setTwoFACode(''); }}>
-                  {useBackupCode ? 'استخدام رمز التطبيق' : 'فقدت هاتفي؟ استخدم كود النسخ الاحتياطي'}
+    <Box 
+      sx={{ 
+        minHeight: '100vh', 
+        display: 'flex', 
+        flexDirection: 'column',
+        bgcolor: '#f8fafc',
+        backgroundImage: 'radial-gradient(at 0% 0%, rgba(37, 99, 235, 0.05) 0, transparent 50%), radial-gradient(at 50% 0%, rgba(37, 99, 235, 0.05) 0, transparent 50%)',
+        p: 2 
+      }}
+    >
+      <Box sx={{ p: 2, display: 'flex', justifyContent: 'flex-end' }}>
+        <LanguageSwitcher />
+      </Box>
+
+      <Box sx={{ flex: 1, display: 'grid', placeItems: 'center' }}>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <Card 
+            sx={{ 
+              width: '100%', 
+              maxWidth: 420, 
+              borderRadius: 6,
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+              overflow: 'visible'
+            }}
+          >
+            <Box 
+              sx={{ 
+                height: 8, 
+                bgcolor: 'primary.main', 
+                borderTopLeftRadius: 24, 
+                borderTopRightRadius: 24 
+              }} 
+            />
+            
+            <CardContent sx={{ p: 5 }}>
+              <Stack spacing={4} component='form' onSubmit={handleSubmit}>
+                <Box sx={{ textAlign: 'center' }}>
+                  <Box 
+                    sx={{ 
+                      display: 'inline-flex', 
+                      p: 2, 
+                      borderRadius: 4, 
+                      bgcolor: 'primary.main', 
+                      color: 'white',
+                      mb: 2,
+                      boxShadow: '0 10px 15px -3px rgba(37, 99, 235, 0.4)'
+                    }}
+                  >
+                    <ShieldCheck size={32} />
+                  </Box>
+                  <Typography variant='h4' fontWeight='800' gutterBottom>
+                    {is2FARequired ? (useBackupCode ? 'كود الطوارئ' : 'التحقق الثنائي') : 'MyAtelier Pro'}
+                  </Typography>
+                  <Typography color='text.secondary' variant='body2'>
+                    {is2FARequired 
+                      ? 'يرجى إدخال رمز التحقق الإضافي للمتابعة' 
+                      : 'سجل دخولك لإدارة ورشتك بكفاءة'}
+                  </Typography>
+                </Box>
+
+                {error && (
+                  <Fade in={!!error}>
+                    <Alert 
+                      severity='error' 
+                      variant="outlined"
+                      sx={{ borderRadius: 3, bgcolor: 'error.lighter' }}
+                    >
+                      {error}
+                    </Alert>
+                  </Fade>
+                )}
+
+                <Stack spacing={2.5}>
+                  {!is2FARequired ? (
+                    <>
+                      <TextField 
+                        label={loginText.username} 
+                        value={username} 
+                        onChange={(event) => setUsername(event.target.value)} 
+                        required 
+                        fullWidth
+                        InputProps={{
+                          startAdornment: (
+                            <InputAdornment position="start">
+                              <UserIcon size={20} color={theme.palette.text.disabled} />
+                            </InputAdornment>
+                          ),
+                          sx: { borderRadius: 3 }
+                        }}
+                      />
+                      <TextField 
+                        label={loginText.password} 
+                        type='password' 
+                        value={password} 
+                        onChange={(event) => setPassword(event.target.value)} 
+                        required 
+                        fullWidth
+                        InputProps={{
+                          startAdornment: (
+                            <InputAdornment position="start">
+                              <Lock size={20} color={theme.palette.text.disabled} />
+                            </InputAdornment>
+                          ),
+                          sx: { borderRadius: 3 }
+                        }}
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <TextField 
+                        label={useBackupCode ? 'كود النسخ الاحتياطي' : 'رمز التحقق (6 أرقام)'} 
+                        value={twoFACode} 
+                        onChange={(event) => setTwoFACode(event.target.value)} 
+                        autoFocus
+                        required 
+                        fullWidth
+                        inputProps={{ 
+                          maxLength: useBackupCode ? 20 : 6,
+                          style: { textAlign: 'center', letterSpacing: useBackupCode ? '0' : '0.5rem', fontWeight: 'bold' } 
+                        }}
+                        InputProps={{
+                          sx: { borderRadius: 3, fontSize: '1.2rem' }
+                        }}
+                      />
+                      <Button 
+                        variant="text" 
+                        size="small" 
+                        onClick={() => { setUseBackupCode(!useBackupCode); setTwoFACode(''); }}
+                        startIcon={<Key size={16} />}
+                        sx={{ alignSelf: 'center', borderRadius: 10 }}
+                      >
+                        {useBackupCode ? 'استخدام رمز التطبيق' : 'استخدم كود النسخ الاحتياطي'}
+                      </Button>
+                    </>
+                  )}
+                </Stack>
+
+                <Button 
+                  type='submit' 
+                  variant='contained' 
+                  size='large' 
+                  disabled={submitting}
+                  endIcon={submitting ? <CircularProgress size={20} color="inherit" /> : <ArrowRight size={20} />}
+                  sx={{ 
+                    py: 1.8, 
+                    borderRadius: 3, 
+                    fontWeight: 'bold', 
+                    fontSize: '1rem',
+                    textTransform: 'none',
+                    boxShadow: '0 10px 15px -3px rgba(37, 99, 235, 0.3)'
+                  }}
+                >
+                  {is2FARequired ? 'تأكيد الرمز' : loginText.submit}
                 </Button>
-              </>
-            )}
-            <Button type='submit' variant='contained' size='large' disabled={submitting}>
-              {submitting ? loginText.submitting : (is2FARequired ? 'تأكيد الرمز' : loginText.submit)}
-            </Button>
-            {!is2FARequired && (
-              <Typography variant='body2' color='text.secondary'>
-                {loginText.helper} <strong>admin / admin123</strong>
-              </Typography>
-            )}
-          </Stack>
-        </CardContent>
-      </Card>
+
+                {!is2FARequired && (
+                  <Paper 
+                    elevation={0} 
+                    sx={{ 
+                      p: 2, 
+                      bgcolor: 'rgba(0,0,0,0.02)', 
+                      borderRadius: 3,
+                      border: '1px solid rgba(0,0,0,0.05)',
+                      textAlign: 'center'
+                    }}
+                  >
+                    <Typography variant='caption' color='text.secondary' display='block'>
+                      بيانات الدخول الافتراضية للتجربة:
+                    </Typography>
+                    <Typography variant='caption' fontWeight='bold' color='primary'>
+                      admin / admin123
+                    </Typography>
+                  </Paper>
+                )}
+              </Stack>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </Box>
+
+      <Box sx={{ p: 4, textAlign: 'center' }}>
+        <Typography variant='caption' color='text.disabled'>
+          © {new Date().getFullYear()} MyAtelier Pro. All rights reserved.
+        </Typography>
+      </Box>
     </Box>
   );
 }

@@ -14,14 +14,15 @@ from app.modules.identity.schemas import (
     TwoFAActivationResponse, 
     AuthUserResponse
 )
-from app.modules.identity.service import (
+from app.modules.identity.security_service import (
     setup_2fa, 
     activate_2fa, 
     verify_2fa_login, 
-    verify_backup_code_login,
-    get_user_profile
+    verify_backup_code_login
 )
+from app.modules.identity.user_service import get_user_profile
 from app.modules.organization.branch_context import ensure_active_branch
+from app.modules.core_platform.service import record_audit
 
 router = APIRouter(prefix='/auth/2fa', tags=['auth-2fa'])
 
@@ -35,6 +36,8 @@ def init_2fa_setup(
         raise ValidationAppError("التحقق الثنائي مفعل بالفعل لهذا الحساب")
     
     result = setup_2fa(db, current_user)
+    record_audit(db, actor_user_id=current_user.id, action="auth.2fa_setup_init", target_type="user", target_id=current_user.id, summary="Initiated 2FA setup")
+    db.commit()
     return TwoFASetupResponse(**result)
 
 @router.post('/activate', response_model=TwoFAActivationResponse)
@@ -78,8 +81,12 @@ def verify_login_2fa(
             "effective_language": request.session.get("language", current_user.preferred_language),
             "is_2fa_required": False
         })
+        record_audit(db, actor_user_id=current_user.id, action="auth.2fa_login_success", target_type="user", target_id=current_user.id, summary="2FA login success")
+        db.commit()
         return AuthUserResponse(**profile)
     
+    record_audit(db, actor_user_id=current_user.id, action="auth.2fa_login_failed", target_type="user", target_id=current_user.id, summary="2FA login failed", success=False)
+    db.commit()
     raise ValidationAppError("رمز التحقق غير صحيح")
 
 @router.post('/verify-backup', response_model=AuthUserResponse)
@@ -106,4 +113,6 @@ def verify_login_backup(
         })
         return AuthUserResponse(**profile)
     
+    record_audit(db, actor_user_id=current_user.id, action="auth.2fa_backup_code_failed", target_type="user", target_id=current_user.id, summary="2FA backup code login failed", success=False)
+    db.commit()
     raise ValidationAppError("رمز النسخ الاحتياطي غير صحيح")

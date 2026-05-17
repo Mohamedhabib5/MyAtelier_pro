@@ -24,6 +24,8 @@ def build_test_client(
     monkeypatch.setenv("STORAGE_ROOT", storage_root.as_posix())
     monkeypatch.setenv("BACKUP_STORAGE_DIR", (storage_root / "backups").as_posix())
     monkeypatch.setenv("ATTACHMENT_STORAGE_DIR", (storage_root / "attachments").as_posix())
+    monkeypatch.setenv("DEFAULT_ADMIN_USERNAME", "admin")
+    monkeypatch.setenv("DEFAULT_ADMIN_PASSWORD", "admin123")
     if env_overrides:
         for key, value in env_overrides.items():
             monkeypatch.setenv(key, value)

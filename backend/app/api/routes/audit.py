@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import require_audit_view
 from app.db.session import get_db
-from app.modules.core_platform.audit import record_audit
+from app.modules.core_platform.audit import record_audit, verify_chain_integrity
 from app.modules.core_platform.audit_explorer import list_audit_events, list_destructive_actions, list_nightly_ops_events
 from app.modules.core_platform.schemas import AuditEventPageResponse
 from app.modules.identity.models import User
@@ -186,3 +186,27 @@ def export_nightly_ops_csv_route(
             "X-Active-Filters": json.dumps(clean_filters, ensure_ascii=False),
         },
     )
+
+@router.post("/verify-integrity")
+def verify_audit_integrity_route(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_audit_view),
+) -> dict:
+    """
+    Verifies the hash chain of all audit logs.
+    Restricted to users with audit.view permission (Auditors/Owners).
+    """
+    result = verify_chain_integrity(db)
+    
+    # Audit the verification action itself
+    record_audit(
+        db,
+        actor_user_id=current_user.id,
+        action="audit.integrity_verified",
+        target_type="system",
+        target_id="audit_chain",
+        summary=f"Audit chain integrity verified. Success: {result['success']}, Total: {result['total_verified']}",
+        success=result["success"]
+    )
+    db.commit()
+    return result

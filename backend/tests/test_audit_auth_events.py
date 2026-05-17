@@ -15,8 +15,11 @@ def _latest_audit(app_client: TestClient, action: str) -> AuditLog | None:
         return db.scalars(select(AuditLog).where(AuditLog.action == action).order_by(AuditLog.occurred_at.desc())).first()
 
 
+from app.core.config import get_settings
+
 def test_login_success_is_audited_with_request_context(app_client: TestClient) -> None:
-    response = app_client.post("/api/auth/login", json={"username": "admin", "password": "admin123"})
+    settings = get_settings()
+    response = app_client.post("/api/auth/login", json={"username": settings.default_admin_username, "password": settings.default_admin_password})
     assert response.status_code == 200
 
     row = _latest_audit(app_client, "auth.login_success")
@@ -29,7 +32,8 @@ def test_login_success_is_audited_with_request_context(app_client: TestClient) -
 
 
 def test_login_failure_is_audited(app_client: TestClient) -> None:
-    response = app_client.post("/api/auth/login", json={"username": "admin", "password": "wrong-password"})
+    settings = get_settings()
+    response = app_client.post("/api/auth/login", json={"username": settings.default_admin_username, "password": "wrong-password"})
     assert response.status_code == 401
 
     row = _latest_audit(app_client, "auth.login_failed")
@@ -38,7 +42,7 @@ def test_login_failure_is_audited(app_client: TestClient) -> None:
     assert row.success is False
     assert row.error_code == "invalid_credentials"
     payload = json.loads(row.diff_json or "{}")
-    assert payload.get("username") == "admin"
+    assert payload.get("username") == settings.default_admin_username
 
 
 def test_logout_is_audited(app_client: TestClient) -> None:

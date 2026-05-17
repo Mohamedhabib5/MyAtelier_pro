@@ -15,7 +15,7 @@ export function ProtectedRoute() {
     );
   }
 
-  if (!user) {
+  if (!user || user.is_2fa_required) {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   }
 
