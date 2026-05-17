@@ -54,7 +54,7 @@ export function ReconciliationContent() {
   const [receiverName, setReceiverName] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
   const [selectedPaymentIds, setSelectedPaymentIds] = useState<string[]>([]);
-  const [singleActualAmount, setSingleActualAmount] = useState<number>(0);
+  const [singleActualAmount, setSingleActualAmount] = useState<number | "">("");
 
   // View / Delete Row State
   const [viewingRecon, setViewingRecon] = useState<ReconciliationRecord | null>(null);
@@ -109,8 +109,7 @@ export function ReconciliationContent() {
       setSelectedPaymentIds(pendingItems.map((item) => item.id));
       setHasAutoSelected(currentQueryKey);
       
-      const totalExpected = pendingItems.reduce((sum, item) => sum + item.direct_amount, 0);
-      setSingleActualAmount(totalExpected);
+      // We removed the auto-filling of singleActualAmount to enforce a Blind Count (جرد أعمى)
     }
   }, [pendingItems, hasAutoSelected, currentQueryKey]);
 
@@ -122,7 +121,8 @@ export function ReconciliationContent() {
   }, [pendingItems, selectedPaymentIds]);
 
   const difference = useMemo(() => {
-    return singleActualAmount - selectedPaymentsExpectedTotal;
+    const actual = singleActualAmount === "" ? 0 : singleActualAmount;
+    return actual - selectedPaymentsExpectedTotal;
   }, [singleActualAmount, selectedPaymentsExpectedTotal]);
 
   // Mutations
@@ -134,7 +134,7 @@ export function ReconciliationContent() {
       setReceiverName("");
       setNotes("");
       setSelectedPaymentIds([]);
-      setSingleActualAmount(0);
+      setSingleActualAmount("");
       setHasAutoSelected("");
       setIsMatchingOpen(false);
       queryClient.invalidateQueries({ queryKey: ["reconciliations"] });
@@ -171,15 +171,16 @@ export function ReconciliationContent() {
 
     // Proportional Distribution
     let allocatedSum = 0;
+    const actualVal = singleActualAmount === "" ? 0 : singleActualAmount;
     const itemsPayload = pendingItems
       .filter((item) => selectedPaymentIds.includes(item.id))
       .map((item, index, arr) => {
         let itemActual = 0;
         if (index === arr.length - 1) {
-          itemActual = singleActualAmount - allocatedSum;
+          itemActual = actualVal - allocatedSum;
         } else {
           if (selectedPaymentsExpectedTotal > 0) {
-            itemActual = Math.round((item.direct_amount * (singleActualAmount / selectedPaymentsExpectedTotal)) * 100) / 100;
+            itemActual = Math.round((item.direct_amount * (actualVal / selectedPaymentsExpectedTotal)) * 100) / 100;
           } else {
             itemActual = 0;
           }
@@ -382,7 +383,7 @@ export function ReconciliationContent() {
                   onChange={(e) => {
                     setSelectedMethodId(e.target.value);
                     setSelectedPaymentIds([]);
-                    setSingleActualAmount(0);
+                    setSingleActualAmount("");
                     setHasAutoSelected("");
                   }}
                   fullWidth
@@ -404,7 +405,7 @@ export function ReconciliationContent() {
                   onChange={(e) => {
                     setStartDate(e.target.value);
                     setSelectedPaymentIds([]);
-                    setSingleActualAmount(0);
+                    setSingleActualAmount("");
                     setHasAutoSelected("");
                   }}
                   fullWidth
@@ -421,7 +422,7 @@ export function ReconciliationContent() {
                   onChange={(e) => {
                     setEndDate(e.target.value);
                     setSelectedPaymentIds([]);
-                    setSingleActualAmount(0);
+                    setSingleActualAmount("");
                     setHasAutoSelected("");
                   }}
                   fullWidth
@@ -449,9 +450,15 @@ export function ReconciliationContent() {
                   size="small"
                   label={text.actualTotal + " *"}
                   value={singleActualAmount}
+                  placeholder="0"
                   onChange={(e) => {
-                    const val = parseFloat(e.target.value);
-                    setSingleActualAmount(isNaN(val) ? 0 : val);
+                    const val = e.target.value;
+                    if (val === "") {
+                      setSingleActualAmount("");
+                    } else {
+                      const parsed = parseFloat(val);
+                      setSingleActualAmount(isNaN(parsed) ? "" : parsed);
+                    }
                   }}
                   inputProps={{ min: 0 }}
                   fullWidth
