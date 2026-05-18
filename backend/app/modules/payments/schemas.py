@@ -177,3 +177,68 @@ class PaymentTargetDetailResponse(BaseModel):
     branch_name: str
     total_remaining: float
     bookings: list[PaymentTargetBookingResponse]
+
+
+class DisbursementVoucherSummaryResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    company_id: str
+    branch_id: str
+    created_by_user_id: str | None
+    updated_by_user_id: str | None
+    entity_version: int
+    branch_name: str | None = None
+    payment_method_id: str
+    payment_method_name: str | None = None
+    voucher_number: str
+    voucher_date: str
+    amount: float
+    payee_type: str
+    payee_id: str | None = None
+    payee_name: str | None = None
+    expense_category_id: str | None = None
+    status: str
+    journal_entry_id: str | None = None
+    journal_entry_number: str | None = None
+    journal_entry_status: str | None = None
+    voided_at: str | None = None
+    void_reason: str | None = None
+    notes: str | None = None
+
+
+class DisbursementVoucherResponse(DisbursementVoucherSummaryResponse):
+    pass
+
+
+class DisbursementVoucherSummaryPageResponse(BaseModel):
+    items: list[DisbursementVoucherSummaryResponse]
+    total: int
+    page: int
+    page_size: int
+
+
+class DisbursementVoucherCreateRequest(BaseModel):
+    payment_method_id: str
+    voucher_date: str
+    amount: float = Field(gt=0)
+    payee_type: str = Field(min_length=1, max_length=30)  # 'customer', 'supplier', 'employee', 'expense'
+    payee_id: str | None = None
+    payee_name: str | None = None
+    expense_category_id: str | None = None
+    notes: str | None = None
+
+
+class DisbursementVoucherUpdateRequest(BaseModel):
+    payment_method_id: str | None = None
+    voucher_date: str | None = None
+    amount: float | None = Field(default=None, gt=0)
+    payee_type: str | None = None
+    payee_id: str | None = None
+    payee_name: str | None = None
+    expense_category_id: str | None = None
+    notes: str | None = None
+    reason_code: str | None = None
+    override_lock: bool = False
+    override_reason: str | None = Field(default=None, max_length=500)
+

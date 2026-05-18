@@ -3,10 +3,11 @@ from __future__ import annotations
 from decimal import Decimal
 
 from app.modules.bookings.calculations import quantize_amount
-from app.modules.payments.models import PaymentAllocation, PaymentDocument
+from app.modules.payments.models import PaymentAllocation, PaymentDocument, DisbursementVoucher
 
 ZERO = Decimal("0.00")
 DIRECT_AMOUNT_DOCUMENT_KINDS = {"custody_compensation", "custody_deposit", "refund"}
+
 
 
 def document_total(payment_document: PaymentDocument) -> Decimal:
@@ -75,3 +76,32 @@ def serialize_document(payment_document: PaymentDocument, *, include_allocations
     if include_allocations:
         payload["allocations"] = [serialize_allocation(allocation) for allocation in payment_document.allocations]
     return payload
+
+
+def serialize_disbursement(voucher: DisbursementVoucher) -> dict:
+    return {
+        "id": voucher.id,
+        "company_id": voucher.company_id,
+        "branch_id": voucher.branch_id,
+        "created_by_user_id": voucher.created_by_user_id,
+        "updated_by_user_id": voucher.updated_by_user_id,
+        "entity_version": voucher.entity_version,
+        "branch_name": voucher.branch.name if voucher.branch else None,
+        "payment_method_id": voucher.payment_method_id,
+        "payment_method_name": voucher.payment_method.name if voucher.payment_method else None,
+        "voucher_number": voucher.voucher_number,
+        "voucher_date": voucher.voucher_date.isoformat() if hasattr(voucher.voucher_date, "isoformat") else str(voucher.voucher_date),
+        "amount": float(voucher.amount),
+        "payee_type": voucher.payee_type,
+        "payee_id": voucher.payee_id,
+        "payee_name": voucher.payee_name,
+        "expense_category_id": voucher.expense_category_id,
+        "status": voucher.status,
+        "journal_entry_id": voucher.journal_entry_id,
+        "journal_entry_number": voucher.journal_entry.entry_number if voucher.journal_entry else None,
+        "journal_entry_status": voucher.journal_entry.status if voucher.journal_entry else None,
+        "voided_at": voucher.voided_at.isoformat() if voucher.voided_at else None,
+        "void_reason": voucher.void_reason,
+        "notes": voucher.notes,
+    }
+

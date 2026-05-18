@@ -49,7 +49,8 @@ class ReconciliationItem(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     __tablename__ = "reconciliation_items"
 
     reconciliation_id: Mapped[str] = mapped_column(ForeignKey("cash_reconciliations.id", ondelete="CASCADE"), nullable=False)
-    payment_document_id: Mapped[str] = mapped_column(ForeignKey("payment_documents.id", ondelete="RESTRICT"), nullable=False)
+    payment_document_id: Mapped[str | None] = mapped_column(ForeignKey("payment_documents.id", ondelete="RESTRICT"), nullable=True)
+    disbursement_voucher_id: Mapped[str | None] = mapped_column(ForeignKey("disbursement_vouchers.id", ondelete="RESTRICT"), nullable=True)
 
     expected_amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     actual_amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
@@ -57,3 +58,5 @@ class ReconciliationItem(Base, UUIDPrimaryKeyMixin, TimestampMixin):
 
     reconciliation = relationship("CashReconciliation", back_populates="items")
     payment_document = relationship("PaymentDocument", lazy="joined")
+    disbursement_voucher = relationship("DisbursementVoucher", lazy="joined")
+

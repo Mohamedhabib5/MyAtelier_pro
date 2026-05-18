@@ -69,7 +69,7 @@ def test_admin_can_create_list_and_update_payment_document(app_client: TestClien
     )
     assert create_response.status_code == 201, create_response.text
     created = create_response.json()
-    assert created['payment_number'].startswith('PAY')
+    assert created['payment_number'].startswith('REC')
     assert created['total_amount'] == 1000.0
     assert created['allocation_count'] == 1
     assert created['payment_method_id']

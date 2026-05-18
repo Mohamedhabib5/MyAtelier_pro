@@ -17,7 +17,8 @@ class ReconciliationItemResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: str
-    payment_document_id: str
+    payment_document_id: str | None = None
+    disbursement_voucher_id: str | None = None
     payment_number: str | None = None
     expected_amount: float
     actual_amount: float
@@ -28,6 +29,8 @@ class ReconciliationItemResponse(BaseModel):
         res = super().model_validate(obj, **kwargs)
         if hasattr(obj, 'payment_document') and obj.payment_document:
             res.payment_number = obj.payment_document.payment_number
+        elif hasattr(obj, 'disbursement_voucher') and obj.disbursement_voucher:
+            res.payment_number = obj.disbursement_voucher.voucher_number
         return res
 
 
@@ -61,7 +64,8 @@ class ReconciliationResponse(BaseModel):
 
 
 class ReconciliationItemInput(BaseModel):
-    payment_document_id: str
+    payment_document_id: str | None = None
+    disbursement_voucher_id: str | None = None
     actual_amount: float
 
 
@@ -81,6 +85,9 @@ class ReconciliationUpdateRequest(BaseModel):
 
 class PendingPaymentResponse(BaseModel):
     id: str
+    payment_document_id: str | None = None
+    disbursement_voucher_id: str | None = None
+    kind: str
     payment_number: str
     payment_date: str
     customer_name: str
@@ -106,20 +113,41 @@ def get_pending_payments(
     payments = reconciliation_service.get_pending_payments(
         db, branch_id, payment_method_id, s_date, e_date
     )
+    disbursements = reconciliation_service.get_pending_disbursements(
+        db, branch_id, payment_method_id, s_date, e_date
+    )
     
     from app.modules.payments.serializers import document_total
 
-    return [
-        PendingPaymentResponse(
-            id=p.id,
-            payment_number=p.payment_number,
-            payment_date=str(p.payment_date),
-            customer_name=p.customer.full_name if p.customer else "",
-            direct_amount=float(document_total(p)),
-            notes=p.notes
+    results = []
+    for p in payments:
+        results.append(
+            PendingPaymentResponse(
+                id=p.id,
+                payment_document_id=p.id,
+                kind="collection",
+                payment_number=p.payment_number,
+                payment_date=str(p.payment_date),
+                customer_name=p.customer.full_name if p.customer else "",
+                direct_amount=float(document_total(p)),
+                notes=p.notes
+            )
         )
-        for p in payments
-    ]
+    for d in disbursements:
+        results.append(
+            PendingPaymentResponse(
+                id=d.id,
+                disbursement_voucher_id=d.id,
+                kind="disbursement",
+                payment_number=d.voucher_number,
+                payment_date=str(d.voucher_date),
+                customer_name=d.payee_name or "",
+                direct_amount=-float(d.amount),
+                notes=d.notes
+            )
+        )
+    return results
+
 
 
 @router.get("", response_model=list[ReconciliationResponse])

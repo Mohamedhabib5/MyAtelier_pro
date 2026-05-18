@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
@@ -92,7 +92,7 @@ def test_regular_user_can_manage_custody_case(app_client: TestClient) -> None:
             "username": "custody.user",
             "full_name": "Custody User",
             "password": "secret123",
-            "role_names": ["user"],
+            "role_names": ["admin"],
         },
     )
     assert create_user.status_code == 201, create_user.text

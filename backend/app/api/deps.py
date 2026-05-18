@@ -59,21 +59,26 @@ def PermissionRequired(permission_key: str):
     Usage: Depends(PermissionRequired("atelier.view_reservations"))
     """
     def _dependency(current_user: User = Depends(get_current_user)) -> User:
-        cache_key = f"user_perms:{current_user.id}"
-        try:
-            cached_perms = redis_client.get(cache_key)
-            if cached_perms:
-                perms = set(json.loads(cached_perms))
-            else:
-                from app.modules.identity.access import permission_keys_for_user
-                perms_set = permission_keys_for_user(current_user)
-                perms = list(perms_set)
-                redis_client.setex(cache_key, 300, json.dumps(perms))
-                perms = perms_set
-        except Exception:
-            # Fallback to DB if Redis fails
+        import os
+        if os.getenv("TESTING") == "true":
             from app.modules.identity.access import permission_keys_for_user
             perms = permission_keys_for_user(current_user)
+        else:
+            cache_key = f"user_perms:{current_user.id}"
+            try:
+                cached_perms = redis_client.get(cache_key)
+                if cached_perms:
+                    perms = set(json.loads(cached_perms))
+                else:
+                    from app.modules.identity.access import permission_keys_for_user
+                    perms_set = permission_keys_for_user(current_user)
+                    perms = list(perms_set)
+                    redis_client.setex(cache_key, 300, json.dumps(perms))
+                    perms = perms_set
+            except Exception:
+                # Fallback to DB if Redis fails
+                from app.modules.identity.access import permission_keys_for_user
+                perms = permission_keys_for_user(current_user)
 
         from app.core.messages import missing_permission_message
         if permission_key not in perms:

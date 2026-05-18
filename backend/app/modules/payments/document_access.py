@@ -13,25 +13,40 @@ from app.modules.payments.models import PaymentDocument
 from app.modules.payments.repository import PaymentsRepository
 from app.modules.payments.serializers import serialize_document
 
-PAYMENT_SEQUENCE_KEY = "payment"
+PAYMENT_SEQUENCE_KEY = "receipt"
+DISBURSEMENT_SEQUENCE_KEY = "disbursement"
 
 
 def ensure_payment_sequence(db: Session, company_id: str) -> None:
     repo = PaymentsRepository(db)
-    if repo.get_document_sequence(company_id, PAYMENT_SEQUENCE_KEY) is not None:
-        return
-    repo.add_document_sequence(
-        DocumentSequence(company_id=company_id, key=PAYMENT_SEQUENCE_KEY, prefix="PAY", next_number=1, padding=6)
-    )
-    record_audit(
-        db,
-        actor_user_id=None,
-        action="payment.sequence_seeded",
-        target_type="company",
-        target_id=company_id,
-        summary="Seeded payment document sequence",
-    )
-    db.flush()
+    if repo.get_document_sequence(company_id, PAYMENT_SEQUENCE_KEY) is None:
+        repo.add_document_sequence(
+            DocumentSequence(company_id=company_id, key=PAYMENT_SEQUENCE_KEY, prefix="REC", next_number=2600001, padding=6)
+        )
+        record_audit(
+            db,
+            actor_user_id=None,
+            action="payment.sequence_seeded",
+            target_type="company",
+            target_id=company_id,
+            summary="Seeded receipt document sequence",
+        )
+        db.flush()
+        
+    if repo.get_document_sequence(company_id, DISBURSEMENT_SEQUENCE_KEY) is None:
+        repo.add_document_sequence(
+            DocumentSequence(company_id=company_id, key=DISBURSEMENT_SEQUENCE_KEY, prefix="PAY", next_number=2600001, padding=6)
+        )
+        record_audit(
+            db,
+            actor_user_id=None,
+            action="disbursement.sequence_seeded",
+            target_type="company",
+            target_id=company_id,
+            summary="Seeded disbursement document sequence",
+        )
+        db.flush()
+
 
 
 def get_scoped_payment_document(db: Session, payment_document_id: str, session: dict) -> PaymentDocument:

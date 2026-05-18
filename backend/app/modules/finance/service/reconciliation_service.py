@@ -9,7 +9,8 @@ from app.core.exceptions import ValidationAppError
 from app.modules.core_platform.audit import record_audit
 from app.modules.identity.models import User
 from app.modules.organization.service import get_company_settings
-from app.modules.payments.models import PaymentDocument, PaymentMethod
+from app.modules.payments.models import PaymentDocument, PaymentMethod, DisbursementVoucher
+
 from app.modules.finance.models.reconciliation import CashReconciliation, ReconciliationItem
 
 
@@ -61,6 +62,37 @@ def get_pending_payments(
         .all()
     )
     return payments
+
+
+def get_pending_disbursements(
+    db: Session, branch_id: str, payment_method_id: str, start_date: date, end_date: date
+) -> list[DisbursementVoucher]:
+    from sqlalchemy import select
+    
+    reconciled_ids = (
+        select(ReconciliationItem.disbursement_voucher_id)
+        .join(CashReconciliation)
+        .filter(
+            CashReconciliation.branch_id == branch_id,
+            ReconciliationItem.is_reconciled == True
+        )
+    )
+
+    disbursements = (
+        db.query(DisbursementVoucher)
+        .filter(
+            DisbursementVoucher.branch_id == branch_id,
+            DisbursementVoucher.payment_method_id == payment_method_id,
+            DisbursementVoucher.voucher_date >= start_date,
+            DisbursementVoucher.voucher_date <= end_date,
+            DisbursementVoucher.status == "active",
+            ~DisbursementVoucher.id.in_(reconciled_ids)
+        )
+        .order_by(DisbursementVoucher.voucher_date.asc(), DisbursementVoucher.voucher_number.asc())
+        .all()
+    )
+    return disbursements
+
 
 
 def get_latest_reconciliation_ids(db: Session, branch_id: str) -> set[str]:
@@ -147,16 +179,16 @@ def create_reconciliation(
     else:
         receiver_name = None
 
-    # 5. Fetch pending payments specified
+    # 5. Fetch pending payments and disbursements specified
     item_payloads = payload.get("items", [])
     if not item_payloads:
         raise ValidationAppError("يجب اختيار دفعة واحدة على الأقل لإجراء التسوية")
         
-    payment_ids = [item["payment_document_id"] for item in item_payloads]
-    
-    # Verify these payments actually exist, are active, belong to the branch/date/method
     pending_payments = get_pending_payments(db, branch_id, payment_method.id, start_date, end_date)
     pending_dict = {p.id: p for p in pending_payments}
+    
+    pending_disbursements = get_pending_disbursements(db, branch_id, payment_method.id, start_date, end_date)
+    pending_dis_dict = {d.id: d for d in pending_disbursements}
 
     recon_items = []
     total_expected = Decimal("0.00")
@@ -165,24 +197,43 @@ def create_reconciliation(
     from app.modules.payments.serializers import document_total
 
     for item_pay in item_payloads:
-        p_id = item_pay["payment_document_id"]
-        if p_id not in pending_dict:
-            raise ValidationAppError(f"المستند {p_id} غير متاح للتسوية")
-        
-        payment_doc = pending_dict[p_id]
-        expected_amt = document_total(payment_doc)
-        actual_amt = Decimal(str(item_pay.get("actual_amount", expected_amt)))
-        
-        total_expected += expected_amt
-        total_actual += actual_amt
+        p_id = item_pay.get("payment_document_id") or item_pay.get("disbursement_voucher_id")
+        if not p_id:
+            raise ValidationAppError("معرف المستند غير صالح")
+            
+        if p_id in pending_dict:
+            payment_doc = pending_dict[p_id]
+            expected_amt = document_total(payment_doc)
+            actual_amt = Decimal(str(item_pay.get("actual_amount", expected_amt)))
+            
+            total_expected += expected_amt
+            total_actual += actual_amt
 
-        recon_item = ReconciliationItem(
-            payment_document_id=p_id,
-            expected_amount=expected_amt,
-            actual_amount=actual_amt,
-            is_reconciled=True
-        )
-        recon_items.append(recon_item)
+            recon_item = ReconciliationItem(
+                payment_document_id=p_id,
+                expected_amount=expected_amt,
+                actual_amount=actual_amt,
+                is_reconciled=True
+            )
+            recon_items.append(recon_item)
+        elif p_id in pending_dis_dict:
+            voucher = pending_dis_dict[p_id]
+            expected_amt = -voucher.amount  # Negative subtraction in expected amount
+            actual_amt = Decimal(str(item_pay.get("actual_amount", expected_amt)))
+            
+            total_expected += expected_amt
+            total_actual += actual_amt
+
+            recon_item = ReconciliationItem(
+                disbursement_voucher_id=p_id,
+                expected_amount=expected_amt,
+                actual_amount=actual_amt,
+                is_reconciled=True
+            )
+            recon_items.append(recon_item)
+        else:
+            raise ValidationAppError(f"المستند {p_id} غير متاح للتسوية")
+
 
     difference = total_actual - total_expected
 

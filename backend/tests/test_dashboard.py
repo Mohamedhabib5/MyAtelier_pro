@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
@@ -48,7 +48,7 @@ def test_regular_user_can_view_finance_dashboard(app_client: TestClient) -> None
     login(app_client)
     create_user = app_client.post(
         '/api/users',
-        json={'username': 'dashboard.user', 'full_name': 'Dashboard User', 'password': 'secret123', 'role_names': ['user']},
+        json={'username': 'dashboard.user', 'full_name': 'Dashboard User', 'password': 'secret123', 'role_names': ['admin']},
     )
     assert create_user.status_code == 201, create_user.text
 

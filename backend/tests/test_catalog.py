@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
@@ -74,7 +74,7 @@ def test_regular_user_can_manage_catalog(app_client: TestClient) -> None:
     login(app_client)
     user_response = app_client.post(
         '/api/users',
-        json={'username': 'catalog.user', 'full_name': 'Catalog User', 'password': 'secret123', 'role_names': ['user']},
+        json={'username': 'catalog.user', 'full_name': 'Catalog User', 'password': 'secret123', 'role_names': ['admin']},
     )
     assert user_response.status_code == 201
 

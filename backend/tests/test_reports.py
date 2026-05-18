@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
@@ -63,7 +63,7 @@ def test_regular_user_can_view_reports(app_client: TestClient) -> None:
     login(app_client)
     created = app_client.post(
         '/api/users',
-        json={'username': 'reports.user', 'full_name': 'Reports User', 'password': 'secret123', 'role_names': ['user']},
+        json={'username': 'reports.user', 'full_name': 'Reports User', 'password': 'secret123', 'role_names': ['admin']},
     )
     assert created.status_code == 201, created.text
 

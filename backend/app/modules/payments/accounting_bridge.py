@@ -12,7 +12,8 @@ from app.modules.accounting.repository import AccountingRepository
 from app.modules.accounting.service import DEFAULT_JOURNAL_SEQUENCE_KEY
 from app.modules.core_platform.service import record_audit
 from app.modules.identity.models import User
-from app.modules.payments.models import PaymentDocument
+from app.modules.payments.models import PaymentDocument, DisbursementVoucher
+
 
 CASH_ACCOUNT_CODE = "1000"
 CUSTOMER_ADVANCES_CODE = "2100"
@@ -337,3 +338,136 @@ def _get_account(repo: AccountingRepository, company_id: str, code: str):
     if account is None or not account.is_active or not account.allows_posting:
         raise ValidationAppError(f"حساب الترحيل {code} غير متاح")
     return account
+
+
+def auto_post_disbursement_voucher(db: Session, actor: User, voucher: DisbursementVoucher) -> JournalEntry:
+    repo = AccountingRepository(db)
+    fiscal_period = _resolve_fiscal_period(repo, voucher.company_id, voucher.voucher_date)
+    cash_account = _get_account(repo, voucher.company_id, CASH_ACCOUNT_CODE)
+    
+    if voucher.payee_type == "customer":
+        advances_account = _get_account(repo, voucher.company_id, CUSTOMER_ADVANCES_CODE)
+        debit_account = advances_account
+    else:
+        receivables_account = _get_account(repo, voucher.company_id, CUSTOMER_RECEIVABLES_CODE)
+        debit_account = receivables_account
+        
+    entry = JournalEntry(
+        company_id=voucher.company_id,
+        fiscal_period_id=fiscal_period.id,
+        entry_number=repo.reserve_sequence_number(voucher.company_id, DEFAULT_JOURNAL_SEQUENCE_KEY),
+        entry_date=voucher.voucher_date,
+        status=JournalEntryStatus.POSTED.value,
+        reference=voucher.voucher_number,
+        notes=f"Auto-posted disbursement voucher {voucher.voucher_number}",
+        posted_at=datetime.now(UTC),
+        posted_by_user_id=actor.id,
+    )
+    
+    entry.lines = [
+        JournalEntryLine(
+            line_number=1,
+            account_id=debit_account.id,
+            description=f"Disbursement {voucher.voucher_number}",
+            debit_amount=voucher.amount,
+            credit_amount=ZERO,
+        ),
+        JournalEntryLine(
+            line_number=2,
+            account_id=cash_account.id,
+            description=f"Disbursement {voucher.voucher_number}",
+            debit_amount=ZERO,
+            credit_amount=voucher.amount,
+        )
+    ]
+    repo.add_journal_entry(entry)
+    db.flush()
+    record_audit(
+        db,
+        actor_user_id=actor.id,
+        action="accounting.disbursement_voucher_auto_posted",
+        target_type="journal_entry",
+        target_id=entry.id,
+        summary=f"Auto-posted disbursement voucher {voucher.voucher_number} to journal {entry.entry_number}",
+        diff={
+            "disbursement_voucher_id": voucher.id,
+            "total_amount": float(voucher.amount),
+        },
+    )
+    return entry
+
+
+def reverse_linked_disbursement_voucher_entry(
+    db: Session,
+    actor: User,
+    voucher: DisbursementVoucher,
+    reverse_date: date,
+) -> JournalEntry | None:
+    if not voucher.journal_entry_id:
+        return None
+    repo = AccountingRepository(db)
+    entry = repo.get_journal_entry(voucher.journal_entry_id)
+    if entry is None:
+        raise NotFoundError("لم يتم العثور على القيد المحاسبي المرتبط")
+    if entry.status != JournalEntryStatus.POSTED.value:
+        raise ValidationAppError("يمكن عكس القيود المرحلة فقط")
+
+    fiscal_period = _resolve_fiscal_period(repo, voucher.company_id, reverse_date)
+    reversal = JournalEntry(
+        company_id=entry.company_id,
+        fiscal_period_id=fiscal_period.id,
+        entry_number=repo.reserve_sequence_number(entry.company_id, DEFAULT_JOURNAL_SEQUENCE_KEY),
+        entry_date=reverse_date,
+        status=JournalEntryStatus.POSTED.value,
+        reference=f"REV-{entry.entry_number}",
+        notes=f"Auto reversal for disbursement voucher {voucher.voucher_number}",
+        posted_at=datetime.now(UTC),
+        posted_by_user_id=actor.id,
+    )
+    reversal.lines = [
+        JournalEntryLine(
+            line_number=index,
+            account_id=line.account_id,
+            description=line.description,
+            debit_amount=line.credit_amount,
+            credit_amount=line.debit_amount,
+        )
+        for index, line in enumerate(entry.lines, start=1)
+    ]
+    repo.add_journal_entry(reversal)
+    entry.status = JournalEntryStatus.REVERSED.value
+    entry.reversed_at = datetime.now(UTC)
+    entry.reversed_by_user_id = actor.id
+    db.flush()
+    record_audit(
+        db,
+        actor_user_id=actor.id,
+        action="accounting.disbursement_voucher_entry_reversed",
+        target_type="journal_entry",
+        target_id=entry.id,
+        summary=f"Reversed linked journal entry {entry.entry_number} for disbursement voucher {voucher.voucher_number}",
+        diff={"disbursement_voucher_id": voucher.id, "reversal_entry_number": reversal.entry_number},
+    )
+    return reversal
+
+
+def delete_linked_disbursement_voucher_entry(db: Session, actor: User, voucher: DisbursementVoucher) -> None:
+    if not voucher.journal_entry_id:
+        return
+    repo = AccountingRepository(db)
+    entry = repo.get_journal_entry(voucher.journal_entry_id)
+    if entry is None:
+        return
+    
+    record_audit(
+        db,
+        actor_user_id=actor.id,
+        action="accounting.journal_entry_deleted",
+        target_type="journal_entry",
+        target_id=entry.id,
+        summary=f"Permanently deleted journal entry {entry.entry_number} linked to disbursement {voucher.voucher_number}",
+        diff={"disbursement_voucher_id": voucher.id},
+    )
+    db.delete(entry)
+    db.flush()
+

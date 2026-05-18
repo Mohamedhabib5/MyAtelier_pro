@@ -10,8 +10,9 @@ from app.modules.bookings.models import Booking, BookingLine
 from app.modules.catalog.models import ServiceCatalogItem
 from app.modules.customers.models import Customer
 from app.modules.organization.models import DocumentSequence
-from app.modules.payments.models import PaymentAllocation, PaymentDocument, PaymentMethod
+from app.modules.payments.models import PaymentAllocation, PaymentDocument, PaymentMethod, DisbursementVoucher
 from app.modules.custody.models import CustodyCase
+
 
 
 class PaymentsRepository:
@@ -235,3 +236,98 @@ class PaymentsRepository:
                 joinedload(PaymentDocument.compensation_custody_case).joinedload(CustodyCase.booking),
             )
         )
+
+    def list_disbursement_vouchers(self, company_id: str, branch_id: str | None = None) -> list[DisbursementVoucher]:
+        stmt = self._disbursement_query().where(DisbursementVoucher.company_id == company_id)
+        if branch_id:
+            stmt = stmt.where(DisbursementVoucher.branch_id == branch_id)
+        stmt = stmt.order_by(DisbursementVoucher.voucher_date.desc(), DisbursementVoucher.created_at.desc())
+        return list(self.db.scalars(stmt))
+
+    def list_disbursement_voucher_page(
+        self,
+        company_id: str,
+        *,
+        branch_id: str | None = None,
+        search: str | None = None,
+        status: str | None = None,
+        payee_type: str | None = None,
+        date_from: date | None = None,
+        date_to: date | None = None,
+        page: int = 1,
+        page_size: int = 25,
+        sort_by: str = 'voucher_date',
+        sort_dir: str = 'desc',
+    ) -> tuple[list[DisbursementVoucher], int]:
+        stmt = (
+            select(DisbursementVoucher.id)
+            .where(DisbursementVoucher.company_id == company_id)
+        )
+        if branch_id:
+            stmt = stmt.where(DisbursementVoucher.branch_id == branch_id)
+        if status:
+            stmt = stmt.where(DisbursementVoucher.status == status)
+        if payee_type:
+            stmt = stmt.where(DisbursementVoucher.payee_type == payee_type)
+        if date_from:
+            stmt = stmt.where(DisbursementVoucher.voucher_date >= date_from)
+        if date_to:
+            stmt = stmt.where(DisbursementVoucher.voucher_date <= date_to)
+        if search:
+            pattern = f'%{search.strip()}%'
+            stmt = stmt.where(
+                or_(
+                    DisbursementVoucher.voucher_number.ilike(pattern),
+                    DisbursementVoucher.payee_name.ilike(pattern),
+                    DisbursementVoucher.notes.ilike(pattern),
+                )
+            )
+
+        sort_column = {
+            'voucher_number': DisbursementVoucher.voucher_number,
+            'payee_name': DisbursementVoucher.payee_name,
+            'status': DisbursementVoucher.status,
+            'voucher_date': DisbursementVoucher.voucher_date,
+        }.get(sort_by, DisbursementVoucher.voucher_date)
+        sort_expression = sort_column.asc() if sort_dir == 'asc' else sort_column.desc()
+        distinct_id_stmt = stmt.distinct()
+        total = self.db.scalar(select(func.count()).select_from(distinct_id_stmt.subquery())) or 0
+
+        id_page_stmt = (
+            stmt.with_only_columns(
+                DisbursementVoucher.id.label('disbursement_voucher_id'),
+                sort_column.label('sort_value'),
+                DisbursementVoucher.created_at.label('created_at'),
+            )
+            .distinct()
+            .order_by(sort_expression, DisbursementVoucher.created_at.desc())
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+        )
+        ids = [row.disbursement_voucher_id for row in self.db.execute(id_page_stmt).all()]
+        if not ids:
+            return [], total
+
+        rows = list(self.db.scalars(self._disbursement_query().where(DisbursementVoucher.id.in_(ids))))
+        order_map = {voucher_id: index for index, voucher_id in enumerate(ids)}
+        rows.sort(key=lambda row: order_map.get(row.id, len(order_map)))
+        return rows, total
+
+    def get_disbursement_voucher(self, disbursement_voucher_id: str) -> DisbursementVoucher | None:
+        stmt = self._disbursement_query().where(DisbursementVoucher.id == disbursement_voucher_id)
+        return self.db.scalars(stmt).first()
+
+    def add_disbursement_voucher(self, disbursement_voucher: DisbursementVoucher) -> DisbursementVoucher:
+        self.db.add(disbursement_voucher)
+        return disbursement_voucher
+
+    def _disbursement_query(self):
+        return (
+            select(DisbursementVoucher)
+            .options(
+                joinedload(DisbursementVoucher.branch),
+                joinedload(DisbursementVoucher.payment_method),
+                joinedload(DisbursementVoucher.journal_entry),
+            )
+        )
+

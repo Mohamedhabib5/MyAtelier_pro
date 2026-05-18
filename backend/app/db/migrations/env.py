@@ -16,7 +16,7 @@ from app.modules.customers.models import Customer
 from app.modules.dresses.models import DressResource
 from app.modules.identity.models import Permission, Role, User, UserRole, UserBackupCode, role_permissions
 from app.modules.organization.models import Branch, Company, DocumentSequence, FiscalPeriod
-from app.modules.payments.models import PaymentAllocation, PaymentDocument, PaymentMethod
+from app.modules.payments.models import PaymentAllocation, PaymentDocument, PaymentMethod, DisbursementVoucher
 from app.modules.finance.models.reconciliation import CashReconciliation, ReconciliationItem
 
 config = context.config

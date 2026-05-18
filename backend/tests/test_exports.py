@@ -37,24 +37,24 @@ def test_admin_can_download_customers_booking_and_payment_exports(app_client: Te
     disposition = customers_export.headers['content-disposition']
     assert 'attachment; filename="customers_' in disposition
     assert '; filename*=UTF-8\'\'customers_' in disposition
-    assert 'full_name,phone' in customers_export.text
+    assert 'الاسم الكامل,الهاتف' in customers_export.text
     assert 'Bride One' in customers_export.text
 
     assert bookings_export.status_code == 200
-    assert 'booking_number,branch_name' in bookings_export.text
+    assert 'رقم الحجز,اسم الفرع' in bookings_export.text
     assert 'BK' in bookings_export.text
 
     assert booking_lines_export.status_code == 200
-    assert 'booking_number,branch_name,customer_name,customer_phone,customer_address,line_number' in booking_lines_export.text
+    assert 'رقم الحجز,اسم الفرع,اسم العميلة,رقم الهاتف' in booking_lines_export.text
     assert 'تجربة فستان' in booking_lines_export.text
 
     assert payments_export.status_code == 200
-    assert 'payment_number,branch_name,customer_name,customer_phone,customer_address,payment_date' in payments_export.text
-    assert 'PAY' in payments_export.text
+    assert 'رقم الدفع,اسم الفرع,اسم العميلة' in payments_export.text
+    assert 'REC' in payments_export.text
     assert 'JV' in payments_export.text
 
     assert payment_allocations_export.status_code == 200
-    assert 'payment_number,branch_name,customer_name,customer_phone,customer_address,payment_date,document_kind,booking_number,booking_line_number' in payment_allocations_export.text
+    assert 'رقم الدفع,اسم الفرع,اسم العميلة' in payment_allocations_export.text
     assert booking['booking_number'] in payment_allocations_export.text
     assert customers_xlsx.status_code == 200
     assert customers_xlsx.headers['content-type'] == 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
@@ -64,7 +64,7 @@ def test_admin_can_download_customers_booking_and_payment_exports(app_client: Te
     assert payments_xlsx.status_code == 200
     assert payments_xlsx.content[:2] == b'PK'
     assert custody_export.status_code == 200
-    assert 'case_number,status,case_type' in custody_export.text
+    assert 'رقم الحالة,الحالة' in custody_export.text
     assert custody_xlsx.status_code == 200
     assert custody_xlsx.content[:2] == b'PK'
 

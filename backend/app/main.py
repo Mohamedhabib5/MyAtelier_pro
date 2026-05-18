@@ -32,6 +32,7 @@ from app.api.routes import (
     payment_methods,
     payment_targets,
     payments,
+    disbursements,
     period_lock,
     roles,
     reports,
@@ -60,7 +61,8 @@ from app.modules.identity.models import Permission, Role, User, role_permissions
 from app.modules.identity.service import ensure_identity_foundation
 from app.modules.organization.models import Branch, Company, DocumentSequence, FiscalPeriod
 from app.modules.organization.service import ensure_organization_foundation
-from app.modules.payments.models import PaymentAllocation, PaymentDocument, PaymentMethod
+from app.modules.payments.models import PaymentAllocation, PaymentDocument, PaymentMethod, DisbursementVoucher
+
 
 
 def _ensure_storage_dirs(settings_obj: Settings) -> None:
@@ -250,7 +252,9 @@ def create_app(settings_obj: Settings | None = None) -> FastAPI:
     app.include_router(payment_methods.router, prefix='/api')
     app.include_router(payment_targets.router, prefix='/api')
     app.include_router(payments.router, prefix='/api')
+    app.include_router(disbursements.router, prefix='/api')
     app.include_router(reconciliation.router, prefix='/api')
+
     return app
 
 

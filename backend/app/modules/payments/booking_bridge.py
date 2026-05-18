@@ -12,12 +12,17 @@ from app.modules.bookings.models import Booking, BookingLine
 from app.modules.core_platform.service import record_audit
 from app.modules.identity.models import User
 from app.modules.organization.service import get_company_settings
-from app.modules.payments.accounting_bridge import auto_post_payment_document
-from app.modules.payments.document_access import PAYMENT_SEQUENCE_KEY, ensure_payment_sequence
-from app.modules.payments.models import PaymentAllocation, PaymentDocument
+from app.modules.payments.accounting_bridge import auto_post_payment_document, auto_post_disbursement_voucher
+from app.modules.payments.document_access import (
+    PAYMENT_SEQUENCE_KEY,
+    DISBURSEMENT_SEQUENCE_KEY,
+    ensure_payment_sequence,
+)
+from app.modules.payments.models import PaymentAllocation, PaymentDocument, DisbursementVoucher
 from app.modules.payments.payment_methods import resolve_payment_method
 from app.modules.payments.repository import PaymentsRepository
 from app.modules.payments.serializers import document_total
+
 
 ZERO = Decimal("0.00")
 
@@ -107,7 +112,7 @@ def create_cancellation_refund_document(
     reason: str,
     payment_method_id: str | None = None,
     notes: str | None = None,
-) -> PaymentDocument:
+) -> DisbursementVoucher:
     company = get_company_settings(db)
     repo = PaymentsRepository(db)
     ensure_payment_sequence(db, company.id)
@@ -117,17 +122,21 @@ def create_cancellation_refund_document(
         payment_method_id=payment_method_id,
         actor_user_id=actor.id,
     )
-    document = PaymentDocument(
+    total_refund = sum((quantize_amount(amount) for line, amount in line_amounts), start=ZERO)
+    
+    voucher = DisbursementVoucher(
         company_id=company.id,
         branch_id=booking.branch_id,
-        customer_id=booking.customer_id,
         payment_method_id=payment_method.id,
         created_by_user_id=actor.id,
         updated_by_user_id=actor.id,
         entity_version=1,
-        payment_number=repo.reserve_sequence_number(company.id, PAYMENT_SEQUENCE_KEY),
-        payment_date=payment_date,
-        document_kind="refund",
+        voucher_number=repo.reserve_sequence_number(company.id, DISBURSEMENT_SEQUENCE_KEY),
+        voucher_date=payment_date,
+        amount=total_refund,
+        payee_type="customer",
+        payee_id=booking.customer_id,
+        payee_name=booking.customer.full_name if booking.customer else "",
         status=PaymentReceiptStatus.ACTIVE.value,
         notes=notes or f"سند استرداد لإلغاء في الحجز {booking.booking_number}. السبب: {reason}",
     )
@@ -138,7 +147,7 @@ def create_cancellation_refund_document(
             continue
         allocations.append(
             PaymentAllocation(
-                payment_document=document,
+                disbursement_voucher=voucher,
                 created_by_user_id=actor.id,
                 updated_by_user_id=actor.id,
                 entity_version=1,
@@ -149,26 +158,27 @@ def create_cancellation_refund_document(
             )
         )
     if not allocations:
-        return document
-    document.allocations = allocations
-    repo.add_payment_document(document)
+        return voucher
+    voucher.allocations = allocations
+    repo.add_disbursement_voucher(voucher)
     db.flush()
-    journal_entry = auto_post_payment_document(db, actor, document)
-    document.journal_entry_id = journal_entry.id
-    document.journal_entry = journal_entry
+    journal_entry = auto_post_disbursement_voucher(db, actor, voucher)
+    voucher.journal_entry_id = journal_entry.id
+    voucher.journal_entry = journal_entry
     record_audit(
         db,
         actor_user_id=actor.id,
-        action="payment_document.cancellation_refund_created",
-        target_type="payment_document",
-        target_id=document.id,
-        summary=f"Created cancellation refund {document.payment_number} for booking {booking.booking_number}",
+        action="disbursement_voucher.cancellation_refund_created",
+        target_type="disbursement_voucher",
+        target_id=voucher.id,
+        summary=f"Created cancellation refund disbursement {voucher.voucher_number} for booking {booking.booking_number}",
         diff={
             "booking_id": booking.id,
-            "refund_amount": float(document_total(document)),
+            "refund_amount": float(voucher.amount),
         },
     )
-    return document
+    return voucher
+
 
 
 def sync_booking_lines_status(db: Session, line_ids: list[str]) -> None:
