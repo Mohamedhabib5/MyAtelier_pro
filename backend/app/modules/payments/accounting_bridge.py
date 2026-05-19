@@ -15,10 +15,10 @@ from app.modules.identity.models import User
 from app.modules.payments.models import PaymentDocument, DisbursementVoucher
 
 
-CASH_ACCOUNT_CODE = "1000"
-CUSTOMER_ADVANCES_CODE = "2100"
-CUSTOMER_RECEIVABLES_CODE = "1200"
-SERVICE_REVENUE_CODE = "4100"
+CASH_ACCOUNT_CODE = "1111001"
+CUSTOMER_ADVANCES_CODE = "2110"
+CUSTOMER_RECEIVABLES_CODE = "1121001"
+SERVICE_REVENUE_CODE = "4110"
 ZERO = Decimal("0.00")
 DIRECT_CUSTODY_REVENUE_KINDS = {"custody_compensation"}
 DIRECT_CUSTODY_DEPOSIT_COLLECTION_KINDS = {"custody_deposit"}
@@ -53,11 +53,14 @@ def auto_post_payment_document(db: Session, actor: User, payment_document: Payme
     entry = JournalEntry(
         company_id=payment_document.company_id,
         fiscal_period_id=fiscal_period.id,
+        branch_id=payment_document.branch_id,
         entry_number=repo.reserve_sequence_number(payment_document.company_id, DEFAULT_JOURNAL_SEQUENCE_KEY),
         entry_date=payment_document.payment_date,
         status=JournalEntryStatus.POSTED.value,
         reference=payment_document.payment_number,
         notes=f"Auto-posted from payment document {payment_document.payment_number}",
+        reference_type="payment_document",
+        reference_id=payment_document.id,
         posted_at=datetime.now(UTC),
         posted_by_user_id=actor.id,
     )
@@ -69,8 +72,12 @@ def auto_post_payment_document(db: Session, actor: User, payment_document: Payme
         advances_account.id,
         receivables_account.id,
         payment_document.payment_number,
+        party_type="customer",
+        party_id=payment_document.customer_id,
     )
     repo.add_journal_entry(entry)
+    from app.modules.accounting.journal_integrity import warn_missing_branch
+    warn_missing_branch(entry)
     db.flush()
     record_audit(
         db,
@@ -84,6 +91,11 @@ def auto_post_payment_document(db: Session, actor: User, payment_document: Payme
             "total_amount": float(total_amount),
             "advances_amount": float(advances_amount),
             "receivables_amount": float(receivables_amount),
+            "branch_id": entry.branch_id,
+            "reference_type": entry.reference_type,
+            "reference_id": entry.reference_id,
+            "party_type": "customer",
+            "party_id": payment_document.customer_id,
         },
     )
     return entry
@@ -108,11 +120,14 @@ def reverse_linked_payment_document_entry(
     reversal = JournalEntry(
         company_id=entry.company_id,
         fiscal_period_id=fiscal_period.id,
+        branch_id=entry.branch_id,
         entry_number=repo.reserve_sequence_number(entry.company_id, DEFAULT_JOURNAL_SEQUENCE_KEY),
         entry_date=reverse_date,
         status=JournalEntryStatus.POSTED.value,
         reference=f"REV-{entry.entry_number}",
         notes=f"Auto reversal for payment document {payment_document.payment_number}",
+        reference_type=entry.reference_type,
+        reference_id=entry.reference_id,
         posted_at=datetime.now(UTC),
         posted_by_user_id=actor.id,
     )
@@ -123,10 +138,14 @@ def reverse_linked_payment_document_entry(
             description=line.description,
             debit_amount=line.credit_amount,
             credit_amount=line.debit_amount,
+            party_type=line.party_type,
+            party_id=line.party_id,
         )
         for index, line in enumerate(entry.lines, start=1)
     ]
     repo.add_journal_entry(reversal)
+    from app.modules.accounting.journal_integrity import warn_missing_branch
+    warn_missing_branch(reversal)
     entry.status = JournalEntryStatus.REVERSED.value
     entry.reversed_at = datetime.now(UTC)
     entry.reversed_by_user_id = actor.id
@@ -138,7 +157,13 @@ def reverse_linked_payment_document_entry(
         target_type="journal_entry",
         target_id=entry.id,
         summary=f"Reversed linked journal entry {entry.entry_number} for payment document {payment_document.payment_number}",
-        diff={"payment_document_id": payment_document.id, "reversal_entry_number": reversal.entry_number},
+        diff={
+            "payment_document_id": payment_document.id,
+            "reversal_entry_number": reversal.entry_number,
+            "branch_id": reversal.branch_id,
+            "reference_type": reversal.reference_type,
+            "reference_id": reversal.reference_id,
+        },
     )
     return reversal
 
@@ -190,6 +215,8 @@ def _build_payment_lines(
     advances_account_id: str,
     receivables_account_id: str,
     payment_number: str,
+    party_type: str | None = None,
+    party_id: str | None = None,
 ) -> list[JournalEntryLine]:
     description = f"Payment document {payment_number}"
     lines = [
@@ -210,6 +237,8 @@ def _build_payment_lines(
                 description=description,
                 debit_amount=ZERO,
                 credit_amount=advances_amount,
+                party_type=party_type,
+                party_id=party_id,
             )
         )
         line_number += 1
@@ -221,6 +250,8 @@ def _build_payment_lines(
                 description=description,
                 debit_amount=ZERO,
                 credit_amount=receivables_amount,
+                party_type=party_type,
+                party_id=party_id,
             )
         )
     return lines
@@ -237,11 +268,14 @@ def _auto_post_booking_refund(db: Session, actor: User, payment_document: Paymen
     entry = JournalEntry(
         company_id=payment_document.company_id,
         fiscal_period_id=fiscal_period.id,
+        branch_id=payment_document.branch_id,
         entry_number=repo.reserve_sequence_number(payment_document.company_id, DEFAULT_JOURNAL_SEQUENCE_KEY),
         entry_date=payment_document.payment_date,
         status=JournalEntryStatus.POSTED.value,
         reference=payment_document.payment_number,
         notes=f"Auto-posted refund document {payment_document.payment_number}",
+        reference_type="payment_document",
+        reference_id=payment_document.id,
         posted_at=datetime.now(UTC),
         posted_by_user_id=actor.id,
     )
@@ -253,8 +287,12 @@ def _auto_post_booking_refund(db: Session, actor: User, payment_document: Paymen
         advances_account.id,
         receivables_account.id,
         payment_document.payment_number,
+        party_type="customer",
+        party_id=payment_document.customer_id,
     )
     repo.add_journal_entry(entry)
+    from app.modules.accounting.journal_integrity import warn_missing_branch
+    warn_missing_branch(entry)
     db.flush()
     record_audit(
         db,
@@ -268,6 +306,11 @@ def _auto_post_booking_refund(db: Session, actor: User, payment_document: Paymen
             "total_amount": float(total_amount),
             "advances_amount": float(advances_amount),
             "receivables_amount": float(receivables_amount),
+            "branch_id": entry.branch_id,
+            "reference_type": entry.reference_type,
+            "reference_id": entry.reference_id,
+            "party_type": "customer",
+            "party_id": payment_document.customer_id,
         },
     )
     return entry
@@ -281,6 +324,8 @@ def _build_refund_lines(
     advances_account_id: str,
     receivables_account_id: str,
     payment_number: str,
+    party_type: str | None = None,
+    party_id: str | None = None,
 ) -> list[JournalEntryLine]:
     description = f"Refund document {payment_number}"
     lines = []
@@ -294,6 +339,8 @@ def _build_refund_lines(
                 description=description,
                 debit_amount=advances_amount,
                 credit_amount=ZERO,
+                party_type=party_type,
+                party_id=party_id,
             )
         )
         line_number += 1
@@ -306,6 +353,8 @@ def _build_refund_lines(
                 description=description,
                 debit_amount=receivables_amount,
                 credit_amount=ZERO,
+                party_type=party_type,
+                party_id=party_id,
             )
         )
         line_number += 1
@@ -355,11 +404,14 @@ def auto_post_disbursement_voucher(db: Session, actor: User, voucher: Disburseme
     entry = JournalEntry(
         company_id=voucher.company_id,
         fiscal_period_id=fiscal_period.id,
+        branch_id=voucher.branch_id,
         entry_number=repo.reserve_sequence_number(voucher.company_id, DEFAULT_JOURNAL_SEQUENCE_KEY),
         entry_date=voucher.voucher_date,
         status=JournalEntryStatus.POSTED.value,
         reference=voucher.voucher_number,
         notes=f"Auto-posted disbursement voucher {voucher.voucher_number}",
+        reference_type="disbursement_voucher",
+        reference_id=voucher.id,
         posted_at=datetime.now(UTC),
         posted_by_user_id=actor.id,
     )
@@ -371,6 +423,8 @@ def auto_post_disbursement_voucher(db: Session, actor: User, voucher: Disburseme
             description=f"Disbursement {voucher.voucher_number}",
             debit_amount=voucher.amount,
             credit_amount=ZERO,
+            party_type=voucher.payee_type,
+            party_id=voucher.payee_id,
         ),
         JournalEntryLine(
             line_number=2,
@@ -381,6 +435,8 @@ def auto_post_disbursement_voucher(db: Session, actor: User, voucher: Disburseme
         )
     ]
     repo.add_journal_entry(entry)
+    from app.modules.accounting.journal_integrity import warn_missing_branch
+    warn_missing_branch(entry)
     db.flush()
     record_audit(
         db,
@@ -392,6 +448,11 @@ def auto_post_disbursement_voucher(db: Session, actor: User, voucher: Disburseme
         diff={
             "disbursement_voucher_id": voucher.id,
             "total_amount": float(voucher.amount),
+            "branch_id": entry.branch_id,
+            "reference_type": entry.reference_type,
+            "reference_id": entry.reference_id,
+            "party_type": voucher.payee_type,
+            "party_id": voucher.payee_id,
         },
     )
     return entry
@@ -416,11 +477,14 @@ def reverse_linked_disbursement_voucher_entry(
     reversal = JournalEntry(
         company_id=entry.company_id,
         fiscal_period_id=fiscal_period.id,
+        branch_id=entry.branch_id,
         entry_number=repo.reserve_sequence_number(entry.company_id, DEFAULT_JOURNAL_SEQUENCE_KEY),
         entry_date=reverse_date,
         status=JournalEntryStatus.POSTED.value,
         reference=f"REV-{entry.entry_number}",
         notes=f"Auto reversal for disbursement voucher {voucher.voucher_number}",
+        reference_type=entry.reference_type,
+        reference_id=entry.reference_id,
         posted_at=datetime.now(UTC),
         posted_by_user_id=actor.id,
     )
@@ -431,10 +495,14 @@ def reverse_linked_disbursement_voucher_entry(
             description=line.description,
             debit_amount=line.credit_amount,
             credit_amount=line.debit_amount,
+            party_type=line.party_type,
+            party_id=line.party_id,
         )
         for index, line in enumerate(entry.lines, start=1)
     ]
     repo.add_journal_entry(reversal)
+    from app.modules.accounting.journal_integrity import warn_missing_branch
+    warn_missing_branch(reversal)
     entry.status = JournalEntryStatus.REVERSED.value
     entry.reversed_at = datetime.now(UTC)
     entry.reversed_by_user_id = actor.id
@@ -446,7 +514,13 @@ def reverse_linked_disbursement_voucher_entry(
         target_type="journal_entry",
         target_id=entry.id,
         summary=f"Reversed linked journal entry {entry.entry_number} for disbursement voucher {voucher.voucher_number}",
-        diff={"disbursement_voucher_id": voucher.id, "reversal_entry_number": reversal.entry_number},
+        diff={
+            "disbursement_voucher_id": voucher.id,
+            "reversal_entry_number": reversal.entry_number,
+            "branch_id": reversal.branch_id,
+            "reference_type": reversal.reference_type,
+            "reference_id": reversal.reference_id,
+        },
     )
     return reversal
 

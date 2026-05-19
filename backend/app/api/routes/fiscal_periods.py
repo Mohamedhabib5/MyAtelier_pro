@@ -46,6 +46,18 @@ def update_fiscal_period_route(
     current_user: User = Depends(require_settings_manage),
     db: Session = Depends(get_db),
 ) -> FiscalPeriodResponse:
+    if payload.is_locked is False:
+        from app.modules.organization.repository import OrganizationRepository
+        repo = OrganizationRepository(db)
+        period = repo.get_fiscal_period(period_id)
+        if period and period.is_locked:
+            from app.modules.identity.access import permission_keys_for_user
+            from app.core.exceptions import AuthorizationError
+            from app.core.messages import missing_permission_message
+            perms = permission_keys_for_user(current_user)
+            if "period_lock.manage" not in perms:
+                raise AuthorizationError(missing_permission_message("period_lock.manage"))
+
     period = update_fiscal_period(db, period_id, payload, current_user.id)
     return FiscalPeriodResponse.model_validate(period)
 

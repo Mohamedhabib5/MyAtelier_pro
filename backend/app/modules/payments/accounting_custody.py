@@ -14,9 +14,9 @@ from app.modules.core_platform.service import record_audit
 from app.modules.identity.models import User
 from app.modules.payments.models import PaymentDocument
 
-CASH_ACCOUNT_CODE = "1000"
-CUSTOMER_ADVANCES_CODE = "2100"
-SERVICE_REVENUE_CODE = "4100"
+CASH_ACCOUNT_CODE = "1111001"
+CUSTOMER_ADVANCES_CODE = "2110"
+SERVICE_REVENUE_CODE = "4110"
 ZERO = Decimal("0.00")
 
 def _auto_post_custody_compensation(db: Session, actor: User, payment_document: PaymentDocument) -> JournalEntry:
@@ -31,11 +31,14 @@ def _auto_post_custody_compensation(db: Session, actor: User, payment_document: 
     entry = JournalEntry(
         company_id=payment_document.company_id,
         fiscal_period_id=fiscal_period.id,
+        branch_id=payment_document.branch_id,
         entry_number=repo.reserve_sequence_number(payment_document.company_id, DEFAULT_JOURNAL_SEQUENCE_KEY),
         entry_date=payment_document.payment_date,
         status=JournalEntryStatus.POSTED.value,
         reference=payment_document.payment_number,
         notes=f"Auto-posted custody compensation {payment_document.payment_number}",
+        reference_type="payment_document",
+        reference_id=payment_document.id,
         posted_at=datetime.now(UTC),
         posted_by_user_id=actor.id,
     )
@@ -53,9 +56,13 @@ def _auto_post_custody_compensation(db: Session, actor: User, payment_document: 
             description=f"Custody compensation {payment_document.payment_number}",
             debit_amount=ZERO,
             credit_amount=amount,
+            party_type="customer",
+            party_id=payment_document.customer_id,
         ),
     ]
     repo.add_journal_entry(entry)
+    from app.modules.accounting.journal_integrity import warn_missing_branch
+    warn_missing_branch(entry)
     db.flush()
     record_audit(
         db,
@@ -64,7 +71,15 @@ def _auto_post_custody_compensation(db: Session, actor: User, payment_document: 
         target_type="journal_entry",
         target_id=entry.id,
         summary=f"Auto-posted custody compensation {payment_document.payment_number} to journal {entry.entry_number}",
-        diff={"payment_document_id": payment_document.id, "total_amount": float(amount)},
+        diff={
+            "payment_document_id": payment_document.id,
+            "total_amount": float(amount),
+            "branch_id": entry.branch_id,
+            "reference_type": entry.reference_type,
+            "reference_id": entry.reference_id,
+            "party_type": "customer",
+            "party_id": payment_document.customer_id,
+        },
     )
     return entry
 
@@ -81,11 +96,14 @@ def _auto_post_custody_deposit_collection(db: Session, actor: User, payment_docu
     entry = JournalEntry(
         company_id=payment_document.company_id,
         fiscal_period_id=fiscal_period.id,
+        branch_id=payment_document.branch_id,
         entry_number=repo.reserve_sequence_number(payment_document.company_id, DEFAULT_JOURNAL_SEQUENCE_KEY),
         entry_date=payment_document.payment_date,
         status=JournalEntryStatus.POSTED.value,
         reference=payment_document.payment_number,
         notes=f"Auto-posted custody deposit {payment_document.payment_number}",
+        reference_type="payment_document",
+        reference_id=payment_document.id,
         posted_at=datetime.now(UTC),
         posted_by_user_id=actor.id,
     )
@@ -103,9 +121,13 @@ def _auto_post_custody_deposit_collection(db: Session, actor: User, payment_docu
             description=f"Custody deposit {payment_document.payment_number}",
             debit_amount=ZERO,
             credit_amount=amount,
+            party_type="customer",
+            party_id=payment_document.customer_id,
         ),
     ]
     repo.add_journal_entry(entry)
+    from app.modules.accounting.journal_integrity import warn_missing_branch
+    warn_missing_branch(entry)
     db.flush()
     record_audit(
         db,
@@ -113,8 +135,16 @@ def _auto_post_custody_deposit_collection(db: Session, actor: User, payment_docu
         action="accounting.custody_deposit_auto_posted",
         target_type="journal_entry",
         target_id=entry.id,
-        summary=f"Auto-posted custody deposit {payment_document.payment_number} to journal {entry.entry_number}",
-        diff={"payment_document_id": payment_document.id, "total_amount": float(amount)},
+        summary=f"Auto-posted custody custody deposit {payment_document.payment_number} to journal {entry.entry_number}",
+        diff={
+            "payment_document_id": payment_document.id,
+            "total_amount": float(amount),
+            "branch_id": entry.branch_id,
+            "reference_type": entry.reference_type,
+            "reference_id": entry.reference_id,
+            "party_type": "customer",
+            "party_id": payment_document.customer_id,
+        },
     )
     return entry
 
@@ -131,11 +161,14 @@ def _auto_post_custody_deposit_refund(db: Session, actor: User, payment_document
     entry = JournalEntry(
         company_id=payment_document.company_id,
         fiscal_period_id=fiscal_period.id,
+        branch_id=payment_document.branch_id,
         entry_number=repo.reserve_sequence_number(payment_document.company_id, DEFAULT_JOURNAL_SEQUENCE_KEY),
         entry_date=payment_document.payment_date,
         status=JournalEntryStatus.POSTED.value,
         reference=payment_document.payment_number,
         notes=f"Auto-posted custody deposit refund {payment_document.payment_number}",
+        reference_type="payment_document",
+        reference_id=payment_document.id,
         posted_at=datetime.now(UTC),
         posted_by_user_id=actor.id,
     )
@@ -146,6 +179,8 @@ def _auto_post_custody_deposit_refund(db: Session, actor: User, payment_document
             description=f"Custody deposit refund {payment_document.payment_number}",
             debit_amount=amount,
             credit_amount=ZERO,
+            party_type="customer",
+            party_id=payment_document.customer_id,
         ),
         JournalEntryLine(
             line_number=2,
@@ -156,6 +191,8 @@ def _auto_post_custody_deposit_refund(db: Session, actor: User, payment_document
         ),
     ]
     repo.add_journal_entry(entry)
+    from app.modules.accounting.journal_integrity import warn_missing_branch
+    warn_missing_branch(entry)
     db.flush()
     record_audit(
         db,
@@ -164,6 +201,14 @@ def _auto_post_custody_deposit_refund(db: Session, actor: User, payment_document
         target_type="journal_entry",
         target_id=entry.id,
         summary=f"Auto-posted custody deposit refund {payment_document.payment_number} to journal {entry.entry_number}",
-        diff={"payment_document_id": payment_document.id, "total_amount": float(amount)},
+        diff={
+            "payment_document_id": payment_document.id,
+            "total_amount": float(amount),
+            "branch_id": entry.branch_id,
+            "reference_type": entry.reference_type,
+            "reference_id": entry.reference_id,
+            "party_type": "customer",
+            "party_id": payment_document.customer_id,
+        },
     )
     return entry

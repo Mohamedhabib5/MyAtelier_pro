@@ -136,6 +136,15 @@ def update_fiscal_period(db: Session, period_id: str, payload: FiscalPeriodUpdat
     if payload.is_active is not None:
         period.is_active = payload.is_active
     if payload.is_locked is not None:
+        if payload.is_locked is True:
+            from app.modules.accounting.models import JournalEntry
+            from app.core.enums import JournalEntryStatus
+            draft_count = db.query(JournalEntry).filter(
+                JournalEntry.fiscal_period_id == period.id,
+                JournalEntry.status == JournalEntryStatus.DRAFT.value
+            ).count()
+            if draft_count > 0:
+                raise ValidationAppError('لا يمكن إغلاق الفترة المالية لوجود قيود يومية مسودة (غير مرحلة)')
         period.is_locked = payload.is_locked
     
     record_audit(db, actor_user_id=actor_user_id, action='fiscal_period.updated', target_type='fiscal_period', target_id=period.id, summary=f'Updated fiscal period {period.name}', diff=old_values)

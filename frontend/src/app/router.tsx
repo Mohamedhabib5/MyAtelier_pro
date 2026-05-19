@@ -17,6 +17,7 @@ const CustodyPage = lazy(() => import('../pages/CustodyPage').then((module) => (
 const AuditExplorerPage = lazy(() => import('../pages/AuditExplorerPage').then((module) => ({ default: module.AuditExplorerPage })));
 const ReportsPage = lazy(() => import('../pages/ReportsPage').then((module) => ({ default: module.ReportsPage })));
 const ReportsPrintPage = lazy(() => import('../pages/ReportsPrintPage').then((module) => ({ default: module.ReportsPrintPage })));
+const AccountingPrintPage = lazy(() => import('../pages/AccountingPrintPage').then((module) => ({ default: module.AccountingPrintPage })));
 const AccountingPage = lazy(() => import('../pages/AccountingPage').then((module) => ({ default: module.AccountingPage })));
 const SettingsPage = lazy(() => import('../pages/SettingsPage').then((module) => ({ default: module.SettingsPage })));
 const BIAnalyticsPage = lazy(() => import('../pages/BIAnalyticsPage').then((module) => ({ default: module.BIAnalyticsPage })));
@@ -44,6 +45,7 @@ export const router = createBrowserRouter([
     children: [
       { path: 'print/finance', element: <FinancePrintPage /> },
       { path: 'print/reports', element: <ReportsPrintPage /> },
+      { path: 'print/accounting', element: <AccountingPrintPage /> },
       {
         path: '/',
         element: <DashboardShell />,

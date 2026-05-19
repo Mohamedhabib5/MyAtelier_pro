@@ -159,6 +159,10 @@ export function FiscalPeriodsSection({ language }: FiscalPeriodsSectionProps) {
             <Alert severity='error'>{(deleteMutation.error as Error).message}</Alert>
           ) : null}
 
+          {updateMutation.isError ? (
+            <Alert severity='error'>{(updateMutation.error as Error).message}</Alert>
+          ) : null}
+
           <AppDataTable
             tableKey='settings-fiscal-periods'
             rows={query.data ?? []}

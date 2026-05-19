@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from datetime import date
 from decimal import Decimal
@@ -21,13 +21,13 @@ def _draft_payload(account_ids: dict[str, str], amount: str = "500.00") -> dict:
         "notes": "Initial accounting checkpoint journal",
         "lines": [
             {
-                "account_id": account_ids["1000"],
+                "account_id": account_ids["1111001"],
                 "description": "Cash received",
                 "debit_amount": amount,
                 "credit_amount": "0.00",
             },
             {
-                "account_id": account_ids["4100"],
+                "account_id": account_ids["4110"],
                 "description": "Service revenue",
                 "debit_amount": "0.00",
                 "credit_amount": amount,

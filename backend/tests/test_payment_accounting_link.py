@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
@@ -34,10 +34,17 @@ def test_payment_creation_auto_posts_linked_journal_entry(app_client: TestClient
     journal = _get_journal(app_client, payment['journal_entry_id'])
     assert journal['reference'] == payment['payment_number']
     assert journal['status'] == 'posted'
-    assert journal['lines'][0]['account_code'] == '1000'
+    # Phase 1: Traceability assertions
+    assert journal['branch_id'] is not None
+    assert journal['reference_type'] == 'payment_document'
+    assert journal['reference_id'] == payment['id']
+    assert journal['lines'][0]['account_code'] == '1111001'
     assert journal['lines'][0]['debit_amount'] == '1000.00'
-    assert journal['lines'][1]['account_code'] == '2100'
+    assert journal['lines'][1]['account_code'] == '2110'
     assert journal['lines'][1]['credit_amount'] == '1000.00'
+    # Phase 1: Party ledger assertions on credit lines
+    assert journal['lines'][1]['party_type'] == 'customer'
+    assert journal['lines'][1]['party_id'] == context['customer_id']
 
 
 def test_payment_update_reverses_old_journal_and_relinks_payment(app_client: TestClient) -> None:
@@ -111,7 +118,15 @@ def test_mixed_payment_document_splits_advances_and_receivables(app_client: Test
     payment = created.json()
 
     journal = _get_journal(app_client, payment['journal_entry_id'])
+    # Phase 1: Traceability assertions
+    assert journal['reference_type'] == 'payment_document'
+    assert journal['reference_id'] == payment['id']
     lines = {line['account_code']: line for line in journal['lines']}
-    assert str(lines['1000']['debit_amount']) == '650.00'
-    assert str(lines['2100']['credit_amount']) == '250.00'
-    assert str(lines['1200']['credit_amount']) == '400.00'
+    assert str(lines['1111001']['debit_amount']) == '650.00'
+    assert str(lines['2110']['credit_amount']) == '250.00'
+    assert str(lines['1121001']['credit_amount']) == '400.00'
+    # Phase 1: Party ledger assertions on customer-facing lines
+    assert lines['2110']['party_type'] == 'customer'
+    assert lines['2110']['party_id'] == customer_id
+    assert lines['1121001']['party_type'] == 'customer'
+    assert lines['1121001']['party_id'] == customer_id

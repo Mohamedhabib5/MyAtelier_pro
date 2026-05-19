@@ -16,10 +16,10 @@ from app.modules.core_platform.service import record_audit
 from app.modules.identity.models import User
 from app.modules.payments.models import PaymentAllocation
 
-CUSTOMER_ADVANCES_CODE = '2100'
-CUSTOMER_RECEIVABLES_CODE = '1200'
+CUSTOMER_ADVANCES_CODE = '2110'
+CUSTOMER_RECEIVABLES_CODE = '1121001'
 TAX_PAYABLE_CODE = '2200'
-SERVICE_REVENUE_CODE = '4100'
+SERVICE_REVENUE_CODE = '4110'
 ZERO = Decimal('0.00')
 
 
@@ -46,11 +46,14 @@ def post_booking_line_revenue_recognition(db: Session, actor: User, line: Bookin
     entry = JournalEntry(
         company_id=line.booking.company_id,
         fiscal_period_id=fiscal_period.id,
+        branch_id=line.booking.branch_id,
         entry_number=repo.reserve_sequence_number(line.booking.company_id, DEFAULT_JOURNAL_SEQUENCE_KEY),
         entry_date=recognition_date,
         status=JournalEntryStatus.POSTED.value,
         reference=f'{line.booking.booking_number}-L{line.line_number}',
         notes=f'Revenue recognition for booking {line.booking.booking_number} line {line.line_number}',
+        reference_type='booking_line',
+        reference_id=line.id,
         posted_at=datetime.now(UTC),
         posted_by_user_id=actor.id,
     )
@@ -64,8 +67,12 @@ def post_booking_line_revenue_recognition(db: Session, actor: User, line: Bookin
         receivables_account.id,
         revenue_account.id,
         tax_payable_account.id,
+        party_type='customer',
+        party_id=line.booking.customer_id,
     )
     repo.add_journal_entry(entry)
+    from app.modules.accounting.journal_integrity import warn_missing_branch
+    warn_missing_branch(entry)
     db.flush()
     record_audit(
         db,
@@ -74,7 +81,20 @@ def post_booking_line_revenue_recognition(db: Session, actor: User, line: Bookin
         target_type='journal_entry',
         target_id=entry.id,
         summary=f'Recognized revenue for booking {line.booking.booking_number} line {line.line_number} in journal {entry.entry_number}',
-        diff={'booking_id': line.booking_id, 'line_id': line.id, 'line_price': float(line_price), 'tax_amount': float(tax_amount), 'revenue_amount': float(revenue_amount), 'collected_amount': float(collected), 'receivable_amount': float(receivable_amount)},
+        diff={
+            'booking_id': line.booking_id,
+            'line_id': line.id,
+            'line_price': float(line_price),
+            'tax_amount': float(tax_amount),
+            'revenue_amount': float(revenue_amount),
+            'collected_amount': float(collected),
+            'receivable_amount': float(receivable_amount),
+            'branch_id': entry.branch_id,
+            'reference_type': entry.reference_type,
+            'reference_id': entry.reference_id,
+            'party_type': 'customer',
+            'party_id': line.booking.customer_id,
+        },
     )
     return entry
 
@@ -95,11 +115,14 @@ def reverse_booking_line_revenue_recognition(db: Session, actor: User, line: Boo
     reversal = JournalEntry(
         company_id=entry.company_id,
         fiscal_period_id=fiscal_period.id,
+        branch_id=entry.branch_id,
         entry_number=repo.reserve_sequence_number(entry.company_id, DEFAULT_JOURNAL_SEQUENCE_KEY),
         entry_date=reverse_date,
         status=JournalEntryStatus.POSTED.value,
         reference=f'REV-{entry.entry_number}',
         notes=f'Auto reversal for booking {line.booking.booking_number} line {line.line_number}',
+        reference_type=entry.reference_type,
+        reference_id=entry.reference_id,
         posted_at=datetime.now(UTC),
         posted_by_user_id=actor.id,
     )
@@ -110,10 +133,14 @@ def reverse_booking_line_revenue_recognition(db: Session, actor: User, line: Boo
             description=entry_line.description,
             debit_amount=entry_line.credit_amount,
             credit_amount=entry_line.debit_amount,
+            party_type=entry_line.party_type,
+            party_id=entry_line.party_id,
         )
         for index, entry_line in enumerate(entry.lines, start=1)
     ]
     repo.add_journal_entry(reversal)
+    from app.modules.accounting.journal_integrity import warn_missing_branch
+    warn_missing_branch(reversal)
     entry.status = JournalEntryStatus.REVERSED.value
     entry.reversed_at = datetime.now(UTC)
     entry.reversed_by_user_id = actor.id
@@ -125,26 +152,59 @@ def reverse_booking_line_revenue_recognition(db: Session, actor: User, line: Boo
         target_type='journal_entry',
         target_id=entry.id,
         summary=f'Reversed booking revenue entry {entry.entry_number} for booking {line.booking.booking_number} line {line.line_number}',
-        diff={'booking_id': line.booking_id, 'line_id': line.id, 'reversal_entry_number': reversal.entry_number},
+        diff={
+            'booking_id': line.booking_id,
+            'line_id': line.id,
+            'reversal_entry_number': reversal.entry_number,
+            'branch_id': reversal.branch_id,
+            'reference_type': reversal.reference_type,
+            'reference_id': reversal.reference_id,
+        },
     )
     return reversal
 
 
-def _build_recognition_lines(line: BookingLine, revenue_amount: Decimal, tax_amount: Decimal, collected: Decimal, receivable_amount: Decimal, advances_account_id: str, receivables_account_id: str, revenue_account_id: str, tax_payable_account_id: str) -> list[JournalEntryLine]:
+def _build_recognition_lines(
+    line: BookingLine,
+    revenue_amount: Decimal,
+    tax_amount: Decimal,
+    collected: Decimal,
+    receivable_amount: Decimal,
+    advances_account_id: str,
+    receivables_account_id: str,
+    revenue_account_id: str,
+    tax_payable_account_id: str,
+    party_type: str | None = None,
+    party_id: str | None = None,
+) -> list[JournalEntryLine]:
     description = f'Booking {line.booking.booking_number} line {line.line_number}'
     lines: list[JournalEntryLine] = []
     line_number = 1
     if collected > ZERO:
-        lines.append(JournalEntryLine(line_number=line_number, account_id=advances_account_id, description=description, debit_amount=collected, credit_amount=ZERO))
+        lines.append(JournalEntryLine(
+            line_number=line_number, account_id=advances_account_id,
+            description=description, debit_amount=collected, credit_amount=ZERO,
+            party_type=party_type, party_id=party_id,
+        ))
         line_number += 1
     if receivable_amount > ZERO:
-        lines.append(JournalEntryLine(line_number=line_number, account_id=receivables_account_id, description=description, debit_amount=receivable_amount, credit_amount=ZERO))
+        lines.append(JournalEntryLine(
+            line_number=line_number, account_id=receivables_account_id,
+            description=description, debit_amount=receivable_amount, credit_amount=ZERO,
+            party_type=party_type, party_id=party_id,
+        ))
         line_number += 1
     if revenue_amount > ZERO:
-        lines.append(JournalEntryLine(line_number=line_number, account_id=revenue_account_id, description=description, debit_amount=ZERO, credit_amount=revenue_amount))
+        lines.append(JournalEntryLine(
+            line_number=line_number, account_id=revenue_account_id,
+            description=description, debit_amount=ZERO, credit_amount=revenue_amount,
+        ))
         line_number += 1
     if tax_amount > ZERO:
-        lines.append(JournalEntryLine(line_number=line_number, account_id=tax_payable_account_id, description=description, debit_amount=ZERO, credit_amount=tax_amount))
+        lines.append(JournalEntryLine(
+            line_number=line_number, account_id=tax_payable_account_id,
+            description=description, debit_amount=ZERO, credit_amount=tax_amount,
+        ))
     return lines
 
 

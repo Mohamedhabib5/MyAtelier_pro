@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
@@ -45,10 +45,21 @@ def test_complete_booking_line_recognizes_revenue_and_locks_line(app_client: Tes
     journal_response = app_client.get(f"/api/accounting/journal-entries/{completed_line['revenue_journal_entry_id']}")
     assert journal_response.status_code == 200, journal_response.text
     journal = journal_response.json()
+    # Phase 1: Traceability assertions
+    assert journal['branch_id'] is not None
+    assert journal['reference_type'] == 'booking_line'
+    assert journal['reference_id'] == line_id
     lines = {line['account_code']: line for line in journal['lines']}
-    assert str(lines['2100']['debit_amount']) == '1000.00'
-    assert str(lines['1200']['debit_amount']) == '1500.00'
-    assert str(lines['4100']['credit_amount']) == '2500.00'
+    assert str(lines['2110']['debit_amount']) == '1000.00'
+    assert str(lines['1121001']['debit_amount']) == '1500.00'
+    assert str(lines['4110']['credit_amount']) == '2500.00'
+    # Phase 1: Party ledger assertions on customer-facing debit lines
+    assert lines['2110']['party_type'] == 'customer'
+    assert lines['2110']['party_id'] == customer_id
+    assert lines['1121001']['party_type'] == 'customer'
+    assert lines['1121001']['party_id'] == customer_id
+    # Revenue line should NOT carry party info (it's an income account, not a party account)
+    assert lines['4110']['party_type'] is None
 
     update_response = app_client.patch(
         f"/api/bookings/{booking['id']}",
@@ -212,7 +223,7 @@ def test_complete_booking_line_with_tax_splits_revenue_and_tax_payable(app_clien
     assert journal_response.status_code == 200, journal_response.text
     journal = journal_response.json()
     lines = {line['account_code']: line for line in journal['lines']}
-    assert str(lines['2100']['debit_amount']) == '1000.00'
-    assert str(lines['1200']['debit_amount']) == '1280.00'
-    assert str(lines['4100']['credit_amount']) == '1960.80'
+    assert str(lines['2110']['debit_amount']) == '1000.00'
+    assert str(lines['1121001']['debit_amount']) == '1280.00'
+    assert str(lines['4110']['credit_amount']) == '1960.80'
     assert str(lines['2200']['credit_amount']) == '319.20'

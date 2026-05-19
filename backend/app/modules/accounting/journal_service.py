@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from datetime import UTC, date, datetime
 from decimal import Decimal
@@ -16,6 +16,7 @@ from app.modules.accounting.schemas import (
     JournalEntryReverseRequest,
     JournalEntryUpdateRequest,
 )
+from app.modules.accounting.party_validation import validate_party_fields
 from app.modules.accounting.service import DEFAULT_JOURNAL_SEQUENCE_KEY, ensure_accounting_foundation
 from app.modules.core_platform.service import record_audit
 from app.modules.identity.models import User
@@ -46,14 +47,19 @@ def create_draft_journal_entry(db: Session, actor: User, payload: JournalEntryCr
     entry = JournalEntry(
         company_id=company.id,
         fiscal_period_id=fiscal_period.id,
+        branch_id=payload.branch_id,
         entry_number=entry_number,
         entry_date=payload.entry_date,
         status=JournalEntryStatus.DRAFT.value,
         reference=_clean_text(payload.reference),
         notes=_clean_text(payload.notes),
+        reference_type=payload.reference_type,
+        reference_id=payload.reference_id,
     )
     entry.lines = lines
     repo.add_journal_entry(entry)
+    from app.modules.accounting.journal_integrity import warn_missing_branch
+    warn_missing_branch(entry)
     db.flush()
     record_audit(
         db,
@@ -98,6 +104,10 @@ def post_journal_entry(db: Session, actor: User, entry_id: str) -> dict:
     entry = _get_entry_or_404(db, entry_id)
     if entry.status != JournalEntryStatus.DRAFT.value:
         raise ValidationAppError("يمكن ترحيل القيود المسودة فقط")
+    repo = AccountingRepository(db)
+    fiscal_period = repo.get_fiscal_period(entry.fiscal_period_id)
+    if fiscal_period and fiscal_period.is_locked:
+        raise ValidationAppError("لا يمكن ترحيل قيود داخل فترة مالية مقفلة")
     _validate_balanced_lines(entry.lines)
     entry.status = JournalEntryStatus.POSTED.value
     entry.posted_at = datetime.now(UTC)
@@ -125,11 +135,14 @@ def reverse_journal_entry(db: Session, actor: User, entry_id: str, payload: Jour
     reversal = JournalEntry(
         company_id=entry.company_id,
         fiscal_period_id=fiscal_period.id,
+        branch_id=entry.branch_id,
         entry_number=reversal_number,
         entry_date=reverse_date,
         status=JournalEntryStatus.POSTED.value,
         reference=f"REV-{entry.entry_number}",
         notes=_clean_text(payload.notes) or f"Reversal of {entry.entry_number}",
+        reference_type=entry.reference_type,
+        reference_id=entry.reference_id,
         posted_at=datetime.now(UTC),
         posted_by_user_id=actor.id,
     )
@@ -140,6 +153,8 @@ def reverse_journal_entry(db: Session, actor: User, entry_id: str, payload: Jour
             description=line.description,
             debit_amount=line.credit_amount,
             credit_amount=line.debit_amount,
+            party_type=line.party_type,
+            party_id=line.party_id,
         )
         for index, line in enumerate(entry.lines, start=1)
     ]
@@ -188,12 +203,15 @@ def _build_lines(repo: AccountingRepository, company_id: str, rows: list[Journal
             raise ValidationAppError("لم يتم العثور على حساب القيد")
         if not account.is_active or not account.allows_posting:
             raise ValidationAppError(f"الحساب {account.code} غير متاح للترحيل")
+        validate_party_fields(row.party_type, row.party_id)
         line = JournalEntryLine(
             line_number=index,
             account_id=account.id,
             description=_clean_text(row.description),
             debit_amount=row.debit_amount,
             credit_amount=row.credit_amount,
+            party_type=row.party_type,
+            party_id=row.party_id,
         )
         built.append(line)
     _validate_balanced_lines(built)
@@ -225,11 +243,14 @@ def _serialize_entry(entry: JournalEntry) -> dict:
         "id": entry.id,
         "company_id": entry.company_id,
         "fiscal_period_id": entry.fiscal_period_id,
+        "branch_id": entry.branch_id,
         "entry_number": entry.entry_number,
         "entry_date": entry.entry_date,
         "status": entry.status,
         "reference": entry.reference,
         "notes": entry.notes,
+        "reference_type": entry.reference_type,
+        "reference_id": entry.reference_id,
         "posted_at": entry.posted_at,
         "posted_by_user_id": entry.posted_by_user_id,
         "reversed_at": entry.reversed_at,
@@ -246,6 +267,8 @@ def _serialize_entry(entry: JournalEntry) -> dict:
                 "description": line.description,
                 "debit_amount": _normalize_amount(line.debit_amount),
                 "credit_amount": _normalize_amount(line.credit_amount),
+                "party_type": line.party_type,
+                "party_id": line.party_id,
             }
             for line in entry.lines
         ],

@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from datetime import date, datetime
 from decimal import Decimal
@@ -12,7 +12,12 @@ from app.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 
 class ChartOfAccount(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     __tablename__ = "chart_of_accounts"
-    __table_args__ = (UniqueConstraint("company_id", "code", name="uq_chart_of_accounts_company_code"),)
+    __table_args__ = (
+        UniqueConstraint("company_id", "code", name="uq_chart_of_accounts_company_code"),
+        CheckConstraint("level >= 1 AND level <= 5", name="ck_chart_of_accounts_level_range"),
+        CheckConstraint("NOT (parent_account_id IS NULL AND level > 1)", name="ck_chart_of_accounts_root_level"),
+        CheckConstraint("NOT (parent_account_id IS NOT NULL AND level = 1)", name="ck_chart_of_accounts_child_level"),
+    )
 
     company_id: Mapped[str] = mapped_column(ForeignKey("companies.id", ondelete="CASCADE"), nullable=False)
     code: Mapped[str] = mapped_column(String(20), nullable=False)
@@ -22,6 +27,7 @@ class ChartOfAccount(Base, UUIDPrimaryKeyMixin, TimestampMixin):
         ForeignKey("chart_of_accounts.id", ondelete="SET NULL"),
         nullable=True,
     )
+    level: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     allows_posting: Mapped[bool] = mapped_column(default=True, nullable=False)
     is_active: Mapped[bool] = mapped_column(default=True, nullable=False)
 
@@ -34,11 +40,18 @@ class JournalEntry(Base, UUIDPrimaryKeyMixin, TimestampMixin):
 
     company_id: Mapped[str] = mapped_column(ForeignKey("companies.id", ondelete="CASCADE"), nullable=False)
     fiscal_period_id: Mapped[str] = mapped_column(ForeignKey("fiscal_periods.id", ondelete="RESTRICT"), nullable=False)
+    # Phase 1: Branch scoping – NULL for historical entries created before Phase 1.
+    branch_id: Mapped[str | None] = mapped_column(
+        ForeignKey("branches.id", ondelete="SET NULL"), nullable=True, index=True,
+    )
     entry_number: Mapped[str] = mapped_column(String(40), nullable=False)
     entry_date: Mapped[date] = mapped_column(Date, nullable=False)
     status: Mapped[str] = mapped_column(String(20), default=JournalEntryStatus.DRAFT.value, nullable=False)
     reference: Mapped[str | None] = mapped_column(String(120), nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Phase 1: Source document traceability (e.g. payment_document, disbursement_voucher, booking_line).
+    reference_type: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    reference_id: Mapped[str | None] = mapped_column(String(40), nullable=True, index=True)
     posted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     posted_by_user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     reversed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -69,6 +82,9 @@ class JournalEntryLine(Base, UUIDPrimaryKeyMixin):
     description: Mapped[str | None] = mapped_column(String(255), nullable=True)
     debit_amount: Mapped[Decimal] = mapped_column(Numeric(14, 2), default=Decimal("0.00"), nullable=False)
     credit_amount: Mapped[Decimal] = mapped_column(Numeric(14, 2), default=Decimal("0.00"), nullable=False)
+    # Phase 1: Party Ledger – decoupled, no FK (same pattern as DisbursementVoucher.payee_type/payee_id).
+    party_type: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    party_id: Mapped[str | None] = mapped_column(String(40), nullable=True, index=True)
 
     journal_entry = relationship("JournalEntry", back_populates="lines", lazy="joined")
     account = relationship("ChartOfAccount", lazy="joined")

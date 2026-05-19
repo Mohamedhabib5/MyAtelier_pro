@@ -47,6 +47,11 @@ class AccountTypeKey(StrEnum):
     EQUITY = "equity"
     REVENUE = "revenue"
     EXPENSE = "expense"
+    RECEIVABLE = "receivable"
+    PAYABLE = "payable"
+    BANK = "bank"
+    CASH = "cash"
+    STOCK = "stock"
 
 
 class JournalEntryStatus(StrEnum):
