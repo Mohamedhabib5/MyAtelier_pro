@@ -63,3 +63,30 @@ The default admin is seeded once only on an empty database.
   - `.github/workflows/nightly-full-regression.yml`
   - `docs/nightly-full-regression.md`
   - Optional failure notifier secret: `NIGHTLY_FAILURE_WEBHOOK_URL`
+
+## 🚀 تشغيل تلقائي على Linux Mint (جهاز قديم 6 جيجا رام)
+
+1. بعد سحب الكود (`git pull`) على خادم لينكس:
+   ```bash
+   sudo systemctl enable docker --now
+   ```
+2. انسخ ملف الخدمة إلى مجلد النظام:
+   ```bash
+   sudo cp deploy/linux/myatelier-pro.service /etc/systemd/system/
+   ```
+3. قم بتعديل مسار المجلد واسم المستخدم في الملف الجديد إذا لزم الأمر:
+   ```bash
+   sudo nano /etc/systemd/system/myatelier-pro.service
+   ```
+4. أعد تحميل إعدادات الخدمات وتفعيل تشغيل النظام تلقائياً:
+   ```bash
+   sudo systemctl daemon-reload
+   sudo systemctl enable --now myatelier-pro.service
+   ```
+5. لمراقبة استهلاك الموارد وحالة الخدمة:
+   ```bash
+   docker stats
+   sudo systemctl status myatelier-pro.service
+   ```
+
+سيعمل البرنامج الآن تلقائياً عند تشغيل الخادم بدون أي تدخل بشري.
