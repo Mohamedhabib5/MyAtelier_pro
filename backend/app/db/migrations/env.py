@@ -7,7 +7,7 @@ from alembic import context
 from sqlalchemy import engine_from_config, pool
 
 from app.db.base import Base
-from app.modules.accounting.models import ChartOfAccount, JournalEntry, JournalEntryLine
+from app.modules.accounting.models import ChartOfAccount, JournalEntry, JournalEntryLine, AccountingBridgeConfig
 from app.modules.bookings.models import Booking, BookingLine
 from app.modules.catalog.models import Department, ServiceCatalogItem
 from app.modules.core_platform.models import AppSetting, AuditLog, BackupRecord

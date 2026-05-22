@@ -1,6 +1,6 @@
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import { Button, Chip, Stack, Tooltip, IconButton, Box, Typography, useTheme } from '@mui/material';
-import { Snowflake, Flame, Shield, ShieldAlert, UserCheck, UserMinus } from 'lucide-react';
+import { Snowflake, Flame, Shield, ShieldAlert, UserCheck, UserMinus, ShieldCheck } from 'lucide-react';
 
 import { AppDataTable } from '../../components/data-table/AppDataTable';
 import { SectionCard } from '../../components/SectionCard';
@@ -83,7 +83,7 @@ export function UsersAdminSection({
                     key={roleName} 
                     label={userRoleLabel(currentLanguage, roleName)} 
                     size='small' 
-                    variant="soft"
+                    variant="outlined"
                     color={roleName === 'admin' ? 'error' : 'primary'}
                     sx={{ fontWeight: 'bold', fontSize: '0.7rem' }}
                   />

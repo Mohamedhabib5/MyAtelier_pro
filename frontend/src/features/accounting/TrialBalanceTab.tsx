@@ -69,7 +69,7 @@ export function TrialBalanceTab() {
     <Stack spacing={3}>
       <Paper sx={{ p: 2.5, borderRadius: 2, border: '1px solid', borderColor: 'divider', background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(8px)' }}>
         <Grid container spacing={2.5} alignItems="center">
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <FormControl fullWidth size="small">
               <InputLabel id="branch-select-label">{isAr ? 'الفرع' : 'Branch'}</InputLabel>
               <Select
@@ -89,7 +89,7 @@ export function TrialBalanceTab() {
               </Select>
             </FormControl>
           </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <TextField
               fullWidth
               size="small"
@@ -100,13 +100,13 @@ export function TrialBalanceTab() {
               InputLabelProps={{ shrink: true }}
             />
           </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <FormControlLabel
               control={<Switch checked={includeZero} onChange={(e) => setIncludeZero(e.target.checked)} />}
               label={isAr ? 'إظهار الحسابات الصفرية' : 'Include zero accounts'}
             />
           </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Stack direction="row" spacing={1.5} justifyContent="flex-end">
               <Button
                 variant="outlined"
@@ -143,7 +143,7 @@ export function TrialBalanceTab() {
             { label: isAr ? 'إجمالي الأرصدة المدينة' : 'Total Debit Balances', val: summary.balance_debit_total },
             { label: isAr ? 'إجمالي الأرصدة الدائنة' : 'Total Credit Balances', val: summary.balance_credit_total },
           ].map((card, i) => (
-            <Grid item xs={12} sm={6} md={3} key={i}>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }} key={i}>
               <Paper sx={{ p: 2, borderRadius: 2, border: '1px solid', borderColor: 'divider', background: 'linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(240,244,248,0.9) 100%)' }}>
                 <Typography variant="caption" color="text.secondary" fontWeight="500">{card.label}</Typography>
                 <Typography variant="h6" fontWeight="bold" sx={{ mt: 0.5 }}>

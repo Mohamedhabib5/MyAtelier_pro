@@ -3,7 +3,7 @@ import {
   Dialog, DialogTitle, DialogContent, DialogActions, 
   Button, Typography, Box, TextField, Alert,
   Stepper, Step, StepLabel, Divider, IconButton,
-  Paper, useTheme, Fade
+  Paper, useTheme, Fade, Grid, Stack
 } from '@mui/material';
 import { QRCodeSVG } from 'qrcode.react';
 import { Copy, Check, Download, AlertTriangle, ShieldCheck, Key, Smartphone, Lock } from 'lucide-react';
@@ -313,7 +313,7 @@ export const TwoFASetupModal: React.FC<Props> = ({ open, onClose, onComplete }) 
                   >
                     <Grid container spacing={1}>
                       {backupCodes.map((code, idx) => (
-                        <Grid item xs={6} key={idx}>
+                        <Grid size={{ xs: 6 }} key={idx}>
                           <Box sx={{ 
                             display: 'flex', 
                             alignItems: 'center', 

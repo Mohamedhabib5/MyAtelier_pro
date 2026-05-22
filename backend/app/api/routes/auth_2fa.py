@@ -43,6 +43,7 @@ def init_2fa_setup(
 @router.post('/activate', response_model=TwoFAActivationResponse)
 def complete_2fa_setup(
     payload: Verify2FARequest,
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ) -> TwoFAActivationResponse:

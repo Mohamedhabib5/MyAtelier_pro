@@ -1,4 +1,4 @@
-import { PropsWithChildren, useMemo } from 'react';
+import { PropsWithChildren, useEffect, useMemo } from 'react';
 
 import { CacheProvider } from '@emotion/react';
 import { CssBaseline, GlobalStyles, ThemeProvider } from '@mui/material';
@@ -35,9 +35,16 @@ function DirectionalTheme({ children }: PropsWithChildren) {
     [direction, safePrimary, safeSecondary, themeMode]
   );
 
+  // Update CSS variables imperatively — avoids remounting the DOM tree
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty('--bg-gradient-start', safeBgStart);
+    root.style.setProperty('--bg-gradient-end', safeBgEnd);
+  }, [safeBgStart, safeBgEnd]);
+
   return (
     <CacheProvider value={cache}>
-      <ThemeProvider theme={theme} key={`${safePrimary}-${safeSecondary}`}>
+      <ThemeProvider theme={theme}>
         <CssBaseline />
         <GlobalStyles
           styles={{
@@ -50,11 +57,11 @@ function DirectionalTheme({ children }: PropsWithChildren) {
               textAlign,
               margin: 0,
               minHeight: '100vh',
-              backgroundColor: `${safeBgEnd} !important`,
+              backgroundColor: 'var(--bg-gradient-end) !important',
               backgroundImage: `
-                radial-gradient(circle at 0% 0%, ${safeBgStart} 0%, ${safeBgStart}00 75%), 
-                radial-gradient(circle at 100% 0%, ${safeBgEnd} 0%, ${safeBgEnd}00 75%),
-                radial-gradient(circle at 50% 100%, ${safeBgStart} 0%, ${safeBgStart}00 75%)
+                radial-gradient(circle at 0% 0%, var(--bg-gradient-start) 0%, transparent 75%), 
+                radial-gradient(circle at 100% 0%, var(--bg-gradient-end) 0%, transparent 75%),
+                radial-gradient(circle at 50% 100%, var(--bg-gradient-start) 0%, transparent 75%)
               !important`,
               backgroundAttachment: 'fixed !important',
               backgroundSize: 'cover !important',

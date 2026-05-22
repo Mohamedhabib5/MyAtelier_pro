@@ -20,6 +20,21 @@ class ChartAccountResponse(BaseModel):
     is_active: bool
 
 
+class ChartAccountCreateRequest(BaseModel):
+    code: str = Field(..., min_length=1, max_length=20)
+    name: str = Field(..., min_length=1, max_length=160)
+    account_type: str = Field(..., min_length=3, max_length=20)
+    parent_account_id: str | None = None
+    allows_posting: bool = True
+
+
+class ChartAccountUpdateRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=160)
+    account_type: str = Field(..., min_length=3, max_length=20)
+    parent_account_id: str | None = None
+    allows_posting: bool = True
+
+
 class JournalEntryLineWriteRequest(BaseModel):
     account_id: str
     description: str | None = Field(default=None, max_length=255)
@@ -166,4 +181,31 @@ class AgingReportResponse(BaseModel):
     party_type: str
     rows: list[PartyAgingRowResponse]
     total_receivable_or_payable: Decimal
+
+
+class AccountingBridgeConfigResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    bridge_key: str
+    account_code: str
+    label_ar: str
+    label_en: str
+    is_required: bool
+    account_name: str | None = None
+
+
+class AccountingBridgeConfigUpdateRequest(BaseModel):
+    account_code: str = Field(..., min_length=1, max_length=20)
+    label_ar: str | None = Field(default=None, max_length=120)
+    label_en: str | None = Field(default=None, max_length=120)
+
+
+class ChartAccountCSVRow(BaseModel):
+    code: str = Field(..., min_length=1, max_length=20)
+    name: str = Field(..., min_length=1, max_length=120)
+    account_type: str = Field(..., min_length=3, max_length=20)
+    parent_code: str | None = Field(default=None)
+    allows_posting: bool = Field(default=False)
+
+
 

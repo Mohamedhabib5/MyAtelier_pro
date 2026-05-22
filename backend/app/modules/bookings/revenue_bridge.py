@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.core.enums import JournalEntryStatus
 from app.core.exceptions import ValidationAppError
+from app.modules.accounting.bridge_config_service import resolve_bridge_account
 from app.modules.accounting.models import JournalEntry, JournalEntryLine
 from app.modules.accounting.repository import AccountingRepository
 from app.modules.accounting.service import DEFAULT_JOURNAL_SEQUENCE_KEY
@@ -14,12 +15,9 @@ from app.modules.bookings.calculations import line_paid_total, quantize_amount
 from app.modules.bookings.models import BookingLine
 from app.modules.core_platform.service import record_audit
 from app.modules.identity.models import User
+from app.modules.payments.accounting_bridge_utils import resolve_fiscal_period
 from app.modules.payments.models import PaymentAllocation
 
-CUSTOMER_ADVANCES_CODE = '2110'
-CUSTOMER_RECEIVABLES_CODE = '1121001'
-TAX_PAYABLE_CODE = '2200'
-SERVICE_REVENUE_CODE = '4110'
 ZERO = Decimal('0.00')
 
 
@@ -38,11 +36,11 @@ def post_booking_line_revenue_recognition(db: Session, actor: User, line: Bookin
         raise ValidationAppError('لا يمكن أن يتجاوز المبلغ المحصل سعر السطر عند الإكمال')
     receivable_amount = quantize_amount(line_price - collected)
 
-    fiscal_period = _resolve_fiscal_period(repo, line.booking.company_id, recognition_date)
-    advances_account = _get_account(repo, line.booking.company_id, CUSTOMER_ADVANCES_CODE)
-    receivables_account = _get_account(repo, line.booking.company_id, CUSTOMER_RECEIVABLES_CODE)
-    tax_payable_account = _get_account(repo, line.booking.company_id, TAX_PAYABLE_CODE)
-    revenue_account = _get_account(repo, line.booking.company_id, SERVICE_REVENUE_CODE)
+    fiscal_period = resolve_fiscal_period(repo, line.booking.company_id, recognition_date)
+    advances_account = resolve_bridge_account(db, line.booking.company_id, "customer_advances")
+    receivables_account = resolve_bridge_account(db, line.booking.company_id, "customer_receivables")
+    tax_payable_account = resolve_bridge_account(db, line.booking.company_id, "tax_payable")
+    revenue_account = resolve_bridge_account(db, line.booking.company_id, "service_revenue")
     entry = JournalEntry(
         company_id=line.booking.company_id,
         fiscal_period_id=fiscal_period.id,
@@ -58,28 +56,18 @@ def post_booking_line_revenue_recognition(db: Session, actor: User, line: Bookin
         posted_by_user_id=actor.id,
     )
     entry.lines = _build_recognition_lines(
-        line,
-        revenue_amount,
-        tax_amount,
-        collected,
-        receivable_amount,
-        advances_account.id,
-        receivables_account.id,
-        revenue_account.id,
-        tax_payable_account.id,
-        party_type='customer',
-        party_id=line.booking.customer_id,
+        line, revenue_amount, tax_amount, collected, receivable_amount,
+        advances_account.id, receivables_account.id, revenue_account.id, tax_payable_account.id,
+        party_type='customer', party_id=line.booking.customer_id,
     )
     repo.add_journal_entry(entry)
     from app.modules.accounting.journal_integrity import warn_missing_branch
     warn_missing_branch(entry)
     db.flush()
     record_audit(
-        db,
-        actor_user_id=actor.id,
+        db, actor_user_id=actor.id,
         action='accounting.booking_line_revenue_recognized',
-        target_type='journal_entry',
-        target_id=entry.id,
+        target_type='journal_entry', target_id=entry.id,
         summary=f'Recognized revenue for booking {line.booking.booking_number} line {line.line_number} in journal {entry.entry_number}',
         diff={
             'booking_id': line.booking_id,
@@ -108,33 +96,26 @@ def reverse_booking_line_revenue_recognition(db: Session, actor: User, line: Boo
         raise ValidationAppError('لم يتم العثور على قيد الإيراد المرتبط بالسطر')
     if entry.status != JournalEntryStatus.POSTED.value:
         raise ValidationAppError('يمكن عكس قيد الإيراد المرحّل فقط')
-    if _has_active_post_recognition_collections(line):
+    if _has_active_post_recognition_collections(db, line):
         raise ValidationAppError('لا يمكن عكس إيراد هذا السطر قبل معالجة التحصيلات اللاحقة')
 
-    fiscal_period = _resolve_fiscal_period(repo, line.booking.company_id, reverse_date)
+    fiscal_period = resolve_fiscal_period(repo, line.booking.company_id, reverse_date)
     reversal = JournalEntry(
-        company_id=entry.company_id,
-        fiscal_period_id=fiscal_period.id,
+        company_id=entry.company_id, fiscal_period_id=fiscal_period.id,
         branch_id=entry.branch_id,
         entry_number=repo.reserve_sequence_number(entry.company_id, DEFAULT_JOURNAL_SEQUENCE_KEY),
-        entry_date=reverse_date,
-        status=JournalEntryStatus.POSTED.value,
+        entry_date=reverse_date, status=JournalEntryStatus.POSTED.value,
         reference=f'REV-{entry.entry_number}',
         notes=f'Auto reversal for booking {line.booking.booking_number} line {line.line_number}',
-        reference_type=entry.reference_type,
-        reference_id=entry.reference_id,
-        posted_at=datetime.now(UTC),
-        posted_by_user_id=actor.id,
+        reference_type=entry.reference_type, reference_id=entry.reference_id,
+        posted_at=datetime.now(UTC), posted_by_user_id=actor.id,
     )
     reversal.lines = [
         JournalEntryLine(
-            line_number=index,
-            account_id=entry_line.account_id,
+            line_number=index, account_id=entry_line.account_id,
             description=entry_line.description,
-            debit_amount=entry_line.credit_amount,
-            credit_amount=entry_line.debit_amount,
-            party_type=entry_line.party_type,
-            party_id=entry_line.party_id,
+            debit_amount=entry_line.credit_amount, credit_amount=entry_line.debit_amount,
+            party_type=entry_line.party_type, party_id=entry_line.party_id,
         )
         for index, entry_line in enumerate(entry.lines, start=1)
     ]
@@ -146,11 +127,9 @@ def reverse_booking_line_revenue_recognition(db: Session, actor: User, line: Boo
     entry.reversed_by_user_id = actor.id
     db.flush()
     record_audit(
-        db,
-        actor_user_id=actor.id,
+        db, actor_user_id=actor.id,
         action='accounting.booking_line_revenue_reversed',
-        target_type='journal_entry',
-        target_id=entry.id,
+        target_type='journal_entry', target_id=entry.id,
         summary=f'Reversed booking revenue entry {entry.entry_number} for booking {line.booking.booking_number} line {line.line_number}',
         diff={
             'booking_id': line.booking_id,
@@ -166,16 +145,11 @@ def reverse_booking_line_revenue_recognition(db: Session, actor: User, line: Boo
 
 def _build_recognition_lines(
     line: BookingLine,
-    revenue_amount: Decimal,
-    tax_amount: Decimal,
-    collected: Decimal,
-    receivable_amount: Decimal,
-    advances_account_id: str,
-    receivables_account_id: str,
-    revenue_account_id: str,
-    tax_payable_account_id: str,
-    party_type: str | None = None,
-    party_id: str | None = None,
+    revenue_amount: Decimal, tax_amount: Decimal,
+    collected: Decimal, receivable_amount: Decimal,
+    advances_account_id: str, receivables_account_id: str,
+    revenue_account_id: str, tax_payable_account_id: str,
+    party_type: str | None = None, party_id: str | None = None,
 ) -> list[JournalEntryLine]:
     description = f'Booking {line.booking.booking_number} line {line.line_number}'
     lines: list[JournalEntryLine] = []
@@ -208,30 +182,20 @@ def _build_recognition_lines(
     return lines
 
 
-def _resolve_fiscal_period(repo: AccountingRepository, company_id: str, entry_date: date):
-    fiscal_period = repo.get_active_fiscal_period(company_id)
-    if fiscal_period is None:
-        raise ValidationAppError('لم يتم العثور على الفترة المالية النشطة')
-    if fiscal_period.is_locked:
-        raise ValidationAppError('لا يمكن الاعتراف بالإيراد داخل فترة مالية مقفلة')
-    if entry_date < fiscal_period.starts_on or entry_date > fiscal_period.ends_on:
-        raise ValidationAppError('يجب أن يقع تاريخ الاعتراف داخل الفترة المالية النشطة')
-    return fiscal_period
-
-
-def _get_account(repo: AccountingRepository, company_id: str, code: str):
-    account = repo.get_chart_account_by_code(company_id, code)
-    if account is None or not account.is_active or not account.allows_posting:
-        raise ValidationAppError(f'حساب الترحيل {code} غير متاح')
-    return account
-
-
-def _has_active_post_recognition_collections(line: BookingLine) -> bool:
-    active_allocations: list[PaymentAllocation] = [allocation for allocation in line.payment_allocations if allocation.payment_document.status != 'voided']
+def _has_active_post_recognition_collections(db: Session, line: BookingLine) -> bool:
+    """Check if any post-recognition payment allocated to this line credits the receivables account."""
+    receivables_account = resolve_bridge_account(db, line.booking.company_id, "customer_receivables")
+    active_allocations: list[PaymentAllocation] = [
+        allocation for allocation in line.payment_allocations
+        if allocation.payment_document.status != 'voided'
+    ]
     for allocation in active_allocations:
         journal = allocation.payment_document.journal_entry
         if journal is None:
             continue
-        if any(entry_line.account.code == CUSTOMER_RECEIVABLES_CODE and entry_line.credit_amount > ZERO for entry_line in journal.lines):
+        if any(
+            entry_line.account_id == receivables_account.id and entry_line.credit_amount > ZERO
+            for entry_line in journal.lines
+        ):
             return True
     return False

@@ -38,7 +38,9 @@ def build_aging_report(
         as_of_date = date.today()
 
     company = get_company_settings(db)
-    account_code = "1121001" if party_type == "customer" else "2121001"
+    from app.modules.accounting.bridge_config_service import resolve_bridge_account
+    bridge_key = "customer_receivables" if party_type == "customer" else "supplier_payables"
+    account_code = resolve_bridge_account(db, company.id, bridge_key).code
 
     # Query all journal entry lines for the specified party type and account code
     stmt = (

@@ -10,6 +10,7 @@ export type UserRecord = {
   role_names: string[];
   preferred_language: LanguageCode;
   is_frozen_until: string | null;
+  is_2fa_enabled?: boolean;
 };
 
 export type CreateUserPayload = {

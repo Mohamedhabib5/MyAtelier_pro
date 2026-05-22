@@ -1,142 +1,61 @@
 import CheckroomOutlinedIcon from '@mui/icons-material/CheckroomOutlined';
-import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
-import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
-import { Alert, Box, Button, Chip, Stack, TextField, Typography, Dialog, DialogContent, IconButton } from '@mui/material';
+import { Alert, Box, Button, Stack, Typography, Dialog, DialogContent, IconButton, TextField } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import { useMutation, useQuery } from '@tanstack/react-query';
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo } from 'react';
 import { DestructiveDeleteDialog } from '../components/DestructiveDeleteDialog';
 import { LifecycleReasonDialog } from '../components/LifecycleReasonDialog';
 import { AppDataTable } from '../components/data-table/AppDataTable';
 import { SectionCard } from '../components/SectionCard';
-import { archiveDress, createDress, listDresses, restoreDress, updateDress, type DressRecord } from '../features/dresses/api';
-import { DressFormDialog, type DressFormState } from '../features/dresses/DressFormDialog';
+import { DressFormDialog } from '../features/dresses/DressFormDialog';
 import { useLanguage } from '../features/language/LanguageProvider';
 import { queryClient } from '../lib/queryClient';
-import { EMPTY_VALUE, useCommonText } from '../text/common';
+import { useCommonText } from '../text/common';
 import { dressStatusLabel, useDressesText } from '../text/dresses';
-
-function emptyForm() {
-  return { code: '', dress_type: '', purchase_date: '', status: 'available', description: '', image_path: '', is_active: true } satisfies DressFormState;
-}
+import { useDressesState } from '../features/dresses/hooks/useDressesState';
+import { useDressColumns } from '../features/dresses/hooks/useDressColumns';
 
 export function DressesPage() {
   const { language } = useLanguage();
   const commonText = useCommonText();
   const dressesText = useDressesText();
-  const [error, setError] = useState<string | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingDress, setEditingDress] = useState<DressRecord | null>(null);
-  const [form, setForm] = useState<DressFormState>(emptyForm());
-  const [statusFilter, setStatusFilter] = useState<'all' | 'available' | 'reserved' | 'with_customer' | 'maintenance'>('all');
-  const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'inactive'>('all');
-  const [lifecycleTarget, setLifecycleTarget] = useState<DressRecord | null>(null);
-  const [lifecycleMode, setLifecycleMode] = useState<'archive' | 'restore'>('archive');
-  const [lifecycleReason, setLifecycleReason] = useState('');
-  const [deleteTarget, setDeleteTarget] = useState<DressRecord | null>(null);
-  const [previewImage, setPreviewImage] = useState<string | null>(null);
-  const dressesQuery = useQuery({ queryKey: ['dresses', activeFilter], queryFn: () => listDresses(activeFilter) });
 
-  const createMutation = useMutation({
-    mutationFn: createDress,
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['dresses'] });
-      closeDialog();
-    },
-    onError: (mutationError: Error) => setError(mutationError.message),
+  const {
+    error, setError,
+    dialogOpen,
+    editingDress,
+    form, setForm,
+    statusFilter, setStatusFilter,
+    activeFilter, setActiveFilter,
+    lifecycleTarget,
+    lifecycleMode,
+    lifecycleReason, setLifecycleReason,
+    deleteTarget, setDeleteTarget,
+    previewImage, setPreviewImage,
+    dressesQuery,
+    lifecycleMutation,
+    closeDialog,
+    openCreateDialog,
+    openEditDialog,
+    saveDress,
+    openLifecycleDialog,
+    closeLifecycleDialog,
+    confirmLifecycle,
+    closeDeleteDialog,
+  } = useDressesState();
+
+  const columns = useDressColumns({
+    language,
+    commonText,
+    dressesText,
+    openEditDialog,
+    openLifecycleDialog,
+    setDeleteTarget,
+    setPreviewImage,
   });
-  const updateMutation = useMutation({
-    mutationFn: ({ dressId, payload }: { dressId: string; payload: Parameters<typeof updateDress>[1] }) => updateDress(dressId, payload),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['dresses'] });
-      closeDialog();
-    },
-    onError: (mutationError: Error) => setError(mutationError.message),
-  });
-  const lifecycleMutation = useMutation({
-    mutationFn: ({ dress, archive, reason }: { dress: DressRecord; archive: boolean; reason?: string }) =>
-      archive ? archiveDress(dress.id, reason) : restoreDress(dress.id, reason),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['dresses'] });
-      closeLifecycleDialog();
-    },
-    onError: (mutationError: Error) => setError(mutationError.message),
-  });
-
-  const closeDialog = useCallback(() => {
-    setDialogOpen(false);
-    setEditingDress(null);
-    setForm(emptyForm());
-  }, [setDialogOpen, setEditingDress, setForm]);
-
-  const openCreateDialog = useCallback(() => {
-    setError(null);
-    setEditingDress(null);
-    setForm(emptyForm());
-    setDialogOpen(true);
-  }, [setError, setEditingDress, setForm, setDialogOpen]);
-
-  const openEditDialog = useCallback((dress: DressRecord) => {
-    setError(null);
-    setEditingDress(dress);
-    setForm({
-      code: dress.code,
-      dress_type: dress.dress_type,
-      purchase_date: dress.purchase_date ?? '',
-      status: dress.status,
-      description: dress.description ?? '',
-      image_path: dress.image_path ?? '',
-      is_active: dress.is_active,
-    });
-    setDialogOpen(true);
-  }, [setError, setEditingDress, setForm, setDialogOpen]);
-
-  async function saveDress() {
-    setError(null);
-    const payload = {
-      code: form.code,
-      dress_type: form.dress_type,
-      purchase_date: form.purchase_date || null,
-      status: form.status,
-      description: form.description,
-      image_path: form.image_path || null,
-      is_active: form.is_active,
-    };
-    if (editingDress) {
-      await updateMutation.mutateAsync({ dressId: editingDress.id, payload });
-      return;
-    }
-    await createMutation.mutateAsync(payload);
-  }
-
-  const openLifecycleDialog = useCallback((dress: DressRecord, archive: boolean) => {
-    setError(null);
-    setLifecycleTarget(dress);
-    setLifecycleMode(archive ? 'archive' : 'restore');
-    setLifecycleReason('');
-  }, [setError, setLifecycleTarget, setLifecycleMode, setLifecycleReason]);
-
-  const closeLifecycleDialog = useCallback(() => {
-    setLifecycleTarget(null);
-    setLifecycleReason('');
-  }, [setLifecycleTarget, setLifecycleReason]);
-
-  async function confirmLifecycle() {
-    if (!lifecycleTarget) return;
-    await lifecycleMutation.mutateAsync({
-      dress: lifecycleTarget,
-      archive: lifecycleMode === 'archive',
-      reason: lifecycleReason || undefined,
-    });
-  }
-
-  const closeDeleteDialog = useCallback(() => {
-    setDeleteTarget(null);
-  }, [setDeleteTarget]);
 
   const rows = useMemo(
     () => (dressesQuery.data ?? []).filter((dress) => (statusFilter === 'all' ? true : dress.status === statusFilter)),
-    [dressesQuery.data, statusFilter],
+    [dressesQuery.data, statusFilter]
   );
 
   const labels = useMemo(() =>
@@ -144,75 +63,6 @@ export function DressesPage() {
       ? { search: 'بحث', searchPlaceholder: 'ابحث بالكود أو النوع أو الوصف', filters: 'الفلاتر', columns: 'الأعمدة', export: 'تصدير', reset: 'إعادة الضبط', noRows: 'لا توجد بيانات مطابقة' }
       : { search: 'Search', searchPlaceholder: 'Search by code, type, or description', filters: 'Filters', columns: 'Columns', export: 'Export', reset: 'Reset', noRows: 'No matching rows' }
   , [language]);
-
-  const columns = useMemo(() => [
-    { key: 'code', header: dressesText.table.code, searchValue: (row: DressRecord) => row.code, render: (row: DressRecord) => row.code },
-    { key: 'type', header: dressesText.table.type, searchValue: (row: DressRecord) => row.dress_type, render: (row: DressRecord) => row.dress_type },
-    { key: 'description', header: dressesText.table.description, searchValue: (row: DressRecord) => row.description ?? '', render: (row: DressRecord) => row.description ?? EMPTY_VALUE },
-    {
-      key: 'status',
-      header: dressesText.table.status,
-      searchValue: (row: DressRecord) => dressStatusLabel(language, row.status),
-      render: (row: DressRecord) => <Chip label={dressStatusLabel(language, row.status)} size='small' color={row.status === 'available' ? 'success' : row.status === 'reserved' ? 'warning' : row.status === 'with_customer' ? 'info' : 'default'} />,
-    },
-    {
-      key: 'operational_status',
-      header: language === 'ar' ? 'الحالة التشغيلية' : 'Operational status',
-      searchValue: (row: DressRecord) => (row.is_active ? dressesText.status.active : dressesText.status.inactive),
-      render: (row: DressRecord) => <Chip label={row.is_active ? dressesText.status.active : dressesText.status.inactive} size='small' color={row.is_active ? 'success' : 'default'} />,
-    },
-    { key: 'purchase_date', header: dressesText.table.purchaseDate, searchValue: (row: DressRecord) => row.purchase_date ?? '', render: (row: DressRecord) => row.purchase_date ?? EMPTY_VALUE },
-    {
-      key: 'image_path',
-      header: dressesText.table.imageRef,
-      searchValue: (row: DressRecord) => row.image_path ?? '',
-      render: (row: DressRecord) => {
-        if (!row.image_path) return EMPTY_VALUE;
-        const backendUrl = `${window.location.protocol}//${window.location.hostname}:8000`;
-        const imageUrl = row.image_path.startsWith('http') ? row.image_path : `${backendUrl}/attachments/${row.image_path}`;
-        return (
-          <Box
-            component='img'
-            src={imageUrl}
-            alt={row.code}
-            onClick={() => setPreviewImage(imageUrl)}
-            sx={{
-              width: 48,
-              height: 48,
-              objectFit: 'cover',
-              borderRadius: 1.5,
-              border: '1px solid',
-              borderColor: 'divider',
-              transition: 'all 0.2s ease-in-out',
-              cursor: 'zoom-in',
-              '&:hover': {
-                transform: 'scale(1.1)',
-                zIndex: 10,
-                boxShadow: 2,
-              },
-            }}
-          />
-        );
-      },
-    },
-    {
-      key: 'action',
-      header: dressesText.table.action,
-      render: (row: DressRecord) => (
-        <Stack direction='row' spacing={1}>
-          <Button size='small' startIcon={<EditOutlinedIcon />} onClick={() => openEditDialog(row)}>
-            {commonText.edit}
-          </Button>
-          <Button size='small' color={row.is_active ? 'warning' : 'success'} onClick={() => openLifecycleDialog(row, row.is_active)}>
-            {row.is_active ? (language === 'ar' ? 'أرشفة' : 'Archive') : language === 'ar' ? 'استعادة' : 'Restore'}
-          </Button>
-          <Button size='small' color='error' startIcon={<DeleteOutlineOutlinedIcon />} onClick={() => setDeleteTarget(row)}>
-            {language === 'ar' ? 'حذف تصحيحي' : 'Corrective delete'}
-          </Button>
-        </Stack>
-      ),
-    },
-  ], [commonText.edit, dressesText.status.active, dressesText.status.inactive, dressesText.table.action, dressesText.table.code, dressesText.table.description, dressesText.table.imageRef, dressesText.table.purchaseDate, dressesText.table.status, dressesText.table.type, language, openEditDialog, openLifecycleDialog]);
 
   return (
     <Stack spacing={3}>
@@ -245,12 +95,12 @@ export function DressesPage() {
           searchFields={[(row) => row.code, (row) => row.dress_type, (row) => row.description ?? '', (row) => row.image_path ?? '']}
           filterContent={
             <Stack spacing={2}>
-              <TextField select SelectProps={{ native: true }} fullWidth label={language === 'ar' ? 'الحالة التشغيلية' : 'Operational status'} value={activeFilter} onChange={(event) => setActiveFilter(event.target.value as typeof activeFilter)}>
+              <TextField select SelectProps={{ native: true }} fullWidth label={language === 'ar' ? 'الحالة التشغيلية' : 'Operational status'} value={activeFilter} onChange={(event) => setActiveFilter(event.target.value as any)}>
                 <option value='all'>{language === 'ar' ? 'الكل' : 'All'}</option>
                 <option value='active'>{dressesText.status.active}</option>
                 <option value='inactive'>{dressesText.status.inactive}</option>
               </TextField>
-              <TextField select SelectProps={{ native: true }} fullWidth label={dressesText.table.status} value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)}>
+              <TextField select SelectProps={{ native: true }} fullWidth label={dressesText.table.status} value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as any)}>
                 <option value='all'>{language === 'ar' ? 'الكل' : 'All'}</option>
                 <option value='available'>{dressStatusLabel(language, 'available')}</option>
                 <option value='reserved'>{dressStatusLabel(language, 'reserved')}</option>
@@ -310,3 +160,4 @@ export function DressesPage() {
     </Stack>
   );
 }
+

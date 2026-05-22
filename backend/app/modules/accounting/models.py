@@ -88,3 +88,18 @@ class JournalEntryLine(Base, UUIDPrimaryKeyMixin):
 
     journal_entry = relationship("JournalEntry", back_populates="lines", lazy="joined")
     account = relationship("ChartOfAccount", lazy="joined")
+
+
+class AccountingBridgeConfig(Base, UUIDPrimaryKeyMixin, TimestampMixin):
+    __tablename__ = "accounting_bridge_configs"
+    __table_args__ = (
+        UniqueConstraint("company_id", "bridge_key", name="uq_accounting_bridge_configs_company_key"),
+    )
+
+    company_id: Mapped[str] = mapped_column(ForeignKey("companies.id", ondelete="CASCADE"), nullable=False)
+    bridge_key: Mapped[str] = mapped_column(String(60), nullable=False)
+    account_code: Mapped[str] = mapped_column(String(20), nullable=False)
+    label_ar: Mapped[str] = mapped_column(String(120), nullable=False)
+    label_en: Mapped[str] = mapped_column(String(120), nullable=False)
+    is_required: Mapped[bool] = mapped_column(default=True, nullable=False)
+

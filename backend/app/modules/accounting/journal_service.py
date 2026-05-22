@@ -284,3 +284,23 @@ def _clean_text(value: str | None) -> str | None:
         return None
     text = norm_text(value)
     return text or None
+
+
+def delete_draft_journal_entry(db: Session, actor: User, entry_id: str) -> None:
+    entry = _get_entry_or_404(db, entry_id)
+    if entry.status != JournalEntryStatus.DRAFT.value:
+        raise ValidationAppError("يمكن حذف القيود اليومية غير المرحلة (المسودات) فقط")
+    
+    entry_number = entry.entry_number
+    db.delete(entry)
+    db.flush()
+    
+    record_audit(
+        db,
+        actor_user_id=actor.id,
+        action="accounting.journal_draft_deleted",
+        target_type="journal_entry",
+        target_id=entry_id,
+        summary=f"Deleted draft journal entry {entry_number}",
+    )
+    db.commit()

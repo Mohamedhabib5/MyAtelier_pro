@@ -1,27 +1,40 @@
+import { useRef, useEffect } from 'react';
 import { Button, Stack, TextField, Typography, Box, Divider, FormControlLabel, Switch } from '@mui/material';
 import { SectionCard } from '../../components/SectionCard';
 import { useSettingsText } from '../../text/settings';
 import { useThemeSettings } from '../theme/ThemeSettingsProvider';
 
-export function ThemeSettingsSection() {
-  const settingsText = useSettingsText();
-  const { 
-    primaryColor, secondaryColor, sidebarColor, sidebarColorEnd, headerColor, headerColorEnd, sidebarTextColor,
-    bgGradientStart, bgGradientEnd, accentColor, themeMode,
-    setPrimaryColor, setSecondaryColor, setSidebarColor, setSidebarColorEnd, setHeaderColor, setHeaderColorEnd, setSidebarTextColor, 
-    setBgGradientStart, setBgGradientEnd, setAccentColor, setThemeMode,
-    resetTheme 
-  } = useThemeSettings();
+function ColorInput({ label, value, onChange }: { label: string, value: string, onChange: (v: string) => void }) {
+  const originalColorRef = useRef(value);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const ColorInput = ({ label, value, onChange }: { label: string, value: string, onChange: (v: string) => void }) => (
+  useEffect(() => {
+    const input = inputRef.current;
+    if (!input) return;
+
+    const handleCancel = () => {
+      onChange(originalColorRef.current);
+    };
+
+    input.addEventListener('cancel', handleCancel);
+    return () => {
+      input.removeEventListener('cancel', handleCancel);
+    };
+  }, [onChange]);
+
+  return (
     <Box flex={1}>
       <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600 }}>
         {label}
       </Typography>
       <Stack direction="row" spacing={2} alignItems="center">
         <input
+          ref={inputRef}
           type="color"
           value={value}
+          onClick={() => {
+            originalColorRef.current = value;
+          }}
           onChange={(e) => onChange(e.target.value)}
           style={{ 
             width: 54, 
@@ -46,6 +59,17 @@ export function ThemeSettingsSection() {
       </Stack>
     </Box>
   );
+}
+
+export function ThemeSettingsSection() {
+  const settingsText = useSettingsText();
+  const { 
+    primaryColor, secondaryColor, sidebarColor, sidebarColorEnd, headerColor, headerColorEnd, sidebarTextColor,
+    bgGradientStart, bgGradientEnd, accentColor, themeMode,
+    setPrimaryColor, setSecondaryColor, setSidebarColor, setSidebarColorEnd, setHeaderColor, setHeaderColorEnd, setSidebarTextColor, 
+    setBgGradientStart, setBgGradientEnd, setAccentColor, setThemeMode,
+    resetTheme 
+  } = useThemeSettings();
 
   return (
     <SectionCard 

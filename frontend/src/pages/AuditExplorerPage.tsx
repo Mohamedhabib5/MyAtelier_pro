@@ -1,139 +1,36 @@
-import { Alert, Button, Grid, Stack, TextField, Typography, CircularProgress, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
-import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
-import { ShieldCheck, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Alert, Button, Grid, Stack, TextField, Typography, CircularProgress } from '@mui/material';
+import { ShieldCheck } from 'lucide-react';
 
 import { AppDataTable } from '../components/data-table/AppDataTable';
 import { SectionCard } from '../components/SectionCard';
-import { buildNightlyOpsCsvUrl, listAuditEvents, listDestructiveActions, listNightlyOpsEvents, verifyAuditIntegrity, type IntegrityVerifyResponse } from '../features/audit/api';
 import { NightlyExportSummary } from '../features/audit/NightlyExportSummary';
-import { useLanguage } from '../features/language/LanguageProvider';
-import { useAuditText } from '../text/audit';
-
-type AuditFilterMode = 'all' | 'destructive' | 'nightly_ops';
-type QuickRange = 'today' | 'last24h' | 'last7d';
+import { useAuditExplorer } from '../features/audit/hooks/useAuditExplorer';
+import { AuditIntegrityDialog } from '../features/audit/components/AuditIntegrityDialog';
 
 export function AuditExplorerPage() {
-  const auditText = useAuditText();
-  const { language } = useLanguage();
-  const [search, setSearch] = useState('');
-  const [actorUserId, setActorUserId] = useState('');
-  const [action, setAction] = useState('');
-  const [targetType, setTargetType] = useState('');
-  const [targetId, setTargetId] = useState('');
-  const [branchId, setBranchId] = useState('');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
-  const [mode, setMode] = useState<AuditFilterMode>('all');
-  const [filtersVersion, setFiltersVersion] = useState(0);
-  const [verifying, setVerifying] = useState(false);
-  const [integrityResult, setIntegrityResult] = useState<IntegrityVerifyResponse | null>(null);
-  const [showIntegrityDialog, setShowIntegrityDialog] = useState(false);
-
-  const auditQuery = useQuery({
-    queryKey: ['audit', 'events', filtersVersion, search, actorUserId, action, targetType, targetId, branchId, dateFrom, dateTo],
-    queryFn: () => {
-      const query = {
-        search: search || undefined,
-        actorUserId: actorUserId || undefined,
-        action: action || undefined,
-        targetType: targetType || undefined,
-        targetId: targetId || undefined,
-        branchId: branchId || undefined,
-        dateFrom: dateFrom || undefined,
-        dateTo: dateTo || undefined,
-      };
-      if (mode === 'destructive') {
-        return listDestructiveActions(query);
-      }
-      if (mode === 'nightly_ops') {
-        return listNightlyOpsEvents(query);
-      }
-      return listAuditEvents(query);
-    },
-  });
-
-  const labels =
-    language === 'ar'
-      ? {
-          search: 'بحث',
-          searchPlaceholder: 'بحث داخل نتائج السجل',
-          filters: 'الفلاتر',
-          columns: 'الأعمدة',
-          export: 'تصدير',
-          reset: 'إعادة الضبط',
-          noRows: auditText.page.noRows,
-          rowsPerPage: 'عدد الصفوف',
-          close: 'إغلاق',
-        }
-      : {
-          search: 'Search',
-          searchPlaceholder: 'Search in audit rows',
-          filters: 'Filters',
-          columns: 'Columns',
-          export: 'Export',
-          reset: 'Reset',
-          noRows: auditText.page.noRows,
-          rowsPerPage: 'Rows per page',
-          close: 'Close',
-        };
-
-  function applyQuickRange(range: QuickRange) {
-    const today = new Date();
-    const end = formatDate(today);
-    if (range === 'today') {
-      setDateFrom(end);
-      setDateTo(end);
-      setFiltersVersion((value) => value + 1);
-      return;
-    }
-    const startDate = new Date(today);
-    if (range === 'last24h') {
-      startDate.setDate(startDate.getDate() - 1);
-    } else {
-      startDate.setDate(startDate.getDate() - 6);
-    }
-    setDateFrom(formatDate(startDate));
-    setDateTo(end);
-    setFiltersVersion((value) => value + 1);
-  }
-
-  function exportNightlyOpsCsv() {
-    const exportReason = window.prompt(auditText.page.exportReasonPrompt, '')?.trim() ?? '';
-    const url = buildNightlyOpsCsvUrl({
-      search: search || undefined,
-      actorUserId: actorUserId || undefined,
-      targetType: targetType || undefined,
-      targetId: targetId || undefined,
-      branchId: branchId || undefined,
-      dateFrom: dateFrom || undefined,
-      dateTo: dateTo || undefined,
-    }, 1000, exportReason || undefined);
-    window.location.assign(url);
-  }
-
-  async function handleVerifyIntegrity() {
-    setVerifying(true);
-    try {
-      const result = await verifyAuditIntegrity();
-      setIntegrityResult(result);
-      setShowIntegrityDialog(true);
-    } catch (err: any) {
-      alert(`فشل التحقق: ${err.message}`);
-    } finally {
-      setVerifying(false);
-    }
-  }
-
-  const activeFilterPairs: string[] = [
-    search ? `search=${search}` : '',
-    actorUserId ? `actor_user_id=${actorUserId}` : '',
-    targetType ? `target_type=${targetType}` : '',
-    targetId ? `target_id=${targetId}` : '',
-    branchId ? `branch_id=${branchId}` : '',
-    dateFrom ? `date_from=${dateFrom}` : '',
-    dateTo ? `date_to=${dateTo}` : '',
-  ].filter(Boolean);
+  const {
+    search, setSearch,
+    actorUserId, setActorUserId,
+    action, setAction,
+    targetType, setTargetType,
+    targetId, setTargetId,
+    branchId, setBranchId,
+    dateFrom, setDateFrom,
+    dateTo, setDateTo,
+    mode, setMode,
+    setFiltersVersion,
+    verifying,
+    integrityResult,
+    showIntegrityDialog, setShowIntegrityDialog,
+    auditQuery,
+    labels,
+    applyQuickRange,
+    exportNightlyOpsCsv,
+    handleVerifyIntegrity,
+    activeFilterPairs,
+    auditText,
+    language,
+  } = useAuditExplorer();
 
   return (
     <Stack spacing={3}>
@@ -280,51 +177,12 @@ export function AuditExplorerPage() {
         />
       </SectionCard>
 
-      <Dialog open={showIntegrityDialog} onClose={() => setShowIntegrityDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          {integrityResult?.success ? <CheckCircle2 color="green" /> : <AlertTriangle color="red" />}
-          نتيجة التحقق من النزاهة
-        </DialogTitle>
-        <DialogContent dividers>
-          {integrityResult?.success ? (
-            <Stack spacing={2} alignItems="center" sx={{ py: 2 }}>
-              <Typography variant="h6" color="success.main" fontWeight="bold">
-                سلسلة السجلات سليمة تماماً
-              </Typography>
-              <Typography variant="body2" textAlign="center">
-                تم التحقق من <strong>{integrityResult.total_verified}</strong> سجل تدقيق. 
-                لم يتم العثور على أي تلاعب أو فجوات في سلسلة التشفير (Hash Chain).
-              </Typography>
-            </Stack>
-          ) : (
-            <Stack spacing={2}>
-              <Typography variant="h6" color="error.main" fontWeight="bold">
-                تم اكتشاف مشكلات في نزاهة السجل!
-              </Typography>
-              <Alert severity="error">
-                تم العثور على {integrityResult?.issues.length} مشكلة. قد يشير هذا إلى تلاعب في قاعدة البيانات أو خطأ في النظام.
-              </Alert>
-              <Box sx={{ maxHeight: 200, overflowY: 'auto', bgcolor: '#fff5f5', p: 1, borderRadius: 1 }}>
-                {integrityResult?.issues.map((issue, idx) => (
-                  <Typography key={idx} variant="caption" display="block" sx={{ mb: 1, borderBottom: '1px solid #fed7d7' }}>
-                    <strong>سجل {issue.log_id}:</strong> {issue.error}
-                  </Typography>
-                ))}
-              </Box>
-            </Stack>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowIntegrityDialog(false)}>إغلاق</Button>
-        </DialogActions>
-      </Dialog>
+      <AuditIntegrityDialog 
+        open={showIntegrityDialog} 
+        onClose={() => setShowIntegrityDialog(false)} 
+        result={integrityResult} 
+      />
     </Stack>
   );
 }
 
-function formatDate(value: Date): string {
-  const year = value.getFullYear();
-  const month = String(value.getMonth() + 1).padStart(2, '0');
-  const day = String(value.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}

@@ -54,7 +54,7 @@ export function AgingReportTab() {
     <Stack spacing={3}>
       <Paper sx={{ p: 2.5, borderRadius: 2, border: '1px solid', borderColor: 'divider', background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(8px)' }}>
         <Grid container spacing={2.5} alignItems="center">
-          <Grid item xs={12} sm={6} md={4}>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
             <Stack direction="row" spacing={1} alignItems="center">
               <Typography variant="body2" fontWeight="bold" sx={{ mr: 1 }}>
                 {isAr ? 'نوع الحساب:' : 'Party Type:'}
@@ -75,7 +75,7 @@ export function AgingReportTab() {
               </ToggleButtonGroup>
             </Stack>
           </Grid>
-          <Grid item xs={12} sm={6} md={4}>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
             <TextField
               fullWidth
               size="small"
@@ -86,7 +86,7 @@ export function AgingReportTab() {
               InputLabelProps={{ shrink: true }}
             />
           </Grid>
-          <Grid item xs={12} sm={12} md={4}>
+          <Grid size={{ xs: 12, sm: 12, md: 4 }}>
             <Stack direction="row" spacing={1.5} justifyContent="flex-end">
               <Button
                 variant="outlined"
@@ -117,7 +117,7 @@ export function AgingReportTab() {
 
       {data && (
         <Grid container spacing={2}>
-          <Grid item xs={12} md={4}>
+          <Grid size={{ xs: 12, md: 4 }}>
             <Paper
               sx={{
                 p: 2.5,
@@ -174,7 +174,7 @@ export function AgingReportTab() {
             ) : (
               data.rows.map((row) => (
                 <TableRow key={row.party_id} hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
-                  <TableCell fontWeight="500">{row.party_name}</TableCell>
+                  <TableCell sx={{ fontWeight: '500' }}>{row.party_name}</TableCell>
                   <TableCell align="right" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
                     {formatters.formatDecimal(Number(row.total_outstanding))}
                   </TableCell>

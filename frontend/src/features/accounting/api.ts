@@ -189,3 +189,35 @@ export function getAgingReportExcelUrl(params: {
   if (params.asOfDate) search.set("as_of_date", params.asOfDate);
   return `/api/accounting/aging/export?${search.toString()}`;
 }
+
+export function createChartAccount(payload: any): Promise<ChartAccountRecord> {
+  return apiRequest("/api/accounting/chart-of-accounts", { method: "POST", body: JSON.stringify(payload) });
+}
+
+export function createJournalEntry(payload: any): Promise<JournalEntryRecord> {
+  return apiRequest("/api/accounting/journal-entries", { method: "POST", body: JSON.stringify(payload) });
+}
+
+export function updateJournalEntry(id: string, payload: any): Promise<JournalEntryRecord> {
+  return apiRequest(`/api/accounting/journal-entries/${id}`, { method: "PATCH", body: JSON.stringify(payload) });
+}
+
+export function postJournalEntry(id: string): Promise<JournalEntryRecord> {
+  return apiRequest(`/api/accounting/journal-entries/${id}/post`, { method: "POST" });
+}
+
+export function reverseJournalEntry(id: string, payload: any): Promise<JournalEntryRecord> {
+  return apiRequest(`/api/accounting/journal-entries/${id}/reverse`, { method: "POST", body: JSON.stringify(payload) });
+}
+
+export function deleteJournalEntry(id: string): Promise<void> {
+  return apiRequest(`/api/accounting/journal-entries/${id}`, { method: "DELETE" });
+}
+
+export function updateChartAccount(id: string, payload: any): Promise<ChartAccountRecord> {
+  return apiRequest(`/api/accounting/chart-of-accounts/${id}`, { method: "PATCH", body: JSON.stringify(payload) });
+}
+
+export function deleteChartAccount(id: string): Promise<void> {
+  return apiRequest(`/api/accounting/chart-of-accounts/${id}`, { method: "DELETE" });
+}

@@ -7,6 +7,8 @@ import { PaymentMethodsSection } from '../PaymentMethodsSection';
 import { PeriodLockSection } from '../PeriodLockSection';
 import { FiscalPeriodsSection } from '../FiscalPeriodsSection';
 import { CompensationTypesSettingsSection } from '../CompensationTypesSettingsSection';
+import { AccountingBridgesSection } from '../AccountingBridgesSection';
+import { CustomChartUpload } from '../CustomChartUpload';
 
 export function GeneralFinancialView() {
   const { language } = useLanguage();
@@ -18,7 +20,31 @@ export function GeneralFinancialView() {
       {message ? <Alert severity='success'>{message}</Alert> : null}
       {error ? <Alert severity='error'>{error}</Alert> : null}
 
+      <CustomChartUpload
+        language={language}
+        onError={(nextError) => {
+          setError(nextError);
+          if (nextError) setMessage(null);
+        }}
+        onSuccess={(nextMessage) => {
+          setMessage(nextMessage);
+          setError(null);
+        }}
+      />
+
       <PaymentMethodsSection
+        language={language}
+        onError={(nextError) => {
+          setError(nextError);
+          if (nextError) setMessage(null);
+        }}
+        onSuccess={(nextMessage) => {
+          setMessage(nextMessage);
+          setError(null);
+        }}
+      />
+
+      <AccountingBridgesSection
         language={language}
         onError={(nextError) => {
           setError(nextError);

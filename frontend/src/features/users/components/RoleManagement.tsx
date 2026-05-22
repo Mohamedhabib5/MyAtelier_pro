@@ -171,7 +171,7 @@ export const RoleManagement: React.FC = () => {
 
       <Grid container spacing={3}>
         {roles.map((role, index) => (
-          <Grid item xs={12} md={6} lg={4} key={role.id}>
+          <Grid size={{ xs: 12, md: 6, lg: 4 }} key={role.id}>
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -198,7 +198,7 @@ export const RoleManagement: React.FC = () => {
                             label="نظام" 
                             size="small" 
                             color="primary" 
-                            variant="soft"
+                            variant="outlined"
                             sx={{ fontWeight: 'bold', fontSize: '0.65rem', height: 20 }} 
                           />
                         )}
@@ -267,7 +267,7 @@ export const RoleManagement: React.FC = () => {
         <DialogContent dividers sx={{ bgcolor: '#fbfbfb' }}>
           <Stack spacing={3} sx={{ mt: 1 }}>
             <Grid container spacing={2}>
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <TextField 
                   label="اسم الدور" 
                   fullWidth 
@@ -277,7 +277,7 @@ export const RoleManagement: React.FC = () => {
                   InputProps={{ sx: { borderRadius: 3, bgcolor: 'white' } }}
                 />
               </Grid>
-              <Grid item xs={12} md={6}>
+              <Grid size={{ xs: 12, md: 6 }}>
                 <TextField 
                   label="الوصف" 
                   fullWidth 
@@ -321,7 +321,7 @@ export const RoleManagement: React.FC = () => {
                     </Stack>
                     <Grid container spacing={1}>
                       {perms.map(perm => (
-                        <Grid item xs={12} sm={6} md={4} key={perm.key}>
+                        <Grid size={{ xs: 12, sm: 6, md: 4 }} key={perm.key}>
                           <Paper 
                             elevation={0}
                             sx={{ 

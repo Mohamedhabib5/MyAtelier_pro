@@ -568,7 +568,7 @@ export function ReconciliationContent() {
                 <Grid size={{ xs: 4 }}>
                   <Typography color="text.secondary" variant="caption">{text.actualTotal}</Typography>
                   <Typography variant="body1" fontWeight="bold">
-                    {formatters.formatDecimal(singleActualAmount)}
+                    {formatters.formatDecimal(singleActualAmount === "" ? 0 : singleActualAmount)}
                   </Typography>
                 </Grid>
                 <Grid size={{ xs: 4 }}>

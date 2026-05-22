@@ -68,7 +68,7 @@ export function IncomeStatementTab() {
     <Stack spacing={3}>
       <Paper sx={{ p: 2.5, borderRadius: 2, border: '1px solid', borderColor: 'divider', background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(8px)' }}>
         <Grid container spacing={2.5} alignItems="center">
-          <Grid item xs={12} sm={6} md={4}>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
             <FormControl fullWidth size="small">
               <InputLabel id="is-branch-select-label">{isAr ? 'الفرع' : 'Branch'}</InputLabel>
               <Select
@@ -88,7 +88,7 @@ export function IncomeStatementTab() {
               </Select>
             </FormControl>
           </Grid>
-          <Grid item xs={12} sm={6} md={4}>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
             <TextField
               fullWidth
               size="small"
@@ -99,7 +99,7 @@ export function IncomeStatementTab() {
               InputLabelProps={{ shrink: true }}
             />
           </Grid>
-          <Grid item xs={12} sm={12} md={4}>
+          <Grid size={{ xs: 12, sm: 12, md: 4 }}>
             <Stack direction="row" spacing={1.5} justifyContent="flex-end">
               <Button
                 variant="outlined"
@@ -170,7 +170,7 @@ export function IncomeStatementTab() {
       )}
 
       <Grid container spacing={3}>
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Paper sx={{ p: 2.5, borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
             <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
               <Typography variant="h6" fontWeight="bold" color="primary">
@@ -210,7 +210,7 @@ export function IncomeStatementTab() {
           </Paper>
         </Grid>
 
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Paper sx={{ p: 2.5, borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
             <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
               <Typography variant="h6" fontWeight="bold" color="error">

@@ -287,3 +287,49 @@ export function updateFiscalPeriod(periodId: string, payload: FiscalPeriodUpdate
 export function deleteFiscalPeriod(periodId: string): Promise<void> {
   return apiRequest<void>(`/api/settings/fiscal-periods/${periodId}`, { method: 'DELETE' });
 }
+
+
+export type AccountingBridgeConfigRecord = {
+  bridge_key: string;
+  account_code: string;
+  label_ar: string;
+  label_en: string;
+  is_required: boolean;
+  account_name: string | null;
+};
+
+export type UpdateAccountingBridgePayload = {
+  account_code: string;
+  label_ar?: string | null;
+  label_en?: string | null;
+};
+
+export function listAccountingBridges(): Promise<AccountingBridgeConfigRecord[]> {
+  return apiRequest<AccountingBridgeConfigRecord[]>('/api/accounting/bridge-configs', { method: 'GET' });
+}
+
+export function updateAccountingBridge(
+  bridgeKey: string,
+  payload: UpdateAccountingBridgePayload
+): Promise<AccountingBridgeConfigRecord> {
+  return apiRequest<AccountingBridgeConfigRecord>(`/api/accounting/bridge-configs/${bridgeKey}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function resetAccountingBridge(bridgeKey: string): Promise<AccountingBridgeConfigRecord> {
+  return apiRequest<AccountingBridgeConfigRecord>(`/api/accounting/bridge-configs/${bridgeKey}/reset`, {
+    method: 'POST',
+  });
+}
+
+export function importChartOfAccounts(file: File): Promise<{ message: string }> {
+  const formData = new FormData();
+  formData.append('file', file);
+  return apiRequest<{ message: string }>('/api/accounting/chart-of-accounts/import', {
+    method: 'POST',
+    body: formData,
+  });
+}
+
