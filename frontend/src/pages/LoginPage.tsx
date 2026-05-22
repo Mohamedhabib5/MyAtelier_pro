@@ -23,8 +23,8 @@ export function LoginPage() {
   const { loginAction } = useAuth();
   const loginText = useLoginText();
   
-  const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('admin123');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [is2FARequired, setIs2FARequired] = useState(false);
@@ -220,25 +220,7 @@ export function LoginPage() {
                   {is2FARequired ? 'تأكيد الرمز' : loginText.submit}
                 </Button>
 
-                {!is2FARequired && (
-                  <Paper 
-                    elevation={0} 
-                    sx={{ 
-                      p: 2, 
-                      bgcolor: 'rgba(0,0,0,0.02)', 
-                      borderRadius: 3,
-                      border: '1px solid rgba(0,0,0,0.05)',
-                      textAlign: 'center'
-                    }}
-                  >
-                    <Typography variant='caption' color='text.secondary' display='block'>
-                      بيانات الدخول الافتراضية للتجربة:
-                    </Typography>
-                    <Typography variant='caption' fontWeight='bold' color='primary'>
-                      admin / admin123
-                    </Typography>
-                  </Paper>
-                )}
+
               </Stack>
             </CardContent>
           </Card>
