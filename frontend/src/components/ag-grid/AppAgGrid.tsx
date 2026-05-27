@@ -75,6 +75,7 @@ type Props<Row> = {
   pinnedBottomRowData?: Row[];
   onRowClicked?: (params: any) => void;
   toolbarLeftContent?: React.ReactNode;
+  disableMobileView?: boolean;
 };
 
 export function AppAgGrid<Row>({
@@ -111,9 +112,10 @@ export function AppAgGrid<Row>({
   pinnedBottomRowData,
   onRowClicked,
   toolbarLeftContent,
+  disableMobileView = false,
 }: Props<Row>) {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isMobile = useMediaQuery(theme.breakpoints.down('md')) && !disableMobileView;
   const [internalSearch, setInternalSearch] = useState('');
   const [columnsAnchor, setColumnsAnchor] = useState<HTMLElement | null>(null);
   const [exportAnchor, setExportAnchor] = useState<HTMLElement | null>(null);

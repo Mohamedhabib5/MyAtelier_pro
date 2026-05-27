@@ -449,6 +449,7 @@ export function BookingDocumentEditor({
         hideToolbar
         pagination={false}
         height={gridHeight}
+        disableMobileView={true}
       />
 
       <QuickCustomerDialog open={customerDialogOpen} onClose={() => setCustomerDialogOpen(false)} onSubmit={handleQuickCustomerSubmit} />

@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { CircularProgress, Stack } from '@mui/material';
 
 import { AppDialogShell } from '../../components/AppDialogShell';
@@ -59,9 +60,22 @@ export function BookingEditorDialog({
   onCancelFull,
   mode,
 }: Props) {
+  const [shouldRender, setShouldRender] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      const timer = setTimeout(() => {
+        setShouldRender(true);
+      }, 250);
+      return () => clearTimeout(timer);
+    } else {
+      setShouldRender(false);
+    }
+  }, [open]);
+
   return (
     <AppDialogShell open={open} onClose={onClose} title={title} subtitle={subtitle} maxWidth='xl'>
-      {loading && !creatingNew ? (
+      {!shouldRender || (loading && !creatingNew) ? (
         <Stack alignItems='center' justifyContent='center' sx={{ minHeight: 240 }}>
           <CircularProgress />
         </Stack>
