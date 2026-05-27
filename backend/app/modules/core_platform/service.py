@@ -92,7 +92,7 @@ def create_backup(
 
 def resolve_backup_download_path(backup_dir: Path, backup_record: BackupRecord) -> Path:
     resolved_backup_dir = backup_dir.resolve()
-    candidate = Path(backup_record.file_path).resolve()
+    candidate = (backup_dir / backup_record.filename).resolve()
     try:
         candidate.relative_to(resolved_backup_dir)
     except ValueError as exc:

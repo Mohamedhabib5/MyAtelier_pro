@@ -194,7 +194,9 @@ export function AppAgGrid<Row>({
     [saveGridState],
   );
 
-  const columnsList: Column[] = gridApiRef.current?.getColumns() ?? [];
+  const columnsList: Column[] = (gridApiRef.current && !gridApiRef.current.isDestroyed())
+    ? (gridApiRef.current.getColumns() ?? [])
+    : [];
 
   const effectivePageSize = externalPagination?.pageSize ?? localPageSize;
   const effectivePage = externalPagination?.page ?? localPage;
@@ -370,6 +372,9 @@ export function AppAgGrid<Row>({
               overlayNoRowsTemplate={`<span>${noRowsLabel}</span>`}
               onGridReady={handleGridReady}
               onFirstDataRendered={handleFirstDataRendered}
+              onGridPreDestroyed={() => {
+                gridApiRef.current = null;
+              }}
               onColumnMoved={handleGridStateChanged}
               onColumnPinned={handleGridStateChanged}
               onColumnVisible={handleGridStateChanged}

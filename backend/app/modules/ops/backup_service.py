@@ -132,6 +132,6 @@ def _get_metadata(path: Path, kind: str) -> BackupMetadata:
         "id": path.name,
         "filename": path.name,
         "size_bytes": stat.st_size,
-        "created_at": datetime.fromtimestamp(stat.st_ctime).isoformat(),
+        "created_at": datetime.fromtimestamp(stat.st_mtime).isoformat(),
         "kind": kind
     }

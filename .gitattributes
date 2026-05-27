@@ -1,0 +1,12 @@
+# Enforce LF endings for shell scripts and env files to ensure Docker/Linux compatibility
+*.sh text eol=lf
+*.env text eol=lf
+*.conf text eol=lf
+Dockerfile text eol=lf
+docker-compose.yml text eol=lf
+*.py text eol=lf
+*.json text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.css text eol=lf
+*.html text eol=lf
