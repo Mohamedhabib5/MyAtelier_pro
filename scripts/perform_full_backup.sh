@@ -2,7 +2,7 @@
 # سكربت النسخ الاحتياطي المتكامل لبيئة Linux Mint (MyAtelier Pro)
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 BACKUP_DIR="storage/backups"
-DB_CONTAINER="myatelier_db"
+DB_CONTAINER="myatelier_pro-db-1"
 DB_USER="beauty"
 DB_NAME="myatelier_pro"
 ZIP_NAME="FULL_PRO_BACKUP_$TIMESTAMP.zip"
