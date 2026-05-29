@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from sqlalchemy import Boolean, Date, ForeignKey, Integer, String, Text, UniqueConstraint
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 
@@ -15,9 +15,14 @@ class DressResource(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     updated_by_user_id: Mapped[str | None] = mapped_column(ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
     entity_version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     code: Mapped[str] = mapped_column(String(60), nullable=False)
-    dress_type: Mapped[str] = mapped_column(String(80), nullable=False)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    dress_type_id: Mapped[str] = mapped_column(ForeignKey('service_catalog_items.id', ondelete='RESTRICT'), nullable=False)
+    legacy_dress_type: Mapped[str | None] = mapped_column(String(80), nullable=True)
     purchase_date: Mapped[str | None] = mapped_column(Date, nullable=True)
     status: Mapped[str] = mapped_column(String(40), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     image_path: Mapped[str | None] = mapped_column(String(255), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+    dress_type = relationship('ServiceCatalogItem')
+

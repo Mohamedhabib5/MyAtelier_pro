@@ -12,7 +12,9 @@ class DressResponse(BaseModel):
     updated_by_user_id: str | None
     entity_version: int
     code: str
-    dress_type: str
+    name: str
+    dress_type_id: str
+    dress_type_name: str | None = None
     purchase_date: str | None
     status: str
     description: str | None
@@ -22,7 +24,8 @@ class DressResponse(BaseModel):
 
 class DressCreateRequest(BaseModel):
     code: str = Field(min_length=1, max_length=60)
-    dress_type: str = Field(min_length=2, max_length=80)
+    name: str = Field(min_length=2, max_length=120)
+    dress_type_id: str = Field(min_length=2, max_length=80)
     purchase_date: str | None = None
     status: str = Field(min_length=2, max_length=40)
     description: str | None = Field(default=None)
@@ -31,7 +34,8 @@ class DressCreateRequest(BaseModel):
 
 class DressUpdateRequest(BaseModel):
     code: str = Field(min_length=1, max_length=60)
-    dress_type: str = Field(min_length=2, max_length=80)
+    name: str = Field(min_length=2, max_length=120)
+    dress_type_id: str = Field(min_length=2, max_length=80)
     purchase_date: str | None = None
     status: str = Field(min_length=2, max_length=40)
     description: str | None = Field(default=None)

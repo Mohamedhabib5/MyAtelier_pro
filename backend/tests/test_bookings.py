@@ -47,9 +47,17 @@ def seed_service(client: TestClient) -> str:
 
 
 def seed_dress(client: TestClient, code: str = 'DR-001') -> str:
+    from .test_dresses import get_or_create_dress_service
+    service_id = get_or_create_dress_service(client, "زفاف")
     response = client.post(
         '/api/dresses',
-        json={'code': code, 'dress_type': 'زفاف', 'status': 'available', 'description': 'فستان للاختبار'},
+        json={
+            'code': code,
+            'name': 'فستان اختبار',
+            'dress_type_id': service_id,
+            'status': 'available',
+            'description': 'فستان للاختبار'
+        },
     )
     assert response.status_code == 201, response.text
     return response.json()['id']

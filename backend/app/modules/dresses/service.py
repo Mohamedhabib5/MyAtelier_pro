@@ -35,7 +35,8 @@ def create_dress(db: Session, actor: User, payload: DressCreateRequest) -> dict:
         updated_by_user_id=actor.id,
         entity_version=1,
         code=code,
-        dress_type=_clean(payload.dress_type),
+        name=_clean(payload.name),
+        dress_type_id=payload.dress_type_id,
         purchase_date=_parse_date(payload.purchase_date),
         status=_clean_status(payload.status),
         description=_clean_optional(payload.description),
@@ -69,7 +70,8 @@ def update_dress(db: Session, actor: User, dress_id: str, payload: DressUpdateRe
         raise ValidationAppError('كود الفستان مستخدم بالفعل')
 
     dress.code = code
-    dress.dress_type = _clean(payload.dress_type)
+    dress.name = _clean(payload.name)
+    dress.dress_type_id = payload.dress_type_id
     dress.purchase_date = _parse_date(payload.purchase_date)
     dress.status = _clean_status(payload.status)
     dress.description = _clean_optional(payload.description)
@@ -145,7 +147,9 @@ def _serialize_dress(dress: DressResource) -> dict:
         'updated_by_user_id': dress.updated_by_user_id,
         'entity_version': dress.entity_version,
         'code': dress.code,
-        'dress_type': dress.dress_type,
+        'name': dress.name,
+        'dress_type_id': dress.dress_type_id,
+        'dress_type_name': dress.dress_type.name if dress.dress_type else None,
         'purchase_date': dress.purchase_date.isoformat() if dress.purchase_date else None,
         'status': dress.status,
         'description': dress.description,

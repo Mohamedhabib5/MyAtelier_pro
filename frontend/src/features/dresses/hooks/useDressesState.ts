@@ -5,7 +5,7 @@ import { queryClient } from '../../../lib/queryClient';
 import { type DressFormState } from '../DressFormDialog';
 
 export function emptyForm(): DressFormState {
-  return { code: '', dress_type: '', purchase_date: '', status: 'available', description: '', image_path: '', is_active: true };
+  return { code: '', name: '', dress_type_id: '', purchase_date: '', status: 'available', description: '', image_path: '', is_active: true };
 }
 
 export function useDressesState() {
@@ -72,7 +72,8 @@ export function useDressesState() {
     setEditingDress(dress);
     setForm({
       code: dress.code,
-      dress_type: dress.dress_type,
+      name: dress.name,
+      dress_type_id: dress.dress_type_id,
       purchase_date: dress.purchase_date ?? '',
       status: dress.status,
       description: dress.description ?? '',
@@ -86,7 +87,8 @@ export function useDressesState() {
     setError(null);
     const payload = {
       code: form.code,
-      dress_type: form.dress_type,
+      name: form.name,
+      dress_type_id: form.dress_type_id,
       purchase_date: form.purchase_date || null,
       status: form.status,
       description: form.description,

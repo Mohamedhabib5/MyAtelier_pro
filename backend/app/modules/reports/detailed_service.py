@@ -98,7 +98,7 @@ def get_detailed_lines_report(
             'department_name': line.department.name if line.department else '',
             'service_name': line.service.name if line.service else '',
             'dress_code': line.dress.code if line.dress else None,
-            'dress_name': line.dress.dress_type if line.dress else None,
+            'dress_name': line.dress.name if line.dress else None,
             'service_date': line.service_date.isoformat(),
             'line_price': float(line_price.quantize(PRICE_QUANT, rounding=ROUND_HALF_UP)),
             'paid_amount': float(paid_amount.quantize(PRICE_QUANT, rounding=ROUND_HALF_UP)),

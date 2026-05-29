@@ -4,7 +4,9 @@ export type DressRecord = {
   id: string;
   company_id: string;
   code: string;
-  dress_type: string;
+  name: string;
+  dress_type_id: string;
+  dress_type_name: string | null;
   purchase_date: string | null;
   status: string;
   description: string | null;
@@ -14,7 +16,8 @@ export type DressRecord = {
 
 export type DressPayload = {
   code: string;
-  dress_type: string;
+  name: string;
+  dress_type_id: string;
   purchase_date?: string | null;
   status: string;
   description?: string | null;

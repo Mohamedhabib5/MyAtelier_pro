@@ -10,9 +10,17 @@ def seed_reports_data(client: TestClient) -> None:
     customer_id = seed_customer(client)
     service_bundle = seed_service_bundle(client)
     dress_id = seed_dress(client, code='REP-DR-001')
+    from .test_dresses import get_or_create_dress_service
+    service_id = get_or_create_dress_service(client, "زفاف")
     second_dress = client.post(
         '/api/dresses',
-        json={'code': 'REP-DR-002', 'dress_type': 'زفاف', 'status': 'maintenance', 'description': 'فستان صيانة'},
+        json={
+            'code': 'REP-DR-002',
+            'name': 'فستان صيانة تجريبي',
+            'dress_type_id': service_id,
+            'status': 'maintenance',
+            'description': 'فستان صيانة'
+        },
     )
     assert second_dress.status_code == 201, second_dress.text
 
@@ -49,7 +57,7 @@ def test_reports_overview_returns_operational_summary(app_client: TestClient) ->
     assert response.status_code == 200, response.text
     payload = response.json()
     assert payload['active_customers'] == 1
-    assert payload['active_services'] == 1
+    assert payload['active_services'] == 2
     assert payload['available_dresses'] == 1
     assert payload['upcoming_bookings'] == 1
     assert payload['booking_status_counts'][0]['count'] >= 1

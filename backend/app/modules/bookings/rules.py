@@ -48,7 +48,7 @@ def clean_line_status(value: str) -> str:
 
 
 def department_uses_dress(department: Department) -> bool:
-    return department_uses_dress_code(norm_text(department.code))
+    return department.is_dress_department or department_uses_dress_code(norm_text(department.code))
 
 
 def calculate_tax_amount(line_price: Decimal, tax_rate_percent: Decimal) -> Decimal:

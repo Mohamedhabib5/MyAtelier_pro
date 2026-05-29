@@ -57,14 +57,14 @@ def global_search(
     dresses = db.query(DressResource).filter(
         or_(
             DressResource.code.ilike(f"%{q}%"),
-            DressResource.dress_type.ilike(f"%{q}%"),
+            DressResource.name.ilike(f"%{q}%"),
             DressResource.description.ilike(f"%{q}%")
         )
     ).limit(5).all()
     for d in dresses:
         results.append({
             "id": d.id,
-            "title": f"{d.dress_type} - {d.code}",
+            "title": f"{d.name} - {d.code}",
             "subtitle": d.description[:50] if d.description else "",
             "type": "dress",
             "path": "/dresses"

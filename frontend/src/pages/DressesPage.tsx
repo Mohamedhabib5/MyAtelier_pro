@@ -92,7 +92,7 @@ export function DressesPage() {
           exportLabel={labels.export}
           rowsPerPageLabel={language === 'ar' ? 'عدد الصفوف' : 'Rows per page'}
           closeLabel={language === 'ar' ? 'إغلاق' : 'Close'}
-          searchFields={[(row) => row.code, (row) => row.dress_type, (row) => row.description ?? '', (row) => row.image_path ?? '']}
+          searchFields={[(row) => row.code, (row) => row.name, (row) => row.dress_type_name ?? '', (row) => row.description ?? '', (row) => row.image_path ?? '']}
           filterContent={
             <Stack spacing={2}>
               <TextField select SelectProps={{ native: true }} fullWidth label={language === 'ar' ? 'الحالة التشغيلية' : 'Operational status'} value={activeFilter} onChange={(event) => setActiveFilter(event.target.value as any)}>

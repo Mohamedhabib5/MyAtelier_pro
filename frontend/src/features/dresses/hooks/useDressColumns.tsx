@@ -13,6 +13,7 @@ interface UseDressColumnsProps {
   dressesText: {
     table: {
       code: string;
+      name: string;
       type: string;
       description: string;
       status: string;
@@ -42,7 +43,8 @@ export function useDressColumns({
 }: UseDressColumnsProps) {
   return useMemo(() => [
     { key: 'code', header: dressesText.table.code, searchValue: (row: DressRecord) => row.code, render: (row: DressRecord) => row.code },
-    { key: 'type', header: dressesText.table.type, searchValue: (row: DressRecord) => row.dress_type, render: (row: DressRecord) => row.dress_type },
+    { key: 'name', header: dressesText.table.name, searchValue: (row: DressRecord) => row.name, render: (row: DressRecord) => row.name },
+    { key: 'type', header: dressesText.table.type, searchValue: (row: DressRecord) => row.dress_type_name ?? '', render: (row: DressRecord) => row.dress_type_name ?? EMPTY_VALUE },
     { key: 'description', header: dressesText.table.description, searchValue: (row: DressRecord) => row.description ?? '', render: (row: DressRecord) => row.description ?? EMPTY_VALUE },
     {
       key: 'status',
