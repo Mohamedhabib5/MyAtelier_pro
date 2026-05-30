@@ -424,33 +424,45 @@ export function BookingDocumentEditor({
         )}
       </Stack>
 
-      <AppAgGrid
-        tableKey='booking-document-editor-lines'
-        rows={lines}
-        columns={lineColumns}
-        language={language}
-        searchLabel={bookingsText.editor.linesTitle}
-        searchPlaceholder={bookingsText.editor.linesTitle}
-        columnsLabel={commonText.actions}
-        exportLabel='Export'
-        resetLabel='Reset'
-        closeLabel='Close'
-        noRowsLabel={language === 'ar' ? 'لا توجد سطور بعد' : 'No lines yet'}
-        rowsPerPageLabel={language === 'ar' ? 'عدد الصفوف' : 'Rows per page'}
-        getRowId={(params) => params.data.local_id}
-        getRowStyle={(params) => {
-          const isFullPending = Boolean(pendingCancellations['__full__']);
-          const isLinePending = params.data?.id && Boolean(pendingCancellations[params.data.id]);
-          if (isFullPending || isLinePending) {
-            return { backgroundColor: 'rgba(211, 47, 47, 0.08)' };
-          }
-          return undefined;
+      <Box 
+        sx={{ 
+          minHeight: { xs: '350px', md: '450px' },
+          height: gridHeight, 
+          width: '100%', 
+          display: 'flex', 
+          flexDirection: 'column', 
+          flexGrow: 1, 
+          flexShrink: 0
         }}
-        hideToolbar
-        pagination={false}
-        height={gridHeight}
-        disableMobileView={true}
-      />
+      >
+        <AppAgGrid
+          tableKey='booking-document-editor-lines'
+          rows={lines}
+          columns={lineColumns}
+          language={language}
+          searchLabel={bookingsText.editor.linesTitle}
+          searchPlaceholder={bookingsText.editor.linesTitle}
+          columnsLabel={commonText.actions}
+          exportLabel='Export'
+          resetLabel='Reset'
+          closeLabel='Close'
+          noRowsLabel={language === 'ar' ? 'لا توجد سطور بعد' : 'No lines yet'}
+          rowsPerPageLabel={language === 'ar' ? 'عدد الصفوف' : 'Rows per page'}
+          getRowId={(params) => params.data.local_id}
+          getRowStyle={(params) => {
+            const isFullPending = Boolean(pendingCancellations['__full__']);
+            const isLinePending = params.data?.id && Boolean(pendingCancellations[params.data.id]);
+            if (isFullPending || isLinePending) {
+              return { backgroundColor: 'rgba(211, 47, 47, 0.08)' };
+            }
+            return undefined;
+          }}
+          hideToolbar
+          pagination={false}
+          height={gridHeight}
+          disableMobileView={true}
+        />
+      </Box>
 
       <QuickCustomerDialog open={customerDialogOpen} onClose={() => setCustomerDialogOpen(false)} onSubmit={handleQuickCustomerSubmit} />
 

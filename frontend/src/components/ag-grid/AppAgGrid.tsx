@@ -176,6 +176,13 @@ export function AppAgGrid<Row>({
     (event: GridReadyEvent<Row>) => {
       gridApiRef.current = event.api;
       applySavedState(event.api);
+
+      // Force a defensive layout calculation and fit columns once DOM layout settles
+      setTimeout(() => {
+        if (event.api && !event.api.isDestroyed()) {
+          event.api.sizeColumnsToFit();
+        }
+      }, 150);
     },
     [applySavedState],
   );
@@ -183,6 +190,13 @@ export function AppAgGrid<Row>({
   const handleFirstDataRendered = useCallback(
     (event: FirstDataRenderedEvent<Row>) => {
       applySavedState(event.api);
+
+      // Double check column sizing to ensure proper display
+      setTimeout(() => {
+        if (event.api && !event.api.isDestroyed()) {
+          event.api.sizeColumnsToFit();
+        }
+      }, 150);
     },
     [applySavedState],
   );
@@ -340,7 +354,18 @@ export function AppAgGrid<Row>({
         </Stack>
         ) : null}
 
-        <Box className='ag-theme-quartz app-ag-grid' sx={{ height: isMobile ? 'auto' : height, width: '100%' }}>
+        <Box 
+          className='ag-theme-quartz app-ag-grid' 
+          sx={{ 
+            height: isMobile ? 'auto' : height, 
+            width: '100%',
+            minHeight: '400px', // Prevent momentary container height collapse
+            display: 'flex',
+            flexDirection: 'column',
+            flexGrow: 1,
+            flexShrink: 0
+          }}
+        >
           {loading ? (
             <Stack alignItems='center' justifyContent='center' sx={{ height: '100%', gap: 1.5 }}>
               <CircularProgress size={24} />
@@ -368,7 +393,8 @@ export function AppAgGrid<Row>({
               animateRows
               suppressDragLeaveHidesColumns
               suppressCellFocus={false}
-              getRowId={getRowId}
+              getRowId={getRowId ?? ((params) => (params.data as any)?.id || (params.data as any)?.local_id || (params.data as any)?.uuid)}
+              domLayout="normal"
               overlayNoRowsTemplate={`<span>${noRowsLabel}</span>`}
               onGridReady={handleGridReady}
               onFirstDataRendered={handleFirstDataRendered}
