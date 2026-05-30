@@ -131,7 +131,7 @@ export function useBookingEditorColumns({
         minWidth: 140,
         cellRenderer: ({ data }: ICellRendererParams<EditableLine>) => {
           if (!data) return null;
-          
+          const availableDresses = dresses.filter((dress) => dress.status !== 'sold' || dress.id === data.dress_id);
           return (
             <TextField
               select
@@ -139,16 +139,51 @@ export function useBookingEditorColumns({
               size='small'
               fullWidth
               value={data.dress_id}
-              onChange={(event) => updateLine(data.local_id, { dress_id: event.target.value })}
+              onChange={(event) => {
+                const nextDressId = event.target.value;
+                updateLine(data.local_id, { 
+                  dress_id: nextDressId,
+                  // If dress is cleared, automatically uncheck sale!
+                  is_sale: nextDressId ? data.is_sale : false 
+                });
+              }}
               disabled={data.is_locked}
             >
               <option value=''>{bookingsText.editor.noDress}</option>
-              {dresses.map((dress) => (
+              {availableDresses.map((dress) => (
                 <option key={dress.id} value={dress.id}>
                   {dress.code}
                 </option>
               ))}
             </TextField>
+          );
+        },
+      },
+      {
+        colId: 'is_sale',
+        headerName: language === 'ar' ? 'بيع' : 'Sale',
+        width: 80,
+        maxWidth: 90,
+        cellStyle: { display: 'flex', alignItems: 'center', justifyContent: 'center' },
+        cellRenderer: ({ data }: ICellRendererParams<EditableLine>) => {
+          if (!data) return null;
+          const isDressDept = departments.find(d => d.id === data.department_id)?.is_dress_department || 
+                             departmentUsesDressCode(departments.find(d => d.id === data.department_id));
+          const hasDress = Boolean(data.dress_id);
+          const enabled = isDressDept && hasDress && !data.is_locked;
+          
+          return (
+            <input
+              type="checkbox"
+              checked={data.is_sale}
+              disabled={!enabled}
+              onChange={(e) => updateLine(data.local_id, { is_sale: e.target.checked })}
+              style={{
+                width: 20,
+                height: 20,
+                cursor: enabled ? 'pointer' : 'default',
+              }}
+            />
           );
         },
       },

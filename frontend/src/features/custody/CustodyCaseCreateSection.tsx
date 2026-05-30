@@ -109,7 +109,7 @@ export function CustodyCaseCreateSection({
   const selectedBooking = bookingQuery.data ?? null;
   const existingSet = useMemo(() => new Set(existingCaseLineIds), [existingCaseLineIds]);
   const selectableLines = useMemo(
-    () => (selectedBooking?.lines ?? []).filter((line) => line.status !== 'cancelled'),
+    () => (selectedBooking?.lines ?? []).filter((line) => line.status !== 'cancelled' && !line.is_sale),
     [selectedBooking],
   );
   const hasNoDressLineSelected = useMemo(

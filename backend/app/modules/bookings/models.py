@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import Date, DateTime, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -55,6 +55,7 @@ class BookingLine(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     department_id: Mapped[str] = mapped_column(ForeignKey('departments.id', ondelete='RESTRICT'), nullable=False)
     service_id: Mapped[str] = mapped_column(ForeignKey('service_catalog_items.id', ondelete='RESTRICT'), nullable=False)
     dress_id: Mapped[str | None] = mapped_column(ForeignKey('dress_resources.id', ondelete='SET NULL'), nullable=True)
+    is_sale: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     revenue_journal_entry_id: Mapped[str | None] = mapped_column(ForeignKey('journal_entries.id', ondelete='SET NULL'), nullable=True)
     line_number: Mapped[int] = mapped_column(Integer, nullable=False)
     service_date: Mapped[str] = mapped_column(Date, nullable=False)

@@ -73,7 +73,7 @@ export function useDressesState() {
     setForm({
       code: dress.code,
       name: dress.name,
-      dress_type_id: dress.dress_type_id,
+      dress_type_id: dress.dress_type_id ?? '',
       purchase_date: dress.purchase_date ?? '',
       status: dress.status,
       description: dress.description ?? '',

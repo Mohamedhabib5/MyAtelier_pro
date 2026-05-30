@@ -16,6 +16,7 @@ export type BookingLineRecord = {
   paid_total: number;
   remaining_amount: number;
   payment_state: string;
+  is_sale: boolean;
   status: string;
   revenue_journal_entry_id: string | null;
   revenue_journal_entry_number: string | null;
@@ -100,6 +101,7 @@ export type BookingLinePayload = {
   line_price: number;
   initial_payment_amount?: number | null;
   status: string;
+  is_sale: boolean;
   notes?: string | null;
 };
 

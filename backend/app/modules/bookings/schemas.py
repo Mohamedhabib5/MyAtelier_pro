@@ -26,6 +26,7 @@ class BookingLineResponse(BaseModel):
     paid_total: float
     remaining_amount: float
     payment_state: str
+    is_sale: bool
     status: str
     revenue_journal_entry_id: str | None
     revenue_journal_entry_number: str | None
@@ -83,6 +84,7 @@ class BookingLineInput(BaseModel):
     line_price: float = Field(ge=0)
     initial_payment_amount: float | None = Field(default=None, ge=0)
     status: str = Field(min_length=2, max_length=40)
+    is_sale: bool = False
     notes: str | None = None
 
 

@@ -67,10 +67,18 @@ def update_company_settings(db: Session, payload: UpdateCompanyRequest, actor_us
     company = repo.get_primary_company()
     if company is None:
         company = ensure_organization_foundation(db, payload.name)
+    
+    if company.dresses_mode != payload.dresses_mode:
+        from app.modules.dresses.repository import DressesRepository
+        dress_count = DressesRepository(db).count_dresses(company.id)
+        if dress_count > 0:
+            raise ValidationAppError("لا يمكن تغيير نظام تشغيل الفساتين بعد إدخال فساتين في النظام")
+        company.dresses_mode = payload.dresses_mode
+
     company.name = payload.name.strip()
     company.legal_name = payload.legal_name.strip() if payload.legal_name else None
     company.default_currency = payload.default_currency.upper()
-    record_audit(db, actor_user_id=actor_user_id, action='company.updated', target_type='company', target_id=company.id, summary=f'Updated company settings for {company.name}', diff={'name': company.name, 'default_currency': company.default_currency})
+    record_audit(db, actor_user_id=actor_user_id, action='company.updated', target_type='company', target_id=company.id, summary=f'Updated company settings for {company.name}', diff={'name': company.name, 'default_currency': company.default_currency, 'dresses_mode': company.dresses_mode})
     db.commit()
     return repo.get_primary_company() or company
 

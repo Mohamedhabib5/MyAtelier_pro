@@ -16,7 +16,7 @@ class DressResource(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     entity_version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     code: Mapped[str] = mapped_column(String(60), nullable=False)
     name: Mapped[str] = mapped_column(String(120), nullable=False)
-    dress_type_id: Mapped[str] = mapped_column(ForeignKey('service_catalog_items.id', ondelete='RESTRICT'), nullable=False)
+    dress_type_id: Mapped[str | None] = mapped_column(ForeignKey('service_catalog_items.id', ondelete='RESTRICT'), nullable=True)
     legacy_dress_type: Mapped[str | None] = mapped_column(String(80), nullable=True)
     purchase_date: Mapped[str | None] = mapped_column(Date, nullable=True)
     status: Mapped[str] = mapped_column(String(40), nullable=False)

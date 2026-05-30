@@ -10,12 +10,15 @@ import { createBranch, getActiveBranch, getCompany, updateCompany } from '../api
 import { queryClient } from '../../../lib/queryClient';
 import { EMPTY_VALUE } from '../../../text/common';
 import { useSettingsText } from '../../../text/settings';
+import { useLanguage } from '../../language/LanguageProvider';
 
 export function GeneralCompanyView() {
+  const { language } = useLanguage();
   const settingsText = useSettingsText();
   const [name, setName] = useState('');
   const [legalName, setLegalName] = useState('');
   const [currency, setCurrency] = useState('EGP');
+  const [dressesMode, setDressesMode] = useState('free');
   const [branchCode, setBranchCode] = useState('');
   const [branchName, setBranchName] = useState('');
   const [message, setMessage] = useState<string | null>(null);
@@ -23,12 +26,20 @@ export function GeneralCompanyView() {
 
   const companyQuery = useQuery({ queryKey: ['settings', 'company'], queryFn: getCompany });
   const activeBranchQuery = useQuery({ queryKey: ['settings', 'active-branch'], queryFn: getActiveBranch });
+  
+  const dressesQuery = useQuery({
+    queryKey: ['dresses'],
+    queryFn: () => import('../../dresses/api').then(m => m.listDresses('all')),
+  });
+
+  const hasDresses = (dressesQuery.data ?? []).length > 0;
 
   useEffect(() => {
     if (!companyQuery.data) return;
     setName(companyQuery.data.name);
     setLegalName(companyQuery.data.legal_name ?? '');
     setCurrency(companyQuery.data.default_currency);
+    setDressesMode(companyQuery.data.dresses_mode ?? 'free');
   }, [companyQuery.data]);
 
   const saveCompanyMutation = useMutation({
@@ -72,10 +83,32 @@ export function GeneralCompanyView() {
               <TextField label={settingsText.company.name} value={name} onChange={(event) => setName(event.target.value)} />
               <TextField label={settingsText.company.legalName} value={legalName} onChange={(event) => setLegalName(event.target.value)} />
               <TextField label={settingsText.company.currency} value={currency} onChange={(event) => setCurrency(event.target.value.toUpperCase())} />
+              
+              <TextField
+                select
+                SelectProps={{ native: true }}
+                label={language === 'ar' ? 'نظام تشغيل الفساتين' : 'Dresses Operating Mode'}
+                value={dressesMode}
+                disabled={hasDresses}
+                onChange={(event) => setDressesMode(event.target.value)}
+                helperText={
+                  hasDresses
+                    ? (language === 'ar'
+                        ? 'تم قفل هذا الخيار لوجود فساتين مدخلة بالفعل في النظام.'
+                        : 'This setting is locked because there are already dresses in the system.')
+                    : (language === 'ar'
+                        ? 'تحديد ما إذا كانت الفساتين حرة بالكامل أو مرتبطة إجبارياً بخدمات الصالون.'
+                        : 'Determine whether dresses are completely free or strictly coupled to salon services.')
+                }
+              >
+                <option value="free">{language === 'ar' ? 'نظام تشغيل حر (مفصول بالكامل)' : 'Free operating mode (fully decoupled)'}</option>
+                <option value="coupled">{language === 'ar' ? 'نظام تشغيل مرتبط بالخدمات' : 'Coupled operating mode (strictly linked)'}</option>
+              </TextField>
+
               <Button 
                 variant='contained' 
                 startIcon={<SaveOutlinedIcon />} 
-                onClick={() => void saveCompanyMutation.mutateAsync({ name, legal_name: legalName || null, default_currency: currency })}
+                onClick={() => void saveCompanyMutation.mutateAsync({ name, legal_name: legalName || null, default_currency: currency, dresses_mode: dressesMode })}
                 disabled={saveCompanyMutation.isPending}
               >
                 {settingsText.company.save}

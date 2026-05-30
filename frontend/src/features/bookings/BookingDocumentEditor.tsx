@@ -186,6 +186,7 @@ export function BookingDocumentEditor({
           line_price: Number(line.line_price || 0),
           initial_payment_amount: line.initial_payment_amount ? Number(line.initial_payment_amount) : null,
           status: line.status,
+          is_sale: line.is_sale,
           notes: line.notes || null,
         }),
       ),

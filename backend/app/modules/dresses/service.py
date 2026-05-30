@@ -13,7 +13,7 @@ from app.modules.dresses.schemas import DressCreateRequest, DressUpdateRequest
 from app.modules.identity.models import User
 from app.modules.organization.service import get_company_settings
 
-VALID_STATUSES = {'available', 'reserved', 'with_customer', 'maintenance'}
+VALID_STATUSES = {'available', 'reserved', 'with_customer', 'maintenance', 'sold'}
 
 
 def list_dresses(db: Session, *, is_active: bool | None = None) -> list[dict]:
@@ -24,6 +24,10 @@ def list_dresses(db: Session, *, is_active: bool | None = None) -> list[dict]:
 
 def create_dress(db: Session, actor: User, payload: DressCreateRequest) -> dict:
     company = get_company_settings(db)
+    
+    if company.dresses_mode == 'coupled' and not payload.dress_type_id:
+        raise ValidationAppError('نوع الفستان مطلوب عند تفعيل وضع الربط بالخدمات')
+
     repo = DressesRepository(db)
     code = _clean(payload.code).upper()
     if repo.get_dress_by_code(company.id, code) is not None:
@@ -63,6 +67,9 @@ def update_dress(db: Session, actor: User, dress_id: str, payload: DressUpdateRe
     repo = DressesRepository(db)
     dress = _get_company_dress_or_404(db, repo, dress_id)
     company = get_company_settings(db)
+
+    if company.dresses_mode == 'coupled' and not payload.dress_type_id:
+        raise ValidationAppError('نوع الفستان مطلوب عند تفعيل وضع الربط بالخدمات')
 
     code = _clean(payload.code).upper()
     existing = repo.get_dress_by_code(company.id, code)

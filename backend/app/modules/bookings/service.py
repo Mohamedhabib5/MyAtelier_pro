@@ -212,6 +212,14 @@ def delete_booking(db: Session, actor: User, booking_id: str, branch_id: str) ->
         if line.revenue_journal_entry_id:
             raise ConflictError(f"لا يمكن حذف الحجز {booking.booking_number} لوجود قيود إيرادات معترف بها.")
 
+    # Revert sold status for dresses in the booking lines being deleted
+    for line in booking.lines:
+        if line.is_sale and line.dress_id:
+            from app.modules.dresses.models import DressResource
+            dress = db.get(DressResource, line.dress_id)
+            if dress and dress.status == 'sold':
+                dress.status = 'available'
+
     record_audit(
         db,
         actor_user_id=actor.id,
@@ -240,6 +248,13 @@ def delete_booking_line(db: Session, actor: User, booking_id: str, line_id: str,
         raise ConflictError("لا يمكن حذف السطر لوجود مبالغ مدفوعة مرتبطة به.")
     if line.revenue_journal_entry_id:
         raise ConflictError("لا يمكن حذف السطر لوجود قيد إيراد معترف به.")
+
+    # Revert sold status for dress if this line is deleted
+    if line.is_sale and line.dress_id:
+        from app.modules.dresses.models import DressResource
+        dress = db.get(DressResource, line.dress_id)
+        if dress and dress.status == 'sold':
+            dress.status = 'available'
 
     record_audit(
         db,

@@ -54,6 +54,14 @@ export function DressFormDialog({ open, editing, form, onChange, onClose, onSave
     enabled: open,
   });
 
+  // Fetch company settings to know the dresses mode
+  const companyQuery = useQuery({
+    queryKey: ['settings', 'company'],
+    queryFn: () => import('../settings/api').then(m => m.getCompany()),
+    enabled: open,
+  });
+
+  const dressesMode = companyQuery.data?.dresses_mode ?? 'free';
   const dressDept = deptsQuery.data?.find(d => d.is_dress_department);
   const dressServices = (servicesQuery.data ?? []).filter(s => s.department_id === dressDept?.id);
 
@@ -113,38 +121,40 @@ export function DressFormDialog({ open, editing, form, onChange, onClose, onSave
           <TextField label={dressesText.dialog.code} value={form.code} onChange={(event) => onChange({ ...form, code: event.target.value })} />
           <TextField label={dressesText.dialog.name} value={form.name} onChange={(event) => onChange({ ...form, name: event.target.value })} />
           
-          <Stack direction='row' spacing={1} alignItems='center'>
-            <TextField
-              select
-              SelectProps={{ native: true }}
-              InputLabelProps={{ shrink: true }}
-              label={dressesText.dialog.type}
-              value={form.dress_type_id}
-              onChange={(event) => onChange({ ...form, dress_type_id: event.target.value })}
-              fullWidth
-              disabled={servicesQuery.isLoading || deptsQuery.isLoading}
-            >
-              <option value="">
-                {servicesQuery.isLoading || deptsQuery.isLoading
-                  ? (language === 'ar' ? 'جاري التحميل...' : 'Loading...')
-                  : (language === 'ar' ? '-- اختر نوع الفستان --' : '-- Select Dress Type --')}
-              </option>
-              {dressServices.map(s => (
-                <option key={s.id} value={s.id}>{s.name}</option>
-              ))}
-            </TextField>
-            <IconButton
-              color="primary"
-              onClick={() => setQuickAddOpen(true)}
-              sx={{
-                bgcolor: 'action.hover',
-                border: '1px solid',
-                borderColor: 'divider',
-              }}
-            >
-              <AddIcon />
-            </IconButton>
-          </Stack>
+          {dressesMode === 'coupled' && (
+            <Stack direction='row' spacing={1} alignItems='center'>
+              <TextField
+                select
+                SelectProps={{ native: true }}
+                InputLabelProps={{ shrink: true }}
+                label={dressesText.dialog.type}
+                value={form.dress_type_id}
+                onChange={(event) => onChange({ ...form, dress_type_id: event.target.value })}
+                fullWidth
+                disabled={servicesQuery.isLoading || deptsQuery.isLoading}
+              >
+                <option value="">
+                  {servicesQuery.isLoading || deptsQuery.isLoading
+                    ? (language === 'ar' ? 'جاري التحميل...' : 'Loading...')
+                    : (language === 'ar' ? '-- اختر نوع الفستان --' : '-- Select Dress Type --')}
+                </option>
+                {dressServices.map(s => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </TextField>
+              <IconButton
+                color="primary"
+                onClick={() => setQuickAddOpen(true)}
+                sx={{
+                  bgcolor: 'action.hover',
+                  border: '1px solid',
+                  borderColor: 'divider',
+                }}
+              >
+                <AddIcon />
+              </IconButton>
+            </Stack>
+          )}
 
           <TextField label={dressesText.dialog.purchaseDate} type='date' InputLabelProps={{ shrink: true }} value={form.purchase_date} onChange={(event) => onChange({ ...form, purchase_date: event.target.value })} />
           <TextField select SelectProps={{ native: true }} InputLabelProps={{ shrink: true }} label={dressesText.dialog.status} value={form.status} onChange={(event) => onChange({ ...form, status: event.target.value })}>

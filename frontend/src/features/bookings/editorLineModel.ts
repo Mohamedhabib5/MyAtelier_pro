@@ -7,6 +7,7 @@ export type EditableLine = {
   department_id: string;
   service_id: string;
   dress_id: string;
+  is_sale: boolean;
   service_date: string;
   suggested_price: string;
   line_price: string;
@@ -31,6 +32,7 @@ export function lineFromRecord(line: BookingLineRecord): EditableLine {
     department_id: line.department_id,
     service_id: line.service_id,
     dress_id: line.dress_id ?? '',
+    is_sale: line.is_sale,
     service_date: line.service_date,
     suggested_price: String(line.suggested_price),
     line_price: String(line.line_price),
@@ -51,6 +53,7 @@ export function buildEmptyLine(departments: DepartmentRecord[], services: Servic
     department_id: '',
     service_id: '',
     dress_id: '',
+    is_sale: false,
     service_date: defaultDate ?? '',
     suggested_price: '0',
     line_price: '0',

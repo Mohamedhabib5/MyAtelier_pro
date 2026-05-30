@@ -14,6 +14,7 @@ export type CompanyRecord = {
   legal_name: string | null;
   default_currency: string;
   is_active: boolean;
+  dresses_mode: string;
   branches: BranchRecord[];
 };
 
@@ -38,6 +39,7 @@ export type UpdateCompanyPayload = {
   name: string;
   legal_name?: string | null;
   default_currency: string;
+  dresses_mode: string;
 };
 
 export type CreateBranchPayload = {

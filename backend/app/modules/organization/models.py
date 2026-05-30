@@ -15,6 +15,7 @@ class Company(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     legal_name: Mapped[str | None] = mapped_column(String(180), nullable=True)
     default_currency: Mapped[str] = mapped_column(String(3), default="EGP", nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    dresses_mode: Mapped[str] = mapped_column(String(20), default="free", server_default="free", nullable=False)
 
     branches = relationship("Branch", back_populates="company", lazy="selectin")
 

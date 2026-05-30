@@ -96,6 +96,7 @@ def serialize_booking_line(line: BookingLine) -> dict:
         'paid_total': float(paid_total),
         'remaining_amount': float(remaining),
         'payment_state': line_payment_state(line),
+        'is_sale': line.is_sale,
         'status': line.status,
         'revenue_journal_entry_id': line.revenue_journal_entry_id,
         'revenue_journal_entry_number': line.revenue_journal_entry.entry_number if line.revenue_journal_entry else None,

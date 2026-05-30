@@ -41,6 +41,7 @@ class CompanyResponse(BaseModel):
     legal_name: str | None
     default_currency: str
     is_active: bool
+    dresses_mode: str
     branches: list[BranchResponse]
 
 
@@ -48,6 +49,7 @@ class UpdateCompanyRequest(BaseModel):
     name: str = Field(min_length=2, max_length=120)
     legal_name: str | None = Field(default=None, max_length=180)
     default_currency: str = Field(default='EGP', min_length=3, max_length=3)
+    dresses_mode: str = Field(default='free', min_length=2, max_length=20)
 
 
 class FiscalPeriodResponse(BaseModel):

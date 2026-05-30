@@ -41,8 +41,11 @@ def materialize_line(
     if service.department_id != department.id:
         raise ValidationAppError("الخدمة المختارة لا تنتمي إلى القسم المحدد")
     dress = get_dress_or_404(db, company_id, payload.dress_id)
-    if dress and not department_uses_dress(department):
-        raise ValidationAppError("اختيار الفستان متاح فقط للأقسام الخاصة بالفستان")
+    if dress:
+        if not department_uses_dress(department):
+            raise ValidationAppError("اختيار الفستان متاح فقط للأقسام الخاصة بالفستان")
+        if dress.status == 'sold' and (existing_line is None or existing_line.dress_id != dress.id):
+            raise ValidationAppError("الفستان المحدد مباع بالفعل ولا يمكن بيعه أو حجزه")
     service_date = parse_date(payload.service_date)
     suggested_price = quantize_amount(
         payload.suggested_price if payload.suggested_price is not None else service.default_price
@@ -95,12 +98,29 @@ def materialize_line(
                 tax_rate_percent,
                 tax_amount,
             )
+            if existing_line.is_sale != payload.is_sale:
+                raise ValidationAppError("لا يمكن تغيير خيار البيع لسطر مكتمل ومقفل")
             if initial_payment_amount > ZERO:
                 raise ValidationAppError("لا يمكن إضافة دفعة أولى لسطر مكتمل من شاشة الحجز")
             return {"line": existing_line, "initial_payment_amount": ZERO}
+
+        # 1. Revert previous dress status if it was a sale and has been changed or is no longer a sale/is cancelled
+        if existing_line.is_sale and existing_line.dress_id:
+            if existing_line.dress_id != (dress.id if dress else None) or not payload.is_sale or status == 'cancelled':
+                from app.modules.dresses.models import DressResource
+                old_dress = db.get(DressResource, existing_line.dress_id)
+                if old_dress and old_dress.status == 'sold':
+                    old_dress.status = 'available'
+
+        # 2. Update new dress status to sold if the updated line is a sale
+        if payload.is_sale and dress:
+            if status in {"confirmed", "completed"}:
+                dress.status = "sold"
+
         existing_line.department_id = department.id
         existing_line.service_id = service.id
         existing_line.dress_id = dress.id if dress else None
+        existing_line.is_sale = payload.is_sale
         existing_line.line_number = line_number
         existing_line.service_date = service_date
         existing_line.suggested_price = suggested_price
@@ -113,6 +133,11 @@ def materialize_line(
         existing_line.entity_version += 1
         return {"line": existing_line, "initial_payment_amount": initial_payment_amount}
 
+    # 3. Update dress status to sold if the new line is a sale
+    if payload.is_sale and dress:
+        if status in {"confirmed", "completed"}:
+            dress.status = "sold"
+
     line = BookingLine(
         created_by_user_id=actor_user_id,
         updated_by_user_id=actor_user_id,
@@ -120,6 +145,7 @@ def materialize_line(
         department_id=department.id,
         service_id=service.id,
         dress_id=dress.id if dress else None,
+        is_sale=payload.is_sale,
         line_number=line_number,
         service_date=service_date,
         suggested_price=suggested_price,
