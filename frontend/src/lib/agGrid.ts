@@ -20,6 +20,7 @@ import {
   PinnedRowModule,
   TextFilterModule,
   ValidationModule,
+  ColumnAutoSizeModule,
 } from 'ag-grid-community';
 
 let registered = false;
@@ -48,6 +49,7 @@ export function ensureAgGridModulesRegistered() {
     PinnedRowModule,
     TextFilterModule,
     ValidationModule,
+    ColumnAutoSizeModule,
   ]);
 
   registered = true;
