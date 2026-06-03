@@ -4,7 +4,7 @@ import {
   Alert, Box, Button, CircularProgress, FormControlLabel,
   Grid, Stack, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, TextField, Typography, Paper,
-  ToggleButton, ToggleButtonGroup
+  ToggleButton, ToggleButtonGroup, useMediaQuery, useTheme
 } from '@mui/material';
 import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
 import PrintOutlinedIcon from '@mui/icons-material/PrintOutlined';
@@ -14,8 +14,11 @@ import { getAgingReport, getAgingReportExcelUrl } from './api';
 import { useLanguage } from '../language/LanguageProvider';
 import { useLanguageFormatters } from '../../text/common';
 import { downloadFile } from '../../lib/api';
+import { AppDateField } from '../../components/inputs/AppDateField';
 
 export function AgingReportTab() {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { language } = useLanguage();
   const formatters = useLanguageFormatters();
 
@@ -26,14 +29,14 @@ export function AgingReportTab() {
     queryKey: ['accounting', 'aging-report', partyType, asOfDate],
     queryFn: () => getAgingReport({
       partyType,
-      asOfDate: asOfDate || undefined,
+      asOfDate: asOfDate || undefined
     }),
   });
 
   const handleExportExcel = () => {
     const url = getAgingReportExcelUrl({
       partyType,
-      asOfDate: asOfDate || undefined,
+      asOfDate: asOfDate || undefined
     });
     void downloadFile(url);
   };
@@ -55,8 +58,8 @@ export function AgingReportTab() {
       <Paper sx={{ p: 2.5, borderRadius: 2, border: '1px solid', borderColor: 'divider', background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(8px)' }}>
         <Grid container spacing={2.5} alignItems="center">
           <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-            <Stack direction="row" spacing={1} alignItems="center">
-              <Typography variant="body2" fontWeight="bold" sx={{ mr: 1 }}>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ xs: 'stretch', sm: 'center' }}>
+              <Typography variant="body2" fontWeight="bold" sx={{ mr: 1, mb: { xs: 1, sm: 0 } }}>
                 {isAr ? 'نوع الحساب:' : 'Party Type:'}
               </Typography>
               <ToggleButtonGroup
@@ -65,6 +68,7 @@ export function AgingReportTab() {
                 size="small"
                 onChange={(_, val) => val && setPartyType(val)}
                 color="primary"
+                fullWidth={isMobile}
               >
                 <ToggleButton value="customer" sx={{ px: 3 }}>
                   {isAr ? 'العملاء (ذمم مدينة)' : 'Customers (AR)'}
@@ -76,24 +80,22 @@ export function AgingReportTab() {
             </Stack>
           </Grid>
           <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-            <TextField
-              fullWidth
+            <AppDateField
               size="small"
               label={isAr ? 'حتى تاريخ' : 'As of Date'}
-              type="date"
               value={asOfDate}
-              onChange={(e) => setAsOfDate(e.target.value)}
-              InputLabelProps={{ shrink: true }}
+              onChange={(val) => setAsOfDate(val)}
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 12, md: 4 }}>
-            <Stack direction="row" spacing={1.5} justifyContent="flex-end">
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} justifyContent="flex-end">
               <Button
                 variant="outlined"
                 color="success"
                 startIcon={<FileDownloadOutlinedIcon />}
                 onClick={handleExportExcel}
                 disabled={agingQuery.isPending}
+                fullWidth={isMobile}
               >
                 {isAr ? 'تصدير إكسل' : 'Excel'}
               </Button>
@@ -103,6 +105,7 @@ export function AgingReportTab() {
                 startIcon={<PrintOutlinedIcon />}
                 onClick={handlePrint}
                 disabled={agingQuery.isPending}
+                fullWidth={isMobile}
               >
                 {isAr ? 'طباعة' : 'Print'}
               </Button>
@@ -146,8 +149,8 @@ export function AgingReportTab() {
         </Grid>
       )}
 
-      <TableContainer component={Paper} sx={{ borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
-        <Table stickyHeader size="small">
+      <TableContainer component={Paper} sx={{ borderRadius: 2, border: '1px solid', borderColor: 'divider', overflowX: 'auto' }}>
+        <Table stickyHeader size="small" sx={{ minWidth: 700 }}>
           <TableHead>
             <TableRow sx={{ '& th': { backgroundColor: '#f8fafc', fontWeight: 'bold' } }}>
               <TableCell>{isAr ? 'الطرف / الاسم' : 'Party / Name'}</TableCell>

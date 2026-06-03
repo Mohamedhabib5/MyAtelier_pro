@@ -1,6 +1,7 @@
 import { MenuItem, Stack, TextField } from '@mui/material';
 
 import { bookingStatusLabel } from '../../text/common';
+import { AppDateField } from '../../components/inputs/AppDateField';
 
 type Props = {
   language: 'ar' | 'en';
@@ -30,8 +31,8 @@ export function BookingsTableFilters({
         <MenuItem value='completed'>{bookingStatusLabel(language, 'completed')}</MenuItem>
         <MenuItem value='cancelled'>{bookingStatusLabel(language, 'cancelled')}</MenuItem>
       </TextField>
-      <TextField type='date' size='small' label={language === 'ar' ? 'من تاريخ' : 'From date'} value={dateFrom} onChange={(event) => onDateFromChange(event.target.value)} InputLabelProps={{ shrink: true }} />
-      <TextField type='date' size='small' label={language === 'ar' ? 'إلى تاريخ' : 'To date'} value={dateTo} onChange={(event) => onDateToChange(event.target.value)} InputLabelProps={{ shrink: true }} />
+      <AppDateField size='small' label={language === 'ar' ? 'من تاريخ' : 'From date'} value={dateFrom} onChange={(val) => onDateFromChange(val)} />
+      <AppDateField size='small' label={language === 'ar' ? 'إلى تاريخ' : 'To date'} value={dateTo} onChange={(val) => onDateToChange(val)} />
     </Stack>
   );
 }

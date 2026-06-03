@@ -14,6 +14,7 @@ import { useLanguage } from '../language/LanguageProvider';
 import { joinLocalizedList, paymentDocumentStatusLabel, paymentKindLabel, useCommonText } from '../../text/common';
 import { usePaymentsText } from '../../text/payments';
 import type { PaymentDocumentSummaryRecord } from './api';
+import { AppDateField } from '../../components/inputs/AppDateField';
 
 type PaymentSortField = 'payment_date' | 'payment_number' | 'customer_name' | 'status' | 'document_kind';
 
@@ -179,8 +180,8 @@ export function PaymentsTableSection({
               <MenuItem value='custody_deposit'>{paymentKindLabel(language, 'custody_deposit')}</MenuItem>
               <MenuItem value='custody_compensation'>{paymentKindLabel(language, 'custody_compensation')}</MenuItem>
             </TextField>
-            <TextField type='date' size='small' label={language === 'ar' ? 'من تاريخ' : 'From date'} value={dateFrom} onChange={(event) => onDateFromChange(event.target.value)} InputLabelProps={{ shrink: true }} />
-            <TextField type='date' size='small' label={language === 'ar' ? 'إلى تاريخ' : 'To date'} value={dateTo} onChange={(event) => onDateToChange(event.target.value)} InputLabelProps={{ shrink: true }} />
+            <AppDateField size='small' label={language === 'ar' ? 'من تاريخ' : 'From date'} value={dateFrom} onChange={(val) => onDateFromChange(val)} />
+            <AppDateField size='small' label={language === 'ar' ? 'إلى تاريخ' : 'To date'} value={dateTo} onChange={(val) => onDateToChange(val)} />
           </Stack>
         }
         onSortChange={(nextSortBy, nextSortDir) => {

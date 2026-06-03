@@ -8,6 +8,7 @@ import { Trash2, Plus } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import { createJournalEntry, postJournalEntry, updateJournalEntry, ChartAccountRecord, JournalEntryRecord } from './api';
 import { queryClient } from '../../lib/queryClient';
+import { AppDateField } from '../../components/inputs/AppDateField';
 
 type Props = {
   open: boolean;
@@ -124,7 +125,7 @@ export function JournalEntryDialog({ open, onClose, accounts, isAr, entry }: Pro
           {errorMsg && <Alert severity="error">{errorMsg}</Alert>}
           <Grid container spacing={2}>
             <Grid size={{ xs: 12, sm: 4 }}>
-              <TextField label={isAr ? 'التاريخ' : 'Date'} type="date" value={entryDate} onChange={e => setEntryDate(e.target.value)} fullWidth size="small" InputLabelProps={{ shrink: true }} disabled={isViewOnly} />
+              <AppDateField label={isAr ? 'التاريخ' : 'Date'} value={entryDate} onChange={val => setEntryDate(val)} size="small" disabled={isViewOnly} />
             </Grid>
             <Grid size={{ xs: 12, sm: 4 }}>
               <TextField label={isAr ? 'المرجع' : 'Reference'} value={reference} onChange={e => setReference(e.target.value)} fullWidth size="small" disabled={isViewOnly} />
@@ -134,8 +135,8 @@ export function JournalEntryDialog({ open, onClose, accounts, isAr, entry }: Pro
             </Grid>
           </Grid>
 
-          <TableContainer sx={{ border: '1px solid #e0e0e0', borderRadius: 1, maxHeight: 300 }}>
-            <Table size="small" stickyHeader>
+          <TableContainer sx={{ border: '1px solid #e0e0e0', borderRadius: 1, maxHeight: 300, overflowX: 'auto' }}>
+            <Table size="small" stickyHeader sx={{ minWidth: 600 }}>
               <TableHead>
                 <TableRow>
                   <TableCell width="35%">{isAr ? 'الحساب' : 'Account'}</TableCell>

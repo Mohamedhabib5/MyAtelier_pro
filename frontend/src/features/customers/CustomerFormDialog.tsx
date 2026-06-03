@@ -4,6 +4,7 @@ import { AppDialogShell } from '../../components/AppDialogShell';
 import { useLanguage } from '../language/LanguageProvider';
 import { useCommonText } from '../../text/common';
 import { useCustomersText } from '../../text/customers';
+import { AppDateField } from '../../components/inputs/AppDateField';
 
 export type CustomerFormState = {
   full_name: string;
@@ -92,13 +93,10 @@ export function CustomerFormDialog({ open, editing, form, onChange, onClose, onS
             error={!form.address && open}
             helperText={!form.address && open ? (language === 'ar' ? 'العنوان مطلوب' : 'Address is required') : ''}
           />
-          <TextField
-            fullWidth
+          <AppDateField
             label={registrationDateLabel}
-            type='date'
-            InputLabelProps={{ shrink: true }}
             value={form.registration_date}
-            onChange={(event) => onChange({ ...form, registration_date: event.target.value })}
+            onChange={(val) => onChange({ ...form, registration_date: val })}
           />
         </Stack>
 

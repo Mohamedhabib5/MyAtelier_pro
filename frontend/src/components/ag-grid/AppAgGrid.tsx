@@ -112,7 +112,7 @@ export function AppAgGrid<Row>({
   pinnedBottomRowData,
   onRowClicked,
   toolbarLeftContent,
-  disableMobileView = false,
+  disableMobileView = true,
 }: Props<Row>) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md')) && !disableMobileView;

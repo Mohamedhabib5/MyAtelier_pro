@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { Box, Paper, Stack, Typography, alpha, useTheme, Button, IconButton, ButtonGroup, Select, MenuItem, FormControl } from '@mui/material';
+import { useState, useMemo, useEffect } from 'react';
+import { Box, Paper, Stack, Typography, alpha, useTheme, Button, IconButton, ButtonGroup, Select, MenuItem, useMediaQuery, Drawer } from '@mui/material';
 import { ChevronRight, ChevronLeft, Calendar as CalendarIcon, Filter } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 
@@ -16,6 +16,7 @@ export function CalendarPage() {
   const theme = useTheme();
   const { language, direction } = useLanguage();
   const isRtl = direction === 'rtl';
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<CalendarViewMode>('month');
@@ -23,7 +24,12 @@ export function CalendarPage() {
     dateMode: 'service',
   });
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
-  const [showFilters, setShowFilters] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
+
+  // Sync default filter visibility based on device size
+  useEffect(() => {
+    setShowFilters(!isMobile);
+  }, [isMobile]);
 
   // Fetch Data
   const { data: events = [] } = useQuery({
@@ -75,54 +81,56 @@ export function CalendarPage() {
   const selectedEvent = useMemo(() => events.find(e => e.id === selectedEventId), [events, selectedEventId]);
 
   return (
-    <Stack spacing={3} sx={{ height: 'calc(100vh - 160px)' }}>
+    <Stack spacing={3} sx={{ height: { xs: 'auto', md: 'calc(100vh - 160px)' }, p: { xs: 1, md: 0 } }}>
       {/* Header */}
       <Paper sx={{ p: 2, borderRadius: 4, boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
-        <Stack direction="row" justifyContent="space-between" alignItems="center">
-          <Stack direction="row" spacing={2} alignItems="center">
-            <IconButton aria-label={language === 'ar' ? 'إظهار/إخفاء الفلاتر' : 'Toggle filters'} onClick={() => setShowFilters(!showFilters)} color={showFilters ? 'primary' : 'inherit'}>
-              <Filter size={20} />
-            </IconButton>
-            
-            <Stack direction="row" spacing={1} alignItems="center">
-              <Select
-                size="small"
-                value={currentDate.getMonth()}
-                onChange={(e) => {
-                  const newDate = new Date(currentDate);
-                  newDate.setMonth(e.target.value as number);
-                  setCurrentDate(newDate);
-                }}
-                sx={{ fontWeight: 800, borderRadius: 2, minWidth: 120 }}
-              >
-                {Array.from({ length: 12 }, (_, i) => (
-                  <MenuItem key={i} value={i}>
-                    {new Date(2000, i, 1).toLocaleString(language === 'ar' ? 'ar-EG' : 'en-US', { month: 'long' })}
-                  </MenuItem>
-                ))}
-              </Select>
+        <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} justifyContent="space-between" alignItems={{ xs: 'stretch', md: 'center' }}>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ xs: 'stretch', sm: 'center' }}>
+            <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between">
+              <IconButton aria-label={language === 'ar' ? 'إظهار/إخفاء الفلاتر' : 'Toggle filters'} onClick={() => setShowFilters(!showFilters)} color={showFilters ? 'primary' : 'inherit'}>
+                <Filter size={20} />
+              </IconButton>
               
-              <Select
-                size="small"
-                value={currentDate.getFullYear()}
-                onChange={(e) => {
-                  const newDate = new Date(currentDate);
-                  newDate.setFullYear(e.target.value as number);
-                  setCurrentDate(newDate);
-                }}
-                sx={{ fontWeight: 800, borderRadius: 2 }}
-              >
-                {Array.from({ length: 10 }, (_, i) => {
-                  const year = new Date().getFullYear() - 5 + i;
-                  return <MenuItem key={year} value={year}>{year}</MenuItem>;
-                })}
-              </Select>
+              <Stack direction="row" spacing={1} alignItems="center">
+                <Select
+                  size="small"
+                  value={currentDate.getMonth()}
+                  onChange={(e) => {
+                    const newDate = new Date(currentDate);
+                    newDate.setMonth(e.target.value as number);
+                    setCurrentDate(newDate);
+                  }}
+                  sx={{ fontWeight: 800, borderRadius: 2, minWidth: 120 }}
+                >
+                  {Array.from({ length: 12 }, (_, i) => (
+                    <MenuItem key={i} value={i}>
+                      {new Date(2000, i, 1).toLocaleString(language === 'ar' ? 'ar-EG' : 'en-US', { month: 'long' })}
+                    </MenuItem>
+                  ))}
+                </Select>
+                
+                <Select
+                  size="small"
+                  value={currentDate.getFullYear()}
+                  onChange={(e) => {
+                    const newDate = new Date(currentDate);
+                    newDate.setFullYear(e.target.value as number);
+                    setCurrentDate(newDate);
+                  }}
+                  sx={{ fontWeight: 800, borderRadius: 2 }}
+                >
+                  {Array.from({ length: 10 }, (_, i) => {
+                    const year = new Date().getFullYear() - 5 + i;
+                    return <MenuItem key={year} value={year}>{year}</MenuItem>;
+                  })}
+                </Select>
+              </Stack>
             </Stack>
-            <ButtonGroup variant="outlined" size="small">
+            <ButtonGroup variant="outlined" size="small" fullWidth={isMobile} sx={{ justifyContent: 'center' }}>
               <IconButton aria-label={language === 'ar' ? 'السابق' : 'Previous'} onClick={handlePrev}>
                 {isRtl ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
               </IconButton>
-              <Button onClick={handleToday} sx={{ fontWeight: 700 }}>
+              <Button onClick={handleToday} sx={{ fontWeight: 700, flex: 1 }}>
                 {language === 'ar' ? 'اليوم' : 'Today'}
               </Button>
               <IconButton aria-label={language === 'ar' ? 'التالي' : 'Next'} onClick={handleNext}>
@@ -131,7 +139,7 @@ export function CalendarPage() {
             </ButtonGroup>
           </Stack>
 
-          <ButtonGroup variant="outlined" color="primary">
+          <ButtonGroup variant="outlined" color="primary" fullWidth={isMobile}>
             <Button 
               onClick={() => setViewMode('day')} 
               variant={viewMode === 'day' ? 'contained' : 'text'}
@@ -161,8 +169,8 @@ export function CalendarPage() {
       </Paper>
 
       <Stack direction="row" spacing={3} sx={{ flex: 1, overflow: 'hidden' }}>
-        {/* Filters Sidebar */}
-        {showFilters && (
+        {/* Filters Sidebar (Desktop) */}
+        {!isMobile && showFilters && (
           <Paper sx={{ width: 280, p: 3, borderRadius: 4, overflowY: 'auto' }}>
             <CalendarFilters 
               filters={filters} 
@@ -171,6 +179,23 @@ export function CalendarPage() {
               services={services}
             />
           </Paper>
+        )}
+
+        {/* Filters Drawer (Mobile) */}
+        {isMobile && (
+          <Drawer
+            anchor={direction === 'rtl' ? 'right' : 'left'}
+            open={showFilters}
+            onClose={() => setShowFilters(false)}
+            PaperProps={{ sx: { width: 280, p: 3 } }}
+          >
+            <CalendarFilters 
+              filters={filters} 
+              setFilters={setFilters} 
+              departments={departments}
+              services={services}
+            />
+          </Drawer>
         )}
 
         {/* Calendar Grid */}

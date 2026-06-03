@@ -2,6 +2,7 @@ import { Button, MenuItem, Stack, TextField } from '@mui/material';
 
 import { StableNumericField } from '../../components/inputs/StableNumericField';
 import type { PaymentMethodRecord } from '../paymentMethods/api';
+import { AppDateField } from '../../components/inputs/AppDateField';
 import type { CustodyCaseRecord } from './api';
 import { CUSTODY_ACTION_OPTIONS, buildCustodyCaseOptionLabel, getCustodyActionLabel } from './presentation';
 
@@ -92,12 +93,10 @@ export function CustodyActionForm({
           </MenuItem>
         ))}
       </TextField>
-      <TextField
+      <AppDateField
         label={actionDateLabel}
         value={actionDate}
-        type='date'
-        onChange={(event) => onActionDateChange(event.target.value)}
-        slotProps={{ inputLabel: { shrink: true } }}
+        onChange={(val) => onActionDateChange(val)}
         required
       />
       {isCustomerReturn ? (

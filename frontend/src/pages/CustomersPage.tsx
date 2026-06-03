@@ -214,12 +214,12 @@ export function CustomersPage() {
 
   return (
     <Stack spacing={3}>
-      <Stack direction='row' justifyContent='space-between' alignItems='center'>
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent='space-between' alignItems={{ xs: 'stretch', sm: 'center' }}>
         <Box>
           <Typography variant='h4'>{customersText.page.title}</Typography>
           <Typography color='text.secondary'>{customersText.page.description}</Typography>
         </Box>
-        <Button variant='contained' startIcon={<PersonAddOutlinedIcon />} onClick={openCreateDialog}>
+        <Button variant='contained' startIcon={<PersonAddOutlinedIcon />} onClick={openCreateDialog} sx={{ alignSelf: { xs: 'stretch', sm: 'auto' } }}>
           {customersText.page.create}
         </Button>
       </Stack>

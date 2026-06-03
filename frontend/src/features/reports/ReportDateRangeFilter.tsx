@@ -1,5 +1,6 @@
 import { Box, Collapse, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
 import type { DatePreset } from './useReportFilters';
+import { AppDateField } from '../../components/inputs/AppDateField';
 
 type ReportsTextComprehensive = {
   filterTitle: string;
@@ -102,22 +103,18 @@ export function ReportDateRangeFilter({
         {/* Custom date fields */}
         <Collapse in={activePreset === 'custom'}>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-            <TextField
-              type="date"
+            <AppDateField
               size="small"
               label={text.from}
               value={customFrom}
-              onChange={(e) => onCustomFromChange(e.target.value)}
-              InputLabelProps={{ shrink: true }}
+              onChange={(val) => onCustomFromChange(val)}
               sx={{ minWidth: 180 }}
             />
-            <TextField
-              type="date"
+            <AppDateField
               size="small"
               label={text.to}
               value={customTo}
-              onChange={(e) => onCustomToChange(e.target.value)}
-              InputLabelProps={{ shrink: true }}
+              onChange={(val) => onCustomToChange(val)}
               sx={{ minWidth: 180 }}
             />
           </Stack>

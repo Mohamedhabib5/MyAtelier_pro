@@ -135,7 +135,7 @@ export default function BackupPage() {
 
   return (
     <Box sx={{ maxWidth: 1200, mx: 'auto', p: { xs: 1, md: 3 } }}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 4 }}>
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="space-between" alignItems={{ xs: 'stretch', sm: 'center' }} sx={{ mb: 4 }}>
         <Box>
           <Typography variant="h4" sx={{ fontWeight: 900, letterSpacing: -1, color: primaryColor }}>
             {language === 'ar' ? 'إدارة النسخ الاحتياطي' : 'Backup Management'}
@@ -149,7 +149,7 @@ export default function BackupPage() {
           onClick={fetchBackups} 
           disabled={loading}
           startIcon={<RefreshCcw size={18} />}
-          sx={{ borderRadius: 4 }}
+          sx={{ borderRadius: 4, alignSelf: { xs: 'stretch', sm: 'auto' } }}
         >
           {language === 'ar' ? 'تحديث' : 'Refresh'}
         </Button>
@@ -264,12 +264,12 @@ export default function BackupPage() {
 
       <TableContainer component={Paper} sx={{ 
         borderRadius: 5, 
-        overflow: 'hidden',
+        overflowX: 'auto',
         border: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.05)',
         boxShadow: 'none',
         bgcolor: 'transparent'
       }}>
-        <Table>
+        <Table sx={{ minWidth: 650 }}>
           <TableHead sx={{ bgcolor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' }}>
             <TableRow>
               <TableCell align={isRtl ? 'right' : 'left'}>{language === 'ar' ? 'النوع' : 'Kind'}</TableCell>

@@ -15,6 +15,7 @@ import { useAuth } from '../auth/AuthProvider';
 import { useLanguage } from '../language/LanguageProvider';
 import { useLanguageFormatters } from '../../text/common';
 import { downloadFile } from '../../lib/api';
+import { AppDateField } from '../../components/inputs/AppDateField';
 
 export function TrialBalanceTab() {
   const { user } = useAuth();
@@ -90,14 +91,11 @@ export function TrialBalanceTab() {
             </FormControl>
           </Grid>
           <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-            <TextField
-              fullWidth
+            <AppDateField
               size="small"
               label={isAr ? 'حتى تاريخ' : 'As of Date'}
-              type="date"
               value={asOfDate}
-              onChange={(e) => setAsOfDate(e.target.value)}
-              InputLabelProps={{ shrink: true }}
+              onChange={(val) => setAsOfDate(val)}
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 6, md: 3 }}>

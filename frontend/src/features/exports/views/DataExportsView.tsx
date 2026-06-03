@@ -6,6 +6,7 @@ import { useState } from 'react';
 
 import { SectionCard } from '../../../components/SectionCard';
 import { useAuth } from '../../auth/AuthProvider';
+import { AppDateField } from '../../../components/inputs/AppDateField';
 import {
   getBookingLinesExcelUrl,
   getBookingLinesExportUrl,
@@ -89,21 +90,17 @@ export function DataExportsView() {
             <MenuItem value='completed'>{language === 'ar' ? 'مكتمل' : 'Completed'}</MenuItem>
             <MenuItem value='cancelled'>{language === 'ar' ? 'ملغي' : 'Cancelled'}</MenuItem>
           </TextField>
-          <TextField
-            type='date'
+          <AppDateField
             size='small'
             label={language === 'ar' ? 'من تاريخ' : 'From'}
             value={bookingFilters.dateFrom ?? ''}
-            onChange={(event) => setBookingFilters((prev) => ({ ...prev, dateFrom: event.target.value || undefined }))}
-            InputLabelProps={{ shrink: true }}
+            onChange={(val) => setBookingFilters((prev) => ({ ...prev, dateFrom: val || undefined }))}
           />
-          <TextField
-            type='date'
+          <AppDateField
             size='small'
             label={language === 'ar' ? 'إلى تاريخ' : 'To'}
             value={bookingFilters.dateTo ?? ''}
-            onChange={(event) => setBookingFilters((prev) => ({ ...prev, dateTo: event.target.value || undefined }))}
-            InputLabelProps={{ shrink: true }}
+            onChange={(val) => setBookingFilters((prev) => ({ ...prev, dateTo: val || undefined }))}
           />
         </Stack>
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
@@ -146,21 +143,17 @@ export function DataExportsView() {
             <MenuItem value='collection'>{language === 'ar' ? 'تحصيل' : 'Collection'}</MenuItem>
             <MenuItem value='refund'>{language === 'ar' ? 'استرداد' : 'Refund'}</MenuItem>
           </TextField>
-          <TextField
-            type='date'
+          <AppDateField
             size='small'
             label={language === 'ar' ? 'من تاريخ' : 'From'}
             value={paymentFilters.dateFrom ?? ''}
-            onChange={(event) => setPaymentFilters((prev) => ({ ...prev, dateFrom: event.target.value || undefined }))}
-            InputLabelProps={{ shrink: true }}
+            onChange={(val) => setPaymentFilters((prev) => ({ ...prev, dateFrom: val || undefined }))}
           />
-          <TextField
-            type='date'
+          <AppDateField
             size='small'
             label={language === 'ar' ? 'إلى تاريخ' : 'To'}
             value={paymentFilters.dateTo ?? ''}
-            onChange={(event) => setPaymentFilters((prev) => ({ ...prev, dateTo: event.target.value || undefined }))}
-            InputLabelProps={{ shrink: true }}
+            onChange={(val) => setPaymentFilters((prev) => ({ ...prev, dateTo: val || undefined }))}
           />
         </Stack>
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>

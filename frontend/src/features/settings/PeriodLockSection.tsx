@@ -4,6 +4,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 
 import { AppDataTable } from '../../components/data-table/AppDataTable';
+import { AppDateField } from '../../components/inputs/AppDateField';
 import { SectionCard } from '../../components/SectionCard';
 import { queryClient } from '../../lib/queryClient';
 import { getPeriodLock, listPeriodLockExceptions, updatePeriodLock } from './api';
@@ -107,7 +108,7 @@ export function PeriodLockSection({ language, onError, onSuccess }: PeriodLockSe
             <LockOutlinedIcon fontSize='small' color='action' />
             <Chip color={periodLockQuery.data?.is_locked ? 'warning' : 'success'} size='small' label={periodLockQuery.data?.is_locked ? labels.locked : labels.unlocked} />
           </Stack>
-          <TextField label={labels.date} type='date' InputLabelProps={{ shrink: true }} value={lockedThrough} onChange={(event) => setLockedThrough(event.target.value)} />
+          <AppDateField label={labels.date} value={lockedThrough} onChange={(val) => setLockedThrough(val)} />
           <TextField label={labels.note} value={note} onChange={(event) => setNote(event.target.value)} multiline minRows={2} />
           <Stack direction='row' spacing={1}>
             <Button

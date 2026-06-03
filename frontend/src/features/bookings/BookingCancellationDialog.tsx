@@ -20,6 +20,7 @@ import { useLanguageFormatters } from '../../text/common';
 import { useBookingsText } from '../../text/bookings';
 import type { BookingSummaryRecord, BookingCancellationPayload, BookingDocumentRecord } from './api';
 import type { PaymentMethodRecord } from '../paymentMethods/api';
+import { AppDateField } from '../../components/inputs/AppDateField';
 
 type Props = {
   open: boolean;
@@ -141,7 +142,7 @@ export function BookingCancellationDialog({ open, booking, detailedDocument, pay
 
         <Grid container spacing={3}>
           <Grid size={{ xs: 12, md: 6 }}>
-            <TextField fullWidth label="تاريخ الإلغاء" type='date' value={cancelDate} onChange={(e) => setCancelDate(e.target.value)} InputLabelProps={{ shrink: true }} />
+            <AppDateField label="تاريخ الإلغاء" value={cancelDate} onChange={(val) => setCancelDate(val)} />
           </Grid>
           <Grid size={{ xs: 12, md: 6 }}>
             <TextField fullWidth label="مبلغ الرد النقدي" type='number' value={refundAmount} onChange={(e) => setRefundAmount(e.target.value)} />

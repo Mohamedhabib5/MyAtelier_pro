@@ -36,6 +36,7 @@ import { getPendingPayments, createReconciliation, listReconciliations, deleteRe
 import { useLanguage } from "../../language/LanguageProvider";
 import { useLanguageFormatters } from "../../../text/common";
 import { AppDialogShell } from "../../../components/AppDialogShell";
+import { AppDateField } from "../../../components/inputs/AppDateField";
 
 export function ReconciliationContent() {
   const { language } = useLanguage();
@@ -263,8 +264,8 @@ export function ReconciliationContent() {
               {language === "ar" ? "لا توجد تسويات سابقة مسجلة" : "No previous reconciliations recorded."}
             </Typography>
           ) : (
-            <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 1 }}>
-              <Table size="small">
+            <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 1, overflowX: 'auto' }}>
+              <Table size="small" sx={{ minWidth: 800 }}>
                 <TableHead sx={{ backgroundColor: "action.hover" }}>
                   <TableRow>
                     <TableCell sx={{ fontWeight: "bold" }}>{language === "ar" ? "الفترة الزمنية" : "Period"}</TableCell>
@@ -397,36 +398,30 @@ export function ReconciliationContent() {
               </Grid>
 
               <Grid size={{ xs: 12, md: 4 }}>
-                <TextField
-                  type="date"
+                <AppDateField
                   size="small"
                   label={text.start}
                   value={startDate}
-                  onChange={(e) => {
-                    setStartDate(e.target.value);
+                  onChange={(val) => {
+                    setStartDate(val);
                     setSelectedPaymentIds([]);
                     setSingleActualAmount("");
                     setHasAutoSelected("");
                   }}
-                  fullWidth
-                  InputLabelProps={{ shrink: true }}
                 />
               </Grid>
 
               <Grid size={{ xs: 12, md: 4 }}>
-                <TextField
-                  type="date"
+                <AppDateField
                   size="small"
                   label={text.end}
                   value={endDate}
-                  onChange={(e) => {
-                    setEndDate(e.target.value);
+                  onChange={(val) => {
+                    setEndDate(val);
                     setSelectedPaymentIds([]);
                     setSingleActualAmount("");
                     setHasAutoSelected("");
                   }}
-                  fullWidth
-                  InputLabelProps={{ shrink: true }}
                 />
               </Grid>
 

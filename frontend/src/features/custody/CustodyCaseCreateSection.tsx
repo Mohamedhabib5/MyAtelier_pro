@@ -20,6 +20,7 @@ import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 
 import { SectionCard } from '../../components/SectionCard';
 import { StableNumericField } from '../../components/inputs/StableNumericField';
+import { AppDateField } from '../../components/inputs/AppDateField';
 import { getBooking, listBookingsPage, type BookingSummaryRecord } from '../bookings/api';
 import type { PaymentMethodRecord } from '../paymentMethods/api';
 import type { CustodyCaseCreatePayload } from './api';
@@ -282,13 +283,10 @@ export function CustodyCaseCreateSection({
 
         <Stack spacing={1.25} sx={{ width: { xs: '100%', lg: 360 }, flexShrink: 0 }}>
           <Typography variant='subtitle2'>{detailsTitle}</Typography>
-          <TextField
+          <AppDateField
             label={custodyDateLabel}
             value={custodyDate}
-            type='date'
-            onChange={(event) => setCustodyDate(event.target.value)}
-            slotProps={{ inputLabel: { shrink: true } }}
-            fullWidth
+            onChange={(val) => setCustodyDate(val)}
             required
           />
           <StableNumericField label={depositAmountLabel} value={depositAmount} onValueChange={setDepositAmount} fullWidth />

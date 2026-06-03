@@ -4,6 +4,7 @@ import { AppDialogShell } from '../../components/AppDialogShell';
 import { useCommonText } from '../../text/common';
 import { usePaymentsText } from '../../text/payments';
 import type { PaymentDocumentSummaryRecord } from './api';
+import { AppDateField } from '../../components/inputs/AppDateField';
 
 type PaymentVoidDialogProps = {
   open: boolean;
@@ -58,7 +59,7 @@ export function PaymentVoidDialog({
     >
       <Stack spacing={2}>
         {payment ? <Alert severity='warning'>{`${payment.payment_number} ${paymentsText.voidDialog.warningSuffix}`}</Alert> : null}
-        <TextField label={paymentsText.voidDialog.date} type='date' InputLabelProps={{ shrink: true }} value={voidDate} onChange={(event) => onVoidDateChange(event.target.value)} />
+        <AppDateField label={paymentsText.voidDialog.date} value={voidDate} onChange={(val) => onVoidDateChange(val)} />
         <TextField label={paymentsText.voidDialog.reason} value={voidReason} multiline minRows={3} onChange={(event) => onVoidReasonChange(event.target.value)} />
         <FormControlLabel
           control={<Checkbox checked={overrideLock} onChange={(event) => onOverrideLockChange(event.target.checked)} />}

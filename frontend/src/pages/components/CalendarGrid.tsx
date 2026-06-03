@@ -1,4 +1,4 @@
-import { Box, Grid, Typography, alpha, useTheme, Tooltip, Chip, Stack, Paper } from '@mui/material';
+import { Box, Grid, Typography, alpha, useTheme, Tooltip, Chip, Stack, Paper, useMediaQuery } from '@mui/material';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import type { CalendarEventRecord } from '../../features/bookings/api';
 import type { CalendarViewMode } from '../CalendarPage';
@@ -44,6 +44,7 @@ export function CalendarGrid({ viewMode, currentDate, events, onEventClick, onDa
 
 function MonthView({ currentDate, events, onEventClick, onDayClick, language, isRtl }: any) {
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
   
@@ -67,16 +68,18 @@ function MonthView({ currentDate, events, onEventClick, onDayClick, language, is
     days.push({ day: i, currentMonth: false, date: new Date(year, month + 1, i) });
   }
 
-  const dayNames = language === 'ar' 
-    ? ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']
-    : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const dayNames = isMobile
+    ? (language === 'ar' ? ['ح', 'ن', 'ث', 'ر', 'خ', 'ج', 'س'] : ['S', 'M', 'T', 'W', 'T', 'F', 'S'])
+    : (language === 'ar' ? ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'] : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']);
+
+  const maxEvents = isMobile ? 1 : 4;
 
   return (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', minWidth: { xs: 320, md: '100%' }, overflowX: 'auto' }}>
       <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', borderBottom: `1px solid ${theme.palette.divider}`, bgcolor: alpha(theme.palette.primary.main, 0.02) }}>
         {dayNames.map(name => (
-          <Box key={name} sx={{ p: 1.5, textAlign: 'center' }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 800, color: 'text.secondary' }}>{name}</Typography>
+          <Box key={name} sx={{ p: { xs: 1, md: 1.5 }, textAlign: 'center' }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 800, color: 'text.secondary', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>{name}</Typography>
           </Box>
         ))}
       </Box>
@@ -93,28 +96,29 @@ function MonthView({ currentDate, events, onEventClick, onDayClick, language, is
               sx={{ 
                 borderRight: `1px solid ${theme.palette.divider}`, 
                 borderBottom: `1px solid ${theme.palette.divider}`,
-                p: 0.5,
-                minHeight: 100,
+                p: { xs: 0.25, md: 0.5 },
+                minHeight: { xs: 56, md: 100 },
                 transition: 'background 0.2s',
                 bgcolor: dayObj.currentMonth ? 'background.paper' : alpha(theme.palette.action.disabledBackground, 0.3),
                 '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.05), cursor: 'pointer' }
               }}
             >
-              <Stack direction="row" justifyContent="space-between" sx={{ mb: 1, px: 1 }}>
+              <Stack direction="row" justifyContent="space-between" sx={{ mb: 0.5, px: { xs: 0.25, md: 1 } }}>
                 <Typography 
                   variant="caption" 
                   sx={{ 
                     fontWeight: isToday ? 900 : 600,
                     color: isToday ? 'primary.main' : dayObj.currentMonth ? 'text.primary' : 'text.disabled',
                     bgcolor: isToday ? alpha(theme.palette.primary.main, 0.1) : 'transparent',
-                    px: 0.8, py: 0.2, borderRadius: 1
+                    px: { xs: 0.5, md: 0.8 }, py: 0.2, borderRadius: 1,
+                    fontSize: { xs: '0.65rem', md: '0.75rem' }
                   }}
                 >
                   {dayObj.day}
                 </Typography>
               </Stack>
               <Stack spacing={0.5}>
-                {dayEvents.slice(0, 4).map((event: any) => (
+                {dayEvents.slice(0, maxEvents).map((event: any) => (
                   <Chip
                     key={event.id}
                     label={event.title}
@@ -122,19 +126,19 @@ function MonthView({ currentDate, events, onEventClick, onDayClick, language, is
                     onClick={(e) => { e.stopPropagation(); onEventClick(event.id); }}
                     sx={{ 
                       borderRadius: 1, 
-                      fontSize: '0.65rem', 
-                      height: 20,
+                      fontSize: { xs: '0.55rem', md: '0.65rem' }, 
+                      height: { xs: 16, md: 20 },
                       bgcolor: alpha(theme.palette.primary.main, 0.1),
                       color: 'primary.dark',
                       fontWeight: 700,
                       justifyContent: 'flex-start',
-                      '& .MuiChip-label': { px: 1 }
+                      '& .MuiChip-label': { px: { xs: 0.5, md: 1 } }
                     }}
                   />
                 ))}
-                {dayEvents.length > 4 && (
-                  <Typography variant="caption" sx={{ px: 1, fontSize: '0.6rem', color: 'text.secondary', fontWeight: 700 }}>
-                    + {dayEvents.length - 4} {language === 'ar' ? 'المزيد' : 'more'}
+                {dayEvents.length > maxEvents && (
+                  <Typography variant="caption" sx={{ px: { xs: 0.5, md: 1 }, fontSize: { xs: '0.55rem', md: '0.6rem' }, color: 'text.secondary', fontWeight: 700, display: 'block', textAlign: 'center' }}>
+                    + {dayEvents.length - maxEvents} {isMobile ? '' : (language === 'ar' ? 'المزيد' : 'more')}
                   </Typography>
                 )}
               </Stack>
@@ -152,7 +156,7 @@ function DayView({ currentDate, events, onEventClick, language }: any) {
   const dayEvents = events.filter((e: any) => e.start === dateStr);
 
   return (
-    <Box sx={{ p: 4, height: '100%', overflowY: 'auto' }}>
+    <Box sx={{ p: { xs: 2, md: 4 }, height: '100%', overflowY: 'auto' }}>
       <Typography variant="h6" gutterBottom sx={{ fontWeight: 800 }}>
         {language === 'ar' ? 'أحداث اليوم' : 'Today Events'}
       </Typography>
@@ -170,7 +174,7 @@ function DayView({ currentDate, events, onEventClick, language }: any) {
               key={event.id} 
               onClick={() => onEventClick(event.id)}
               sx={{ 
-                p: 3, 
+                p: { xs: 2, md: 3 }, 
                 borderRadius: 4, 
                 borderLeft: `6px solid ${theme.palette.primary.main}`,
                 transition: 'transform 0.2s, box-shadow 0.2s',
@@ -179,8 +183,8 @@ function DayView({ currentDate, events, onEventClick, language }: any) {
             >
               <Stack direction="row" justifyContent="space-between" alignItems="center">
                 <Box>
-                  <Typography variant="h6" sx={{ fontWeight: 800 }}>{event.title}</Typography>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="h6" sx={{ fontWeight: 800, fontSize: { xs: '1rem', md: '1.25rem' } }}>{event.title}</Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                     {event.department_name} • {event.service_name}
                   </Typography>
                 </Box>
@@ -189,6 +193,7 @@ function DayView({ currentDate, events, onEventClick, language }: any) {
                   color={event.status === 'completed' ? 'success' : 'primary'} 
                   variant="outlined" 
                   sx={{ fontWeight: 800, borderRadius: 2 }}
+                  size="small"
                 />
               </Stack>
             </Paper>
@@ -201,6 +206,7 @@ function DayView({ currentDate, events, onEventClick, language }: any) {
 
 function WeekView({ currentDate, events, onEventClick, onDayClick, language, isRtl }: any) {
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const startOfWeek = new Date(currentDate);
   startOfWeek.setDate(currentDate.getDate() - currentDate.getDay());
   
@@ -211,17 +217,17 @@ function WeekView({ currentDate, events, onEventClick, onDayClick, language, isR
     days.push(d);
   }
 
-  const dayNames = language === 'ar' 
-    ? ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']
-    : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const dayNames = isMobile 
+    ? (language === 'ar' ? ['ح', 'ن', 'ث', 'ر', 'خ', 'ج', 'س'] : ['S', 'M', 'T', 'W', 'T', 'F', 'S'])
+    : (language === 'ar' ? ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'] : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']);
 
   return (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', minWidth: { xs: 320, md: '100%' }, overflowX: 'auto' }}>
       <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', borderBottom: `1px solid ${theme.palette.divider}`, bgcolor: alpha(theme.palette.primary.main, 0.02) }}>
         {dayNames.map((name, i) => (
-          <Box key={name} sx={{ p: 1.5, textAlign: 'center' }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 800, color: 'text.secondary' }}>{name}</Typography>
-            <Typography variant="h6" sx={{ fontWeight: 900 }}>{days[i].getDate()}</Typography>
+          <Box key={name} sx={{ p: { xs: 1, md: 1.5 }, textAlign: 'center' }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 800, color: 'text.secondary', fontSize: { xs: '0.7rem', md: '0.875rem' } }}>{name}</Typography>
+            <Typography variant="h6" sx={{ fontWeight: 900, fontSize: { xs: '1rem', md: '1.25rem' } }}>{days[i].getDate()}</Typography>
           </Box>
         ))}
       </Box>
@@ -237,33 +243,35 @@ function WeekView({ currentDate, events, onEventClick, onDayClick, language, isR
               onClick={() => onDayClick(date)}
               sx={{ 
                 borderRight: `1px solid ${theme.palette.divider}`, 
-                p: 1,
-                minHeight: 200,
+                p: { xs: 0.5, md: 1 },
+                minHeight: { xs: 120, md: 200 },
                 transition: 'background 0.2s',
                 bgcolor: isToday ? alpha(theme.palette.primary.main, 0.02) : 'background.paper',
                 '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.05), cursor: 'pointer' }
               }}
             >
-              <Stack spacing={1}>
+              <Stack spacing={0.5}>
                 {dayEvents.map((event: any) => (
                   <Paper
                     key={event.id}
                     elevation={0}
                     onClick={(e) => { e.stopPropagation(); onEventClick(event.id); }}
                     sx={{ 
-                      p: 1, 
-                      borderRadius: 2, 
+                      p: 0.5, 
+                      borderRadius: 1.5, 
                       bgcolor: alpha(theme.palette.primary.main, 0.1),
-                      borderLeft: `4px solid ${theme.palette.primary.main}`,
+                      borderLeft: `3px solid ${theme.palette.primary.main}`,
                       '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.15) }
                     }}
                   >
-                    <Typography variant="caption" sx={{ fontWeight: 800, display: 'block', lineHeight: 1.2 }}>
+                    <Typography variant="caption" sx={{ fontWeight: 800, display: 'block', lineHeight: 1.2, fontSize: { xs: '0.6rem', md: '0.75rem' } }}>
                       {event.title}
                     </Typography>
-                    <Typography variant="caption" sx={{ fontSize: '0.6rem', opacity: 0.7 }}>
-                      {event.service_name}
-                    </Typography>
+                    {!isMobile && (
+                      <Typography variant="caption" sx={{ fontSize: '0.6rem', opacity: 0.7 }}>
+                        {event.service_name}
+                      </Typography>
+                    )}
                   </Paper>
                 ))}
               </Stack>
@@ -285,8 +293,8 @@ function YearView({ currentDate, events, onMonthClick, language }: any) {
     : ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
   return (
-    <Box sx={{ p: 3, height: '100%', overflowY: 'auto' }}>
-      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 3 }}>
+    <Box sx={{ p: { xs: 1.5, md: 3 }, height: '100%', overflowY: 'auto' }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(3, 1fr)', md: 'repeat(4, 1fr)' }, gap: { xs: 1.5, md: 3 } }}>
         {months.map(month => {
           const monthEvents = events.filter((e: any) => {
             const d = new Date(e.start);
@@ -298,9 +306,9 @@ function YearView({ currentDate, events, onMonthClick, language }: any) {
               key={month} 
               onClick={() => onMonthClick(month)}
               sx={{ 
-                p: 2, 
+                p: { xs: 1.5, md: 2 }, 
                 borderRadius: 4, 
-                height: 180,
+                height: { xs: 120, md: 180 },
                 transition: 'all 0.2s',
                 display: 'flex',
                 flexDirection: 'column',
@@ -308,14 +316,14 @@ function YearView({ currentDate, events, onMonthClick, language }: any) {
                 '&:hover': { transform: 'scale(1.02)', boxShadow: theme.shadows[4], cursor: 'pointer' }
               }}
             >
-              <Typography variant="h6" sx={{ fontWeight: 900, color: 'primary.main' }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 900, color: 'primary.main', fontSize: { xs: '0.875rem', md: '1.25rem' } }}>
                 {monthNames[month]}
               </Typography>
               <Box>
-                <Typography variant="h3" sx={{ fontWeight: 900, textAlign: 'center' }}>
+                <Typography variant="h4" sx={{ fontWeight: 900, textAlign: 'center', fontSize: { xs: '1.5rem', md: '2.125rem' } }}>
                   {monthEvents.length}
                 </Typography>
-                <Typography variant="caption" sx={{ display: 'block', textAlign: 'center', fontWeight: 700, opacity: 0.6 }}>
+                <Typography variant="caption" sx={{ display: 'block', textAlign: 'center', fontWeight: 700, opacity: 0.6, fontSize: { xs: '0.6rem', md: '0.75rem' } }}>
                   {language === 'ar' ? 'حدث' : 'Events'}
                 </Typography>
               </Box>

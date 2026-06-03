@@ -13,6 +13,7 @@ import type { DressRecord } from '../dresses/api';
 import { departmentUsesDressCode } from './departmentRules';
 import type { EditableLine } from './editorLineModel';
 import { NumericCell } from './NumericCell';
+import { AppDateField } from '../../components/inputs/AppDateField';
 
 interface UseBookingEditorColumnsProps {
   language: string;
@@ -193,13 +194,10 @@ export function useBookingEditorColumns({
         minWidth: 145,
         cellRenderer: ({ data }: ICellRendererParams<EditableLine>) =>
           data ? (
-            <TextField
-              type='date'
+            <AppDateField
               size='small'
-              fullWidth
               value={data.service_date}
-              onChange={(event) => updateLine(data.local_id, { service_date: event.target.value })}
-              InputLabelProps={{ shrink: true }}
+              onChange={(val) => updateLine(data.local_id, { service_date: val })}
               disabled={data.is_locked}
             />
           ) : null,

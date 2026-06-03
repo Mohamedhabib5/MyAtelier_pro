@@ -11,6 +11,7 @@ import { queryClient } from '../lib/queryClient';
 import { getEmotionCache } from '../lib/rtl';
 import { buildAppTheme } from './theme';
 import { ThemeSettingsProvider, useThemeSettings } from '../features/theme/ThemeSettingsProvider';
+import { DateLocaleProvider } from '../providers/DateLocaleProvider';
 
 function DirectionalTheme({ children }: PropsWithChildren) {
   const { direction, textAlign } = useLanguage();
@@ -160,9 +161,11 @@ export function Providers({ children }: PropsWithChildren) {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <LanguageProvider>
-          <ThemeSettingsProvider>
-            <DirectionalTheme>{children}</DirectionalTheme>
-          </ThemeSettingsProvider>
+          <DateLocaleProvider>
+            <ThemeSettingsProvider>
+              <DirectionalTheme>{children}</DirectionalTheme>
+            </ThemeSettingsProvider>
+          </DateLocaleProvider>
         </LanguageProvider>
       </AuthProvider>
     </QueryClientProvider>

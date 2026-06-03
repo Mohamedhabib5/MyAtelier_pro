@@ -9,6 +9,7 @@ import { useMemo, useState } from 'react';
 import { AppDataTable } from '../../components/data-table/AppDataTable';
 import { SectionCard } from '../../components/SectionCard';
 import { downloadFile } from '../../lib/api';
+import { AppDateField } from '../../components/inputs/AppDateField';
 import { queryClient } from '../../lib/queryClient';
 import { cadenceLabel, exportTypeLabel, useExportsText } from '../../text/exports';
 import { useLanguage } from '../language/LanguageProvider';
@@ -93,7 +94,7 @@ export function ExportSchedulesSection({ activeBranchName }: { activeBranchName?
               </option>
             ))}
           </TextField>
-          <TextField label={exportsText.schedules.startOn} type='date' InputLabelProps={{ shrink: true }} value={form.start_on} onChange={(event) => setForm({ ...form, start_on: event.target.value })} />
+          <AppDateField label={exportsText.schedules.startOn} value={form.start_on} onChange={(val) => setForm({ ...form, start_on: val })} />
           <Button variant='contained' startIcon={<ScheduleOutlinedIcon />} onClick={() => void submitCreate()}>
             {exportsText.schedules.create}
           </Button>

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 
 import { StableNumericField } from '../../components/inputs/StableNumericField';
 import { SectionCard } from '../../components/SectionCard';
+import { AppDateField } from '../../components/inputs/AppDateField';
 import { queryClient } from '../../lib/queryClient';
 import type { PaymentMethodRecord } from '../paymentMethods/api';
 import { collectCustodyCompensation, type CustodyCaseRecord } from './api';
@@ -132,13 +133,10 @@ export function CustodyCompensationSection({
             </MenuItem>
           ))}
         </TextField>
-        <TextField
+        <AppDateField
           label={text.date}
           value={compDate}
-          type='date'
-          onChange={(event) => setCompDate(event.target.value)}
-          InputLabelProps={{ shrink: true }}
-          fullWidth
+          onChange={(val) => setCompDate(val)}
         />
       </Stack>
       <TextField label={text.note} value={compNote} onChange={(event) => setCompNote(event.target.value)} multiline minRows={2} />

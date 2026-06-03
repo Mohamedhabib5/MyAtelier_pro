@@ -22,6 +22,7 @@ import { QuickCustomerDialog } from './QuickCustomerDialog';
 import { useBookingEditorColumns } from './useBookingEditorColumns';
 import { BookingCancellationDialog } from './BookingCancellationDialog';
 import { bulkCancelBookings, type BookingCancellationPayload } from './api';
+import { AppDateField } from '../../components/inputs/AppDateField';
 
 export function BookingDocumentEditor({
   customers,
@@ -283,7 +284,7 @@ export function BookingDocumentEditor({
       </Stack>
 
       {document ? (
-        <Alert severity='info' sx={{ borderRadius: 4 }}>
+        <Alert severity='info' sx={{ borderRadius: 4, '& .MuiAlert-message': { wordBreak: 'break-word' } }}>
           {`${bookingsText.editor.summaryPrefix}: ${bookingsText.editor.summaryLabels.status} ${bookingStatusLabel(language, document.status)} | ${bookingsText.editor.summaryLabels.total} ${document.total_amount} | ${bookingsText.editor.summaryLabels.paid} ${document.paid_total} | ${bookingsText.editor.summaryLabels.remaining} ${document.remaining_amount}`}
         </Alert>
       ) : null}
@@ -311,12 +312,12 @@ export function BookingDocumentEditor({
           />
           {customerId && customers.find(c => c.id === customerId) && (
             <Stack 
-              direction="row" 
-              spacing={2} 
-              alignItems="center" 
+              direction={{ xs: 'column', sm: 'row' }} 
+              spacing={{ xs: 1, sm: 2 }} 
+              alignItems={{ xs: 'flex-start', sm: 'center' }} 
               sx={{ 
                 px: 2, 
-                py: 0.75, 
+                py: { xs: 1, sm: 0.75 }, 
                 bgcolor: 'rgba(25, 118, 210, 0.05)', 
                 borderRadius: 2,
                 border: '1px dashed rgba(25, 118, 210, 0.2)'
@@ -330,7 +331,7 @@ export function BookingDocumentEditor({
                   {customers.find(c => c.id === customerId)?.address || EMPTY_VALUE}
                 </Typography>
               </Stack>
-              <Box sx={{ height: 12, width: 1, bgcolor: 'divider' }} />
+              <Box sx={{ height: 12, width: 1, bgcolor: 'divider', display: { xs: 'none', sm: 'block' } }} />
               <Stack direction="row" spacing={0.5} alignItems="center">
                 <Typography variant="caption" color="primary.main" fontWeight="bold">
                   {language === 'ar' ? '📞 الهاتف:' : '📞 Phone:'}
@@ -366,13 +367,10 @@ export function BookingDocumentEditor({
             </MenuItem>
           ))}
         </TextField>
-        <TextField 
-          fullWidth 
+        <AppDateField 
           label={bookingsText.editor.bookingDate} 
-          type='date' 
-          InputLabelProps={{ shrink: true }} 
           value={bookingDate} 
-          onChange={(event) => setBookingDate(event.target.value)} 
+          onChange={(val) => setBookingDate(val)} 
           disabled={mode === 'cancel'}
         />
         <TextField 
@@ -383,13 +381,10 @@ export function BookingDocumentEditor({
           disabled={mode === 'cancel'}
         />
         {mode === 'cancel' && (
-          <TextField 
-            fullWidth 
+          <AppDateField 
             label={language === 'ar' ? 'تاريخ الإلغاء' : 'Cancellation Date'} 
-            type='date' 
-            InputLabelProps={{ shrink: true }} 
             value={cancellationDate} 
-            onChange={(event) => setCancellationDate(event.target.value)} 
+            onChange={(val) => setCancellationDate(val)} 
             sx={{ 
               '& .MuiInputBase-root': { bgcolor: 'rgba(211, 47, 47, 0.05)', fontWeight: 'bold' } 
             }}
@@ -433,7 +428,11 @@ export function BookingDocumentEditor({
           display: 'flex', 
           flexDirection: 'column', 
           flexGrow: 1, 
-          flexShrink: 0
+          flexShrink: 0,
+          overflowX: 'auto',
+          '& .ag-root-wrapper': {
+            minWidth: 900
+          }
         }}
       >
         <AppAgGrid

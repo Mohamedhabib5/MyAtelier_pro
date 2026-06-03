@@ -9,6 +9,7 @@ import { useLanguage } from '../../features/language/LanguageProvider';
 import { EMPTY_VALUE, bookingStatusLabel, linePaymentStateLabel, useCommonText } from '../../text/common';
 import { usePaymentsText } from '../../text/payments';
 import type { PaymentMethodRecord } from '../paymentMethods/api';
+import { AppDateField } from '../../components/inputs/AppDateField';
 import type { PaymentDocumentPayload, PaymentDocumentRecord, PaymentTargetBookingRecord, PaymentTargetDetailRecord, PaymentTargetLineRecord } from './api';
 
 function todayIso() {
@@ -182,7 +183,7 @@ export function PaymentDocumentBuilder({
           <MenuItem value='collection'>{paymentsText.table.kind.collection}</MenuItem>
           <MenuItem value='refund'>{paymentsText.table.kind.refund}</MenuItem>
         </TextField>
-        <TextField label={paymentsText.builder.paymentDate} type='date' InputLabelProps={{ shrink: true }} value={paymentDate} onChange={(event) => setPaymentDate(event.target.value)} />
+        <AppDateField label={paymentsText.builder.paymentDate} value={paymentDate} onChange={(val) => setPaymentDate(val)} />
         <TextField select label={paymentsText.builder.paymentMethod} value={paymentMethodId} onChange={(event) => setPaymentMethodId(event.target.value)} sx={{ minWidth: 220 }}>
           {paymentMethods.map((item) => (
             <MenuItem key={item.id} value={item.id}>

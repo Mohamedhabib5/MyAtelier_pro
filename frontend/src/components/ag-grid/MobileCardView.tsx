@@ -60,7 +60,7 @@ export function MobileCardView<Row>({ rows, columns, onRowClicked, getRowId }: P
                     {String((row as any)[visibleColumns[1]?.field] || '')}
                   </Typography>
                 </Box>
-                <IconButton size="small">
+                <IconButton size="small" onClick={(e) => e.stopPropagation()}>
                   <MoreVertical size={18} />
                 </IconButton>
               </Stack>

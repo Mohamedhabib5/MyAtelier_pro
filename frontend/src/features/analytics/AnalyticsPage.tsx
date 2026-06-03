@@ -12,6 +12,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
 import { FloatingAnalyticsDock } from './FloatingAnalyticsDock';
+import { AppDateField } from '../../components/inputs/AppDateField';
 
 export default function AnalyticsPage() {
   const language = 'ar';
@@ -154,20 +155,18 @@ export default function AnalyticsPage() {
                   {isAr ? 'تصفية بالتاريخ:' : 'Date Filter:'}
                 </Typography>
               </Stack>
-              <TextField
-                type='date'
+              <AppDateField
                 value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
+                onChange={(val) => setDateFrom(val)}
                 size='small'
                 sx={{ 
                   '& .MuiInputBase-root': { borderRadius: 3, height: 36, fontSize: '0.8rem' },
                   width: 140
                 }}
               />
-              <TextField
-                type='date'
+              <AppDateField
                 value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
+                onChange={(val) => setDateTo(val)}
                 size='small'
                 sx={{ 
                   '& .MuiInputBase-root': { borderRadius: 3, height: 36, fontSize: '0.8rem' },

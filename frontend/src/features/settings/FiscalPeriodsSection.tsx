@@ -22,6 +22,7 @@ import { useMemo, useState } from 'react';
 import { AppDataTable } from '../../components/data-table/AppDataTable';
 import { SectionCard } from '../../components/SectionCard';
 import { queryClient } from '../../lib/queryClient';
+import { AppDateField } from '../../components/inputs/AppDateField';
 import { createFiscalPeriod, deleteFiscalPeriod, listFiscalPeriods, updateFiscalPeriod } from './api';
 
 type FiscalPeriodsSectionProps = {
@@ -127,19 +128,15 @@ export function FiscalPeriodsSection({ language }: FiscalPeriodsSectionProps) {
               value={newName} 
               onChange={(e) => setNewName(e.target.value)} 
             />
-            <TextField 
+            <AppDateField 
               label={labels.starts} 
-              type='date' 
               value={newStartsOn} 
-              onChange={(e) => setNewStartsOn(e.target.value)} 
-              InputLabelProps={{ shrink: true }} 
+              onChange={(val) => setNewStartsOn(val)} 
             />
-            <TextField 
+            <AppDateField 
               label={labels.ends} 
-              type='date' 
               value={newEndsOn} 
-              onChange={(e) => setNewEndsOn(e.target.value)} 
-              InputLabelProps={{ shrink: true }} 
+              onChange={(val) => setNewEndsOn(val)} 
             />
             <Button 
               variant='contained' 

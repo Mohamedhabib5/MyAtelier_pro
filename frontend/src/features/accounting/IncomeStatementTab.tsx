@@ -4,7 +4,7 @@ import {
   Alert, Box, Button, CircularProgress, FormControl,
   Grid, InputLabel, MenuItem, Select, Stack, Table,
   TableBody, TableCell, TableContainer, TableHead, TableRow,
-  TextField, Typography, Paper
+  TextField, Typography, Paper, useMediaQuery, useTheme
 } from '@mui/material';
 import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
 import PrintOutlinedIcon from '@mui/icons-material/PrintOutlined';
@@ -17,8 +17,11 @@ import { useAuth } from '../auth/AuthProvider';
 import { useLanguage } from '../language/LanguageProvider';
 import { useLanguageFormatters } from '../../text/common';
 import { downloadFile } from '../../lib/api';
+import { AppDateField } from '../../components/inputs/AppDateField';
 
 export function IncomeStatementTab() {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { user } = useAuth();
   const { language } = useLanguage();
   const formatters = useLanguageFormatters();
@@ -89,24 +92,22 @@ export function IncomeStatementTab() {
             </FormControl>
           </Grid>
           <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-            <TextField
-              fullWidth
+            <AppDateField
               size="small"
               label={isAr ? 'حتى تاريخ' : 'As of Date'}
-              type="date"
               value={asOfDate}
-              onChange={(e) => setAsOfDate(e.target.value)}
-              InputLabelProps={{ shrink: true }}
+              onChange={(val) => setAsOfDate(val)}
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 12, md: 4 }}>
-            <Stack direction="row" spacing={1.5} justifyContent="flex-end">
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} justifyContent="flex-end">
               <Button
                 variant="outlined"
                 color="success"
                 startIcon={<FileDownloadOutlinedIcon />}
                 onClick={handleExportExcel}
                 disabled={incomeStatementQuery.isPending}
+                fullWidth={isMobile}
               >
                 {isAr ? 'تصدير إكسل' : 'Excel'}
               </Button>
@@ -116,6 +117,7 @@ export function IncomeStatementTab() {
                 startIcon={<PrintOutlinedIcon />}
                 onClick={handlePrint}
                 disabled={incomeStatementQuery.isPending}
+                fullWidth={isMobile}
               >
                 {isAr ? 'طباعة' : 'Print'}
               </Button>
@@ -140,8 +142,10 @@ export function IncomeStatementTab() {
               : 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)',
             boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.05)',
             display: 'flex',
-            alignItems: 'center',
+            flexDirection: { xs: 'column-reverse', sm: 'row' },
+            alignItems: { xs: 'flex-start', sm: 'center' },
             justifyContent: 'space-between',
+            gap: 2,
           }}
         >
           <Box>

@@ -142,13 +142,13 @@ export function UsersPage() {
 
   return (
     <Stack spacing={3}>
-      <Stack direction='row' justifyContent='space-between' alignItems='center'>
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent='space-between' alignItems={{ xs: 'stretch', sm: 'center' }}>
         <Box>
           <Typography variant='h4'>{title}</Typography>
           <Typography color='text.secondary'>{isAdmin ? usersText.admin.description : usersText.profile.description}</Typography>
         </Box>
         {isAdmin ? (
-          <Button variant='contained' startIcon={<PersonAddOutlinedIcon />} onClick={openCreateDialog}>
+          <Button variant='contained' startIcon={<PersonAddOutlinedIcon />} onClick={openCreateDialog} sx={{ alignSelf: { xs: 'stretch', sm: 'auto' } }}>
             {usersText.admin.dialogCreateTitle}
           </Button>
         ) : null}

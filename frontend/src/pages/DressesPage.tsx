@@ -66,12 +66,12 @@ export function DressesPage() {
 
   return (
     <Stack spacing={3}>
-      <Stack direction='row' justifyContent='space-between' alignItems='center'>
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent='space-between' alignItems={{ xs: 'stretch', sm: 'center' }}>
         <Box>
           <Typography variant='h4'>{dressesText.page.title}</Typography>
           <Typography color='text.secondary'>{dressesText.page.description}</Typography>
         </Box>
-        <Button variant='contained' startIcon={<CheckroomOutlinedIcon />} onClick={openCreateDialog}>
+        <Button variant='contained' startIcon={<CheckroomOutlinedIcon />} onClick={openCreateDialog} sx={{ alignSelf: { xs: 'stretch', sm: 'auto' } }}>
           {dressesText.page.create}
         </Button>
       </Stack>

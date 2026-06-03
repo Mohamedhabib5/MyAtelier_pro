@@ -7,6 +7,7 @@ import { AppDialogShell } from '../../components/AppDialogShell';
 import { useLanguage } from '../language/LanguageProvider';
 import { useCommonText } from '../../text/common';
 import { dressStatusLabel, useDressesText } from '../../text/dresses';
+import { AppDateField } from '../../components/inputs/AppDateField';
 import { uploadDressImage } from './api';
 import { listDepartments, listServices, type ServiceRecord } from '../catalog/api';
 import { QuickAddServiceDialog } from './QuickAddServiceDialog';
@@ -156,7 +157,7 @@ export function DressFormDialog({ open, editing, form, onChange, onClose, onSave
             </Stack>
           )}
 
-          <TextField label={dressesText.dialog.purchaseDate} type='date' InputLabelProps={{ shrink: true }} value={form.purchase_date} onChange={(event) => onChange({ ...form, purchase_date: event.target.value })} />
+          <AppDateField label={dressesText.dialog.purchaseDate} value={form.purchase_date} onChange={(val) => onChange({ ...form, purchase_date: val })} />
           <TextField select SelectProps={{ native: true }} InputLabelProps={{ shrink: true }} label={dressesText.dialog.status} value={form.status} onChange={(event) => onChange({ ...form, status: event.target.value })}>
             <option value='available'>{dressStatusLabel(language, 'available')}</option>
             <option value='reserved'>{dressStatusLabel(language, 'reserved')}</option>
