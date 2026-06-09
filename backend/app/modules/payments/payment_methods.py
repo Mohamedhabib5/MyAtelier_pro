@@ -40,6 +40,19 @@ def create_payment_method(db: Session, actor: User, payload: PaymentMethodCreate
     company = get_company_settings(db)
     repo = PaymentsRepository(db)
     code = _resolve_unique_code(repo, company.id, _normalize_code(payload.code or payload.name))
+    
+    linked_account_id = None
+    if payload.linked_account_id:
+        from app.modules.accounting.models import ChartOfAccount
+        acc = db.get(ChartOfAccount, payload.linked_account_id)
+        if not acc or acc.company_id != company.id:
+            raise NotFoundError("الحساب المحاسبي المحدد غير موجود في شجرة الحسابات")
+        if not acc.is_active:
+            raise ValidationAppError("الحساب المحاسبي المحدد معطل حالياً")
+        if not acc.allows_posting:
+            raise ValidationAppError("الحساب المحاسبي المحدد حساب تجميعي ولا يقبل الترحيل المباشر")
+        linked_account_id = acc.id
+
     method = PaymentMethod(
         company_id=company.id,
         created_by_user_id=actor.id,
@@ -49,6 +62,7 @@ def create_payment_method(db: Session, actor: User, payload: PaymentMethodCreate
         name=_clean_name(payload.name),
         is_active=bool(payload.is_active),
         display_order=repo.next_payment_method_order(company.id),
+        linked_account_id=linked_account_id,
     )
     repo.add_payment_method(method)
     db.flush()
@@ -84,6 +98,20 @@ def update_payment_method(db: Session, actor: User, payment_method_id: str, payl
         has_changes = True
     if payload.display_order is not None:
         method.display_order = payload.display_order
+        has_changes = True
+    if payload.linked_account_id is not None:
+        if payload.linked_account_id:
+            from app.modules.accounting.models import ChartOfAccount
+            acc = db.get(ChartOfAccount, payload.linked_account_id)
+            if not acc or acc.company_id != method.company_id:
+                raise NotFoundError("الحساب المحاسبي المحدد غير موجود في شجرة الحسابات")
+            if not acc.is_active:
+                raise ValidationAppError("الحساب المحاسبي المحدد معطل حالياً")
+            if not acc.allows_posting:
+                raise ValidationAppError("الحساب المحاسبي المحدد حساب تجميعي ولا يقبل الترحيل المباشر")
+            method.linked_account_id = acc.id
+        else:
+            method.linked_account_id = None
         has_changes = True
     if has_changes:
         method.updated_by_user_id = actor.id
@@ -239,4 +267,7 @@ def _serialize_payment_method(method: PaymentMethod) -> dict:
         "name": method.name,
         "is_active": method.is_active,
         "display_order": method.display_order,
+        "linked_account_id": method.linked_account_id,
+        "linked_account_code": method.linked_account.code if method.linked_account else None,
+        "linked_account_name": method.linked_account.name if method.linked_account else None,
     }

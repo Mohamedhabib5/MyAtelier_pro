@@ -17,7 +17,7 @@ import { useAuth } from '../features/auth/AuthProvider';
 export function PaymentsPage() {
   const paymentsText = usePaymentsText();
   const { user } = useAuth();
-  const state = usePaymentsPageState();
+  const state = usePaymentsPageState('collection', 'collection');
   const {
     error, setError,
     creatingNew, setCreatingNew,
@@ -32,8 +32,8 @@ export function PaymentsPage() {
     tableSearchInput, setTableSearchInput,
     statusFilter, setStatusFilter,
     documentKindFilter, setDocumentKindFilter,
-    dateFrom, setDateFrom,
-    dateTo, setDateTo,
+    dateFrom,
+    dateTo,
     page, setPage,
     pageSize, setPageSize,
     sortBy, setSortBy,
@@ -112,17 +112,6 @@ export function PaymentsPage() {
           setPendingUpdateOverridePayload(null);
           setTimeout(() => document.querySelector<HTMLInputElement>('input[data-payment-target-search-input="true"]')?.focus(), 0);
         }}
-        secondCreateLabel={paymentsText.page.addRefundAction}
-        onSecondCreate={() => {
-          setError(null);
-          setCreatingNew(true);
-          setSelectedTarget(null);
-          setEditingPaymentId(null);
-          setSearchText('');
-          setInitialKind('refund');
-          setPendingUpdateOverridePayload(null);
-          setTimeout(() => document.querySelector<HTMLInputElement>('input[data-payment-target-search-input="true"]')?.focus(), 0);
-        }}
       />
 
       <PaymentsPageErrors state={state} />
@@ -167,10 +156,12 @@ export function PaymentsPage() {
         onStatusFilterChange={useCallback((v) => { setStatusFilter(v); setPage(0); }, [setStatusFilter, setPage])}
         documentKindFilter={documentKindFilter}
         onDocumentKindFilterChange={useCallback((v) => { setDocumentKindFilter(v); setPage(0); }, [setDocumentKindFilter, setPage])}
-        dateFrom={dateFrom}
-        onDateFromChange={useCallback((v) => { setDateFrom(v); setPage(0); }, [setDateFrom, setPage])}
-        dateTo={dateTo}
-        onDateToChange={useCallback((v) => { setDateTo(v); setPage(0); }, [setDateTo, setPage])}
+        activePreset={state.activePreset}
+        customFrom={state.customFrom}
+        customTo={state.customTo}
+        onSelectPreset={useCallback((preset) => { state.selectPreset(preset); setPage(0); }, [state.selectPreset, setPage])}
+        onCustomFromChange={useCallback((v) => { state.setCustomFrom(v); setPage(0); }, [state.setCustomFrom, setPage])}
+        onCustomToChange={useCallback((v) => { state.setCustomTo(v); setPage(0); }, [state.setCustomTo, setPage])}
         page={page}
         pageSize={pageSize}
         onPageChange={setPage}
@@ -194,6 +185,7 @@ export function PaymentsPage() {
           
           downloadFile(urlFn(user?.active_branch_id, activeExportFilters, exportPage, exportPageSize));
         }, [user?.active_branch_id, page, pageSize, activeExportFilters])}
+        hideKindFilter={true}
       />
 
       <PaymentVoidDialog

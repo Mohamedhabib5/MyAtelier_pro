@@ -132,7 +132,7 @@ export function AdvancedReportGrid({
       { 
         field: isShowingLines ? 'service_name' : (isShowingBookings ? 'booking_number' : 'groupName'), 
         headerName: isShowingLines ? (isAr ? 'الخدمة / السطر' : 'Service / Line') : (isShowingBookings ? (isAr ? 'رقم الحجز' : 'Booking #') : (isAr ? 'المجموعة' : 'Group')),
-        pinned: isAr ? 'right' : 'left',
+        pinned: 'left',
         width: 300,
         cellStyle: (params: any) => ({
           fontWeight: 'bold', 
@@ -301,6 +301,13 @@ export function AdvancedReportGrid({
         pinnedBottomRowData={pinnedBottomRowData}
         onRowClicked={handleRowClick}
         height={600}
+        getRowId={(params) => {
+          const d = params.data as any;
+          if (d.isGroup) return `group-${d.groupName}`;
+          if (d.isBookingSummary) return `booking-${d.booking_id}`;
+          if (d.isBookingLine) return `line-${d.booking_line_id}`;
+          return d.id || d.booking_id || String(Math.random());
+        }}
         searchLabel={isAr ? 'بحث' : 'Search'}
         searchPlaceholder={isAr ? 'ابحث...' : 'Search...'}
         columnsLabel={isAr ? 'الأعمدة' : 'Columns'}

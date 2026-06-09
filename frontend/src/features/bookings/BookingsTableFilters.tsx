@@ -1,26 +1,31 @@
 import { MenuItem, Stack, TextField } from '@mui/material';
 
 import { bookingStatusLabel } from '../../text/common';
-import { AppDateField } from '../../components/inputs/AppDateField';
+import { AppDateRangeFilter } from '../../components/inputs/AppDateRangeFilter';
+import type { DatePreset } from '../../components/inputs/useDateRangeFilter';
 
 type Props = {
   language: 'ar' | 'en';
   statusFilter: string;
-  dateFrom: string;
-  dateTo: string;
   onStatusChange: (value: string) => void;
-  onDateFromChange: (value: string) => void;
-  onDateToChange: (value: string) => void;
+  activePreset: DatePreset;
+  customFrom: string;
+  customTo: string;
+  onSelectPreset: (preset: DatePreset) => void;
+  onCustomFromChange: (v: string) => void;
+  onCustomToChange: (v: string) => void;
 };
 
 export function BookingsTableFilters({
   language,
   statusFilter,
-  dateFrom,
-  dateTo,
   onStatusChange,
-  onDateFromChange,
-  onDateToChange,
+  activePreset,
+  customFrom,
+  customTo,
+  onSelectPreset,
+  onCustomFromChange,
+  onCustomToChange,
 }: Props) {
   return (
     <Stack direction={{ xs: 'column', lg: 'row' }} spacing={1.5}>
@@ -31,8 +36,16 @@ export function BookingsTableFilters({
         <MenuItem value='completed'>{bookingStatusLabel(language, 'completed')}</MenuItem>
         <MenuItem value='cancelled'>{bookingStatusLabel(language, 'cancelled')}</MenuItem>
       </TextField>
-      <AppDateField size='small' label={language === 'ar' ? 'من تاريخ' : 'From date'} value={dateFrom} onChange={(val) => onDateFromChange(val)} />
-      <AppDateField size='small' label={language === 'ar' ? 'إلى تاريخ' : 'To date'} value={dateTo} onChange={(val) => onDateToChange(val)} />
+      
+      <AppDateRangeFilter
+        language={language}
+        activePreset={activePreset}
+        customFrom={customFrom}
+        customTo={customTo}
+        onSelectPreset={onSelectPreset}
+        onCustomFromChange={onCustomFromChange}
+        onCustomToChange={onCustomToChange}
+      />
     </Stack>
   );
 }

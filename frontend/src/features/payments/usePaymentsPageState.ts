@@ -4,13 +4,15 @@ import type { PaymentTargetSearchRecord, PaymentDocumentSummaryRecord, PaymentDo
 import { listPaymentsPage, searchPaymentTargets, getPaymentDocument, getBookingPaymentTarget, getCustomerPaymentTarget } from './api';
 import { listPaymentMethods } from '../paymentMethods/api';
 
+import { useDateRangeFilter } from '../../components/inputs/useDateRangeFilter';
+
 export type PaymentSortField = 'payment_date' | 'payment_number' | 'customer_name' | 'status' | 'document_kind';
 
 function todayIso() {
   return new Date().toISOString().slice(0, 10);
 }
 
-export function usePaymentsPageState() {
+export function usePaymentsPageState(initialKindFilter = '', defaultInitialKind = 'collection') {
   const [error, setError] = useState<string | null>(null);
   const [creatingNew, setCreatingNew] = useState(false);
   const [searchText, setSearchText] = useState('');
@@ -23,15 +25,25 @@ export function usePaymentsPageState() {
   const [voidOverrideReason, setVoidOverrideReason] = useState('');
   const [tableSearchInput, setTableSearchInput] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [documentKindFilter, setDocumentKindFilter] = useState('');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
+  const [documentKindFilter, setDocumentKindFilter] = useState(initialKindFilter);
+
+  const {
+    dateFrom,
+    dateTo,
+    activePreset,
+    customFrom,
+    customTo,
+    selectPreset,
+    setCustomFrom,
+    setCustomTo,
+  } = useDateRangeFilter('all');
+
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(10);
   const [sortBy, setSortBy] = useState<PaymentSortField>('payment_date');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [pendingUpdateOverridePayload, setPendingUpdateOverridePayload] = useState<PaymentDocumentPayload | null>(null);
-  const [initialKind, setInitialKind] = useState<string>('collection');
+  const [initialKind, setInitialKind] = useState<string>(defaultInitialKind);
   
   const deferredTargetSearch = useDeferredValue(searchText);
   const deferredTableSearch = useDeferredValue(tableSearchInput.trim());
@@ -90,8 +102,14 @@ export function usePaymentsPageState() {
     tableSearchInput, setTableSearchInput,
     statusFilter, setStatusFilter,
     documentKindFilter, setDocumentKindFilter,
-    dateFrom, setDateFrom,
-    dateTo, setDateTo,
+    dateFrom,
+    dateTo,
+    activePreset,
+    customFrom,
+    customTo,
+    selectPreset,
+    setCustomFrom,
+    setCustomTo,
     page, setPage,
     pageSize, setPageSize,
     sortBy, setSortBy,

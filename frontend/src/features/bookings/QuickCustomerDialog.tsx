@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { useLanguage } from '../language/LanguageProvider';
 import { CustomerFormDialog, type CustomerFormState } from '../customers/CustomerFormDialog';
 import type { CustomerPayload } from '../customers/api';
+import { getLocalDateStr } from '../../lib/dates';
 
 const emptyForm = (): CustomerFormState => {
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalDateStr();
   return { 
     full_name: '', 
     registration_date: today,

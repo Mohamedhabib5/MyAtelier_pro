@@ -14,7 +14,8 @@ import { useLanguage } from '../language/LanguageProvider';
 import { joinLocalizedList, paymentDocumentStatusLabel, paymentKindLabel, useCommonText } from '../../text/common';
 import { usePaymentsText } from '../../text/payments';
 import type { PaymentDocumentSummaryRecord } from './api';
-import { AppDateField } from '../../components/inputs/AppDateField';
+import { AppDateRangeFilter } from '../../components/inputs/AppDateRangeFilter';
+import type { DatePreset } from '../../components/inputs/useDateRangeFilter';
 
 type PaymentSortField = 'payment_date' | 'payment_number' | 'customer_name' | 'status' | 'document_kind';
 
@@ -28,10 +29,12 @@ type PaymentsTableSectionProps = {
   onStatusFilterChange: (value: string) => void;
   documentKindFilter: string;
   onDocumentKindFilterChange: (value: string) => void;
-  dateFrom: string;
-  onDateFromChange: (value: string) => void;
-  dateTo: string;
-  onDateToChange: (value: string) => void;
+  activePreset: DatePreset;
+  customFrom: string;
+  customTo: string;
+  onSelectPreset: (preset: DatePreset) => void;
+  onCustomFromChange: (value: string) => void;
+  onCustomToChange: (value: string) => void;
   page: number;
   pageSize: number;
   onPageChange: (value: number) => void;
@@ -44,6 +47,7 @@ type PaymentsTableSectionProps = {
   onOpenVoid: (row: PaymentDocumentSummaryRecord) => void;
   onDelete: (row: PaymentDocumentSummaryRecord) => void;
   onExport: (format: 'csv' | 'xlsx', scope: 'all' | 'page') => void;
+  hideKindFilter?: boolean;
 };
 
 export function PaymentsTableSection({
@@ -56,10 +60,12 @@ export function PaymentsTableSection({
   onStatusFilterChange,
   documentKindFilter,
   onDocumentKindFilterChange,
-  dateFrom,
-  onDateFromChange,
-  dateTo,
-  onDateToChange,
+  activePreset,
+  customFrom,
+  customTo,
+  onSelectPreset,
+  onCustomFromChange,
+  onCustomToChange,
   page,
   pageSize,
   onPageChange,
@@ -72,6 +78,7 @@ export function PaymentsTableSection({
   onOpenVoid,
   onDelete,
   onExport,
+  hideKindFilter = false,
 }: PaymentsTableSectionProps) {
   const { language } = useLanguage();
   const commonText = useCommonText();
@@ -88,13 +95,17 @@ export function PaymentsTableSection({
         valueGetter: ({ data }) => joinLocalizedList(language, data?.booking_numbers ?? []),
       },
       { colId: 'payment_date', field: 'payment_date', headerName: paymentsText.table.date, sort: sortBy === 'payment_date' ? sortDir : null },
-      {
-        colId: 'document_kind',
-        headerName: paymentsText.table.type,
-        valueGetter: ({ data }) => (data ? paymentKindLabel(language, data.document_kind) : ''),
-        cellRenderer: ({ data }: { data: PaymentDocumentSummaryRecord | undefined }) => (data ? <Chip size='small' label={paymentKindLabel(language, data.document_kind)} /> : null),
-        sort: sortBy === 'document_kind' ? sortDir : null,
-      },
+      ...(hideKindFilter
+        ? []
+        : [
+            {
+              colId: 'document_kind',
+              headerName: paymentsText.table.type,
+              valueGetter: ({ data }: any) => (data ? paymentKindLabel(language, data.document_kind) : ''),
+              cellRenderer: ({ data }: { data: PaymentDocumentSummaryRecord | undefined }) => (data ? <Chip size='small' label={paymentKindLabel(language, data.document_kind)} /> : null),
+              sort: sortBy === 'document_kind' ? sortDir : null,
+            },
+          ]),
       {
         colId: 'status',
         headerName: paymentsText.table.status,
@@ -146,7 +157,7 @@ export function PaymentsTableSection({
           ),
       },
     ],
-    [commonText.actions, commonText.delete, language, onDelete, onOpenEdit, onOpenVoid, paymentsText.page.edit, paymentsText.page.void, paymentsText.page.voidedState, paymentsText.table.bookings, paymentsText.table.customer, paymentsText.table.date, paymentsText.table.journal, paymentsText.table.number, paymentsText.table.paymentMethod, paymentsText.table.status, paymentsText.table.total, paymentsText.table.type, sortBy, sortDir],
+    [commonText.actions, commonText.delete, language, onDelete, onOpenEdit, onOpenVoid, paymentsText.page.edit, paymentsText.page.void, paymentsText.page.voidedState, paymentsText.table.bookings, paymentsText.table.customer, paymentsText.table.date, paymentsText.table.journal, paymentsText.table.number, paymentsText.table.paymentMethod, paymentsText.table.status, paymentsText.table.total, paymentsText.table.type, sortBy, sortDir, hideKindFilter],
   );
 
   return (
@@ -173,15 +184,24 @@ export function PaymentsTableSection({
               <MenuItem value='active'>{paymentDocumentStatusLabel(language, 'active')}</MenuItem>
               <MenuItem value='voided'>{paymentDocumentStatusLabel(language, 'voided')}</MenuItem>
             </TextField>
-            <TextField select size='small' label={language === 'ar' ? 'النوع' : 'Kind'} value={documentKindFilter} onChange={(event) => onDocumentKindFilterChange(event.target.value)} sx={{ minWidth: 180 }}>
-              <MenuItem value=''>{language === 'ar' ? 'كل الأنواع' : 'All kinds'}</MenuItem>
-              <MenuItem value='collection'>{paymentKindLabel(language, 'collection')}</MenuItem>
-              <MenuItem value='refund'>{paymentKindLabel(language, 'refund')}</MenuItem>
-              <MenuItem value='custody_deposit'>{paymentKindLabel(language, 'custody_deposit')}</MenuItem>
-              <MenuItem value='custody_compensation'>{paymentKindLabel(language, 'custody_compensation')}</MenuItem>
-            </TextField>
-            <AppDateField size='small' label={language === 'ar' ? 'من تاريخ' : 'From date'} value={dateFrom} onChange={(val) => onDateFromChange(val)} />
-            <AppDateField size='small' label={language === 'ar' ? 'إلى تاريخ' : 'To date'} value={dateTo} onChange={(val) => onDateToChange(val)} />
+            {!hideKindFilter && (
+              <TextField select size='small' label={language === 'ar' ? 'النوع' : 'Kind'} value={documentKindFilter} onChange={(event) => onDocumentKindFilterChange(event.target.value)} sx={{ minWidth: 180 }}>
+                <MenuItem value=''>{language === 'ar' ? 'كل الأنواع' : 'All kinds'}</MenuItem>
+                <MenuItem value='collection'>{paymentKindLabel(language, 'collection')}</MenuItem>
+                <MenuItem value='refund'>{paymentKindLabel(language, 'refund')}</MenuItem>
+                <MenuItem value='custody_deposit'>{paymentKindLabel(language, 'custody_deposit')}</MenuItem>
+                <MenuItem value='custody_compensation'>{paymentKindLabel(language, 'custody_compensation')}</MenuItem>
+              </TextField>
+            )}
+            <AppDateRangeFilter
+              language={language}
+              activePreset={activePreset}
+              customFrom={customFrom}
+              customTo={customTo}
+              onSelectPreset={onSelectPreset}
+              onCustomFromChange={onCustomFromChange}
+              onCustomToChange={onCustomToChange}
+            />
           </Stack>
         }
         onSortChange={(nextSortBy, nextSortDir) => {

@@ -42,7 +42,15 @@ def auto_post_payment_document(db: Session, actor: User, payment_document: Payme
     total_amount, advances_amount, receivables_amount = _allocation_split(payment_document)
     repo = AccountingRepository(db)
     fiscal_period = resolve_fiscal_period(repo, payment_document.company_id, payment_document.payment_date)
-    cash_account = resolve_bridge_account(db, payment_document.company_id, "cash")
+    
+    if payment_document.payment_method.linked_account_id:
+        from app.modules.accounting.models import ChartOfAccount
+        cash_account = db.get(ChartOfAccount, payment_document.payment_method.linked_account_id)
+        if not cash_account or not cash_account.is_active:
+            cash_account = resolve_bridge_account(db, payment_document.company_id, "cash")
+    else:
+        cash_account = resolve_bridge_account(db, payment_document.company_id, "cash")
+
     advances_account = resolve_bridge_account(db, payment_document.company_id, "customer_advances")
     receivables_account = resolve_bridge_account(db, payment_document.company_id, "customer_receivables")
     entry = JournalEntry(

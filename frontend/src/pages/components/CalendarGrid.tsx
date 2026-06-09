@@ -3,6 +3,7 @@ import { Calendar as CalendarIcon } from 'lucide-react';
 import type { CalendarEventRecord } from '../../features/bookings/api';
 import type { CalendarViewMode } from '../CalendarPage';
 import { useLanguage } from '../../features/language/LanguageProvider';
+import { getLocalDateStr } from '../../lib/dates';
 
 interface Props {
   viewMode: CalendarViewMode;
@@ -85,7 +86,7 @@ function MonthView({ currentDate, events, onEventClick, onDayClick, language, is
       </Box>
       <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', flex: 1 }}>
         {days.map((dayObj, index) => {
-          const dateStr = dayObj.date.toISOString().split('T')[0];
+          const dateStr = getLocalDateStr(dayObj.date);
           const dayEvents = events.filter((e: any) => e.start === dateStr);
           const isToday = new Date().toDateString() === dayObj.date.toDateString();
 
@@ -152,7 +153,7 @@ function MonthView({ currentDate, events, onEventClick, onDayClick, language, is
 
 function DayView({ currentDate, events, onEventClick, language }: any) {
   const theme = useTheme();
-  const dateStr = currentDate.toISOString().split('T')[0];
+  const dateStr = getLocalDateStr(currentDate);
   const dayEvents = events.filter((e: any) => e.start === dateStr);
 
   return (
@@ -233,7 +234,7 @@ function WeekView({ currentDate, events, onEventClick, onDayClick, language, isR
       </Box>
       <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', flex: 1 }}>
         {days.map((date, index) => {
-          const dateStr = date.toISOString().split('T')[0];
+          const dateStr = getLocalDateStr(date);
           const dayEvents = events.filter((e: any) => e.start === dateStr);
           const isToday = new Date().toDateString() === date.toDateString();
 
@@ -297,8 +298,10 @@ function YearView({ currentDate, events, onMonthClick, language }: any) {
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(3, 1fr)', md: 'repeat(4, 1fr)' }, gap: { xs: 1.5, md: 3 } }}>
         {months.map(month => {
           const monthEvents = events.filter((e: any) => {
-            const d = new Date(e.start);
-            return d.getFullYear() === year && d.getMonth() === month;
+            const parts = e.start.split('-');
+            const evYear = parseInt(parts[0], 10);
+            const evMonth = parseInt(parts[1], 10) - 1;
+            return evYear === year && evMonth === month;
           });
 
           return (

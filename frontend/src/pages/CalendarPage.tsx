@@ -9,6 +9,7 @@ import { CalendarFilters } from './components/CalendarFilters';
 import { CalendarGrid } from './components/CalendarGrid';
 import { EventDetailsModal } from './components/EventDetailsModal';
 import { useLanguage } from '../features/language/LanguageProvider';
+import { getLocalDateStr } from '../lib/dates';
 
 export type CalendarViewMode = 'day' | 'week' | 'month' | 'year';
 
@@ -39,8 +40,8 @@ export function CalendarPage() {
       const month = currentDate.getMonth();
       
       // Calculate a wide range to cover the current view plus some padding
-      const dateFrom = new Date(year, month - 1, 1).toISOString().split('T')[0];
-      const dateTo = new Date(year, month + 2, 0).toISOString().split('T')[0];
+      const dateFrom = getLocalDateStr(new Date(year, month - 1, 1));
+      const dateTo = getLocalDateStr(new Date(year, month + 2, 0));
 
       return listCalendarEvents({ ...filters, dateFrom, dateTo });
     }

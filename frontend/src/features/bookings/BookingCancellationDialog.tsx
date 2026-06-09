@@ -21,6 +21,7 @@ import { useBookingsText } from '../../text/bookings';
 import type { BookingSummaryRecord, BookingCancellationPayload, BookingDocumentRecord } from './api';
 import type { PaymentMethodRecord } from '../paymentMethods/api';
 import { AppDateField } from '../../components/inputs/AppDateField';
+import { getLocalDateStr } from '../../lib/dates';
 
 type Props = {
   open: boolean;
@@ -45,7 +46,7 @@ export function BookingCancellationDialog({ open, booking, detailedDocument, pay
   const [transferAmount, setTransferAmount] = useState<string>('0');
   const [paymentMethodId, setPaymentMethodId] = useState('');
   const [transferToLineId, setTransferToLineId] = useState('');
-  const [cancelDate, setCancelDate] = useState(new Date().toISOString().split('T')[0]);
+  const [cancelDate, setCancelDate] = useState(getLocalDateStr());
   const [localError, setLocalError] = useState<string | null>(null);
 
   const isLineCancellation = !!lineId;
@@ -63,7 +64,7 @@ export function BookingCancellationDialog({ open, booking, detailedDocument, pay
       setTransferAmount('0');
       setPaymentMethodId(paymentMethods.find(m => m.is_active)?.id || '');
       setTransferToLineId('');
-      setCancelDate(initialDate || new Date().toISOString().split('T')[0]);
+      setCancelDate(initialDate || getLocalDateStr());
       setLocalError(null);
     }
   }, [open, paymentMethods, initialDate]);

@@ -15,18 +15,23 @@ class PaymentMethodResponse(BaseModel):
     name: str
     is_active: bool
     display_order: int
+    linked_account_id: str | None = None
+    linked_account_code: str | None = None
+    linked_account_name: str | None = None
 
 
 class PaymentMethodCreateRequest(BaseModel):
     name: str = Field(min_length=2, max_length=120)
     code: str | None = Field(default=None, min_length=1, max_length=40)
     is_active: bool = True
+    linked_account_id: str | None = None
 
 
 class PaymentMethodUpdateRequest(BaseModel):
     name: str | None = Field(default=None, min_length=2, max_length=120)
     is_active: bool | None = None
     display_order: int | None = Field(default=None, ge=1, le=100000)
+    linked_account_id: str | None = None
 
 
 class PaymentAllocationResponse(BaseModel):
@@ -197,7 +202,9 @@ class DisbursementVoucherSummaryResponse(BaseModel):
     payee_type: str
     payee_id: str | None = None
     payee_name: str | None = None
-    expense_category_id: str | None = None
+    expense_account_id: str | None = None
+    expense_account_code: str | None = None
+    expense_account_name: str | None = None
     status: str
     journal_entry_id: str | None = None
     journal_entry_number: str | None = None
@@ -205,6 +212,8 @@ class DisbursementVoucherSummaryResponse(BaseModel):
     voided_at: str | None = None
     void_reason: str | None = None
     notes: str | None = None
+    source_table: str | None = None
+    booking_numbers: list[str] | None = None
 
 
 class DisbursementVoucherResponse(DisbursementVoucherSummaryResponse):
@@ -225,7 +234,7 @@ class DisbursementVoucherCreateRequest(BaseModel):
     payee_type: str = Field(min_length=1, max_length=30)  # 'customer', 'supplier', 'employee', 'expense'
     payee_id: str | None = None
     payee_name: str | None = None
-    expense_category_id: str | None = None
+    expense_account_id: str | None = None
     notes: str | None = None
 
 
@@ -236,7 +245,7 @@ class DisbursementVoucherUpdateRequest(BaseModel):
     payee_type: str | None = None
     payee_id: str | None = None
     payee_name: str | None = None
-    expense_category_id: str | None = None
+    expense_account_id: str | None = None
     notes: str | None = None
     reason_code: str | None = None
     override_lock: bool = False

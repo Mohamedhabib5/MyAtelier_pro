@@ -45,3 +45,12 @@
   min-height: 400px !important;
   flex-shrink: 0 !important;
 }
+
+/* Fix RTL alignment for pinned bottom row (AG Grid known issue) */
+.ag-rtl .ag-floating-bottom {
+  direction: rtl;
+}
+
+.ag-rtl .ag-floating-bottom .ag-row {
+  direction: rtl;
+}

@@ -11,6 +11,7 @@ import { getBookingsExcelUrl, type BookingExportFilters } from '../exports/api';
 import { EMPTY_VALUE, bookingStatusLabel, useCommonText } from '../../text/common';
 import { useBookingsText } from '../../text/bookings';
 import { BookingsTableFilters } from './BookingsTableFilters';
+import type { DatePreset } from '../../components/inputs/useDateRangeFilter';
 import type { BookingSummaryRecord } from './api';
 
 export type BookingSortField = 'booking_date' | 'booking_number' | 'customer_name' | 'status';
@@ -24,10 +25,12 @@ type Props = {
   onSearchChange: (value: string) => void;
   statusFilter: string;
   onStatusFilterChange: (value: string) => void;
-  dateFrom: string;
-  onDateFromChange: (value: string) => void;
-  dateTo: string;
-  onDateToChange: (value: string) => void;
+  activePreset: DatePreset;
+  customFrom: string;
+  customTo: string;
+  onSelectPreset: (preset: DatePreset) => void;
+  onCustomFromChange: (v: string) => void;
+  onCustomToChange: (v: string) => void;
   page: number;
   pageSize: number;
   onPageChange: (value: number) => void;
@@ -51,10 +54,12 @@ export function BookingsTableSection({
   onSearchChange,
   statusFilter,
   onStatusFilterChange,
-  dateFrom,
-  onDateFromChange,
-  dateTo,
-  onDateToChange,
+  activePreset,
+  customFrom,
+  customTo,
+  onSelectPreset,
+  onCustomFromChange,
+  onCustomToChange,
   page,
   pageSize,
   onPageChange,
@@ -75,6 +80,7 @@ export function BookingsTableSection({
       { colId: 'booking_number', field: 'booking_number', headerName: bookingsText.table.bookingNumber, pinned: language === 'ar' ? 'right' : 'left', sort: sortBy === 'booking_number' ? sortDir : null },
       { colId: 'external_code', field: 'external_code', headerName: bookingsText.table.externalCode, valueFormatter: ({ value }) => value ?? EMPTY_VALUE },
       { colId: 'customer_name', field: 'customer_name', headerName: bookingsText.table.customer, sort: sortBy === 'customer_name' ? sortDir : null },
+      { colId: 'booking_date', field: 'booking_date', headerName: bookingsText.table.bookingDate, sort: sortBy === 'booking_date' ? sortDir : null },
       { colId: 'line_count', field: 'line_count', headerName: bookingsText.table.lineCount, filter: 'agNumberColumnFilter' },
       { colId: 'service_summary', field: 'service_summary', headerName: bookingsText.table.serviceSummary, flex: 1.3 },
       { colId: 'next_service_date', field: 'next_service_date', headerName: bookingsText.table.nextServiceDate, valueFormatter: ({ value }) => value ?? EMPTY_VALUE, sort: sortBy === 'booking_date' ? sortDir : null },
@@ -113,7 +119,7 @@ export function BookingsTableSection({
           ) : null,
       },
     ],
-    [bookingsText.page.openDocument, bookingsText.table.bookingNumber, bookingsText.table.customer, bookingsText.table.lineCount, bookingsText.table.nextServiceDate, bookingsText.table.paid, bookingsText.table.remaining, bookingsText.table.serviceSummary, bookingsText.table.status, bookingsText.table.total, commonText.actions, commonText.cancel, commonText.delete, language, onDelete, onOpenCancel, onOpenEdit, sortBy, sortDir],
+    [bookingsText.page.openDocument, bookingsText.table.bookingNumber, bookingsText.table.bookingDate, bookingsText.table.customer, bookingsText.table.lineCount, bookingsText.table.nextServiceDate, bookingsText.table.paid, bookingsText.table.remaining, bookingsText.table.serviceSummary, bookingsText.table.status, bookingsText.table.total, commonText.actions, commonText.cancel, commonText.delete, language, onDelete, onOpenCancel, onOpenEdit, sortBy, sortDir],
   );
 
   return (
@@ -137,11 +143,13 @@ export function BookingsTableSection({
           <BookingsTableFilters
             language={language}
             statusFilter={statusFilter}
-            dateFrom={dateFrom}
-            dateTo={dateTo}
             onStatusChange={onStatusFilterChange}
-            onDateFromChange={onDateFromChange}
-            onDateToChange={onDateToChange}
+            activePreset={activePreset}
+            customFrom={customFrom}
+            customTo={customTo}
+            onSelectPreset={onSelectPreset}
+            onCustomFromChange={onCustomFromChange}
+            onCustomToChange={onCustomToChange}
           />
         }
         onSortChange={(nextSortBy, nextSortDir) => {

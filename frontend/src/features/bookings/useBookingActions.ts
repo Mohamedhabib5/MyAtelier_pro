@@ -7,6 +7,7 @@ import { cancelBooking, cancelBookingLine, completeBookingLine, createBooking, r
 async function invalidateViews() {
   await Promise.all([
     queryClient.invalidateQueries({ queryKey: ['bookings'] }),
+    queryClient.invalidateQueries({ queryKey: ['calendar-events'] }),
     queryClient.invalidateQueries({ queryKey: ['payments'] }),
     queryClient.invalidateQueries({ queryKey: ['dashboard', 'finance'] }),
     queryClient.invalidateQueries({ queryKey: ['reports', 'overview'] }),

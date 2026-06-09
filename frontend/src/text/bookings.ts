@@ -14,6 +14,7 @@ const bookingsText = {
     },
     table: {
       bookingNumber: 'رقم الحجز',
+      bookingDate: 'تاريخ الحجز',
       externalCode: 'كود خارجي',
       customer: 'العميل',
       lineCount: 'عدد السطور',
@@ -96,6 +97,7 @@ const bookingsText = {
     },
     table: {
       bookingNumber: 'Booking #',
+      bookingDate: 'Booking date',
       externalCode: 'External Code',
       customer: 'Customer',
       lineCount: 'Lines',

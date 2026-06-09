@@ -53,21 +53,157 @@ def list_disbursement_page(
     sort_by: str = "voucher_date",
     sort_dir: str = "desc",
 ) -> dict:
+    from sqlalchemy import select, or_
+    from sqlalchemy.orm import joinedload
+    from app.modules.payments.models import PaymentDocument, PaymentAllocation
+    from app.modules.customers.models import Customer
+    from app.modules.bookings.models import Booking
+    from app.modules.payments.serializers import document_total
+
     company = get_company_settings(db)
-    rows, total = PaymentsRepository(db).list_disbursement_voucher_page(
-        company.id,
-        branch_id=branch_id,
-        search=clean_optional_text(search),
-        status=clean_optional_text(status),
-        payee_type=clean_optional_text(payee_type),
-        date_from=parse_payment_date(date_from) if date_from else None,
-        date_to=parse_payment_date(date_to) if date_to else None,
-        page=page,
-        page_size=page_size,
-        sort_by=sort_by,
-        sort_dir="asc" if sort_dir == "asc" else "desc",
+    parsed_search = clean_optional_text(search)
+    parsed_status = clean_optional_text(status)
+    parsed_payee_type = clean_optional_text(payee_type)
+    parsed_date_from = parse_payment_date(date_from) if date_from else None
+    parsed_date_to = parse_payment_date(date_to) if date_to else None
+
+    # 1. Fetch matching DisbursementVoucher records
+    stmt_dv = select(DisbursementVoucher).where(DisbursementVoucher.company_id == company.id)
+    if branch_id:
+        stmt_dv = stmt_dv.where(DisbursementVoucher.branch_id == branch_id)
+    if parsed_status:
+        stmt_dv = stmt_dv.where(DisbursementVoucher.status == parsed_status)
+    if parsed_payee_type:
+        stmt_dv = stmt_dv.where(DisbursementVoucher.payee_type == parsed_payee_type)
+    if parsed_date_from:
+        stmt_dv = stmt_dv.where(DisbursementVoucher.voucher_date >= parsed_date_from)
+    if parsed_date_to:
+        stmt_dv = stmt_dv.where(DisbursementVoucher.voucher_date <= parsed_date_to)
+    if parsed_search:
+        pattern = f"%{parsed_search.strip()}%"
+        stmt_dv = stmt_dv.where(
+            or_(
+                DisbursementVoucher.voucher_number.ilike(pattern),
+                DisbursementVoucher.payee_name.ilike(pattern),
+                DisbursementVoucher.notes.ilike(pattern),
+            )
+        )
+    stmt_dv = stmt_dv.options(
+        joinedload(DisbursementVoucher.branch),
+        joinedload(DisbursementVoucher.payment_method),
+        joinedload(DisbursementVoucher.journal_entry),
     )
-    return {"items": [serialize_disbursement(row) for row in rows], "total": total, "page": page, "page_size": page_size}
+    dv_rows = list(db.scalars(stmt_dv).all())
+
+    # 2. Fetch matching PaymentDocument records (refund kind only)
+    pd_rows = []
+    if parsed_payee_type is None or parsed_payee_type == "customer":
+        stmt_pd = select(PaymentDocument).join(PaymentDocument.customer).where(
+            PaymentDocument.company_id == company.id,
+            PaymentDocument.document_kind == "refund"
+        )
+        if branch_id:
+            stmt_pd = stmt_pd.where(PaymentDocument.branch_id == branch_id)
+        if parsed_status:
+            stmt_pd = stmt_pd.where(PaymentDocument.status == parsed_status)
+        if parsed_date_from:
+            stmt_pd = stmt_pd.where(PaymentDocument.payment_date >= parsed_date_from)
+        if parsed_date_to:
+            stmt_pd = stmt_pd.where(PaymentDocument.payment_date <= parsed_date_to)
+        if parsed_search:
+            pattern = f"%{parsed_search.strip()}%"
+            stmt_pd = stmt_pd.outerjoin(PaymentDocument.allocations).outerjoin(PaymentAllocation.booking).where(
+                or_(
+                    PaymentDocument.payment_number.ilike(pattern),
+                    Customer.full_name.ilike(pattern),
+                    Customer.phone.ilike(pattern),
+                    PaymentDocument.notes.ilike(pattern),
+                    Booking.booking_number.ilike(pattern),
+                )
+            )
+        stmt_pd = stmt_pd.options(
+            joinedload(PaymentDocument.branch),
+            joinedload(PaymentDocument.customer),
+            joinedload(PaymentDocument.payment_method),
+            joinedload(PaymentDocument.journal_entry),
+        )
+        pd_rows = list(db.scalars(stmt_pd.distinct()).all())
+
+    # 3. Serialize and merge the two lists
+    items = []
+    for row in dv_rows:
+        data = serialize_disbursement(row)
+        data["source_table"] = "disbursement_vouchers"
+        data["booking_numbers"] = []
+        items.append(data)
+
+    for row in pd_rows:
+        booking_numbers = sorted({alloc.booking.booking_number for alloc in row.allocations if alloc.booking})
+        items.append({
+            "id": row.id,
+            "company_id": row.company_id,
+            "branch_id": row.branch_id,
+            "created_by_user_id": row.created_by_user_id,
+            "updated_by_user_id": row.updated_by_user_id,
+            "entity_version": row.entity_version,
+            "branch_name": row.branch.name if row.branch else None,
+            "payment_method_id": row.payment_method_id,
+            "payment_method_name": row.payment_method.name if row.payment_method else None,
+            "voucher_number": row.payment_number,
+            "voucher_date": row.payment_date.isoformat() if hasattr(row.payment_date, "isoformat") else str(row.payment_date),
+            "amount": float(document_total(row)),
+            "payee_type": "customer",
+            "payee_id": row.customer_id,
+            "payee_name": row.customer.full_name if row.customer else None,
+            "expense_account_id": None,
+            "expense_account_code": None,
+            "expense_account_name": None,
+            "status": row.status,
+            "journal_entry_id": row.journal_entry_id,
+            "journal_entry_number": row.journal_entry.entry_number if row.journal_entry else None,
+            "journal_entry_status": row.journal_entry.status if row.journal_entry else None,
+            "voided_at": row.voided_at.isoformat() if row.voided_at else None,
+            "void_reason": row.void_reason,
+            "notes": row.notes,
+            "source_table": "payment_documents",
+            "booking_numbers": booking_numbers,
+        })
+
+    # 4. Sorting
+    sort_key_map = {
+        "voucher_date": "voucher_date",
+        "voucher_number": "voucher_number",
+        "payee_name": "payee_name",
+        "status": "status",
+        "amount": "amount"
+    }
+    key_to_sort = sort_key_map.get(sort_by, "voucher_date")
+
+    def get_sort_val(x):
+        val = x.get(key_to_sort)
+        if val is None:
+            if key_to_sort == "amount":
+                return 0.0
+            return ""
+        if isinstance(val, str) and key_to_sort != "amount":
+            return val.lower()
+        return val
+
+    is_desc = sort_dir == "desc"
+    items.sort(key=get_sort_val, reverse=is_desc)
+
+    # 5. Pagination
+    total = len(items)
+    start_offset = (page - 1) * page_size
+    end_offset = start_offset + page_size
+    sliced_items = items[start_offset:end_offset]
+
+    return {
+        "items": sliced_items,
+        "total": total,
+        "page": page,
+        "page_size": page_size
+    }
 
 
 def get_disbursement_voucher(db: Session, disbursement_voucher_id: str, branch_id: str) -> dict:
@@ -106,7 +242,7 @@ def create_disbursement(db: Session, actor: User, payload: DisbursementVoucherCr
         payee_type=payload.payee_type,
         payee_id=payload.payee_id,
         payee_name=clean_optional_text(payload.payee_name),
-        expense_category_id=payload.expense_category_id,
+        expense_account_id=payload.expense_account_id,
         status=PaymentReceiptStatus.ACTIVE.value,
         notes=clean_optional_text(payload.notes),
     )
@@ -178,8 +314,8 @@ def update_disbursement(db: Session, actor: User, disbursement_voucher_id: str, 
         voucher.payee_id = payload.payee_id
     if payload.payee_name is not None:
         voucher.payee_name = clean_optional_text(payload.payee_name)
-    if payload.expense_category_id is not None:
-        voucher.expense_category_id = payload.expense_category_id
+    if payload.expense_account_id is not None:
+        voucher.expense_account_id = payload.expense_account_id
     if payload.notes is not None:
         voucher.notes = clean_optional_text(payload.notes)
         

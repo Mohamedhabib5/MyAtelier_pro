@@ -13,6 +13,7 @@ const CalendarPage = lazy(() => import('../pages/CalendarPage').then((module) =>
 const CustomersPage = lazy(() => import('../pages/CustomersPage').then((module) => ({ default: module.CustomersPage })));
 const DressesPage = lazy(() => import('../pages/DressesPage').then((module) => ({ default: module.DressesPage })));
 const PaymentsPage = lazy(() => import('../pages/PaymentsPage').then((module) => ({ default: module.PaymentsPage })));
+const DisbursementsPage = lazy(() => import('../pages/DisbursementsPage').then((module) => ({ default: module.DisbursementsPage })));
 const CustodyPage = lazy(() => import('../pages/CustodyPage').then((module) => ({ default: module.CustodyPage })));
 const AuditExplorerPage = lazy(() => import('../pages/AuditExplorerPage').then((module) => ({ default: module.AuditExplorerPage })));
 const ReportsPage = lazy(() => import('../pages/ReportsPage').then((module) => ({ default: module.ReportsPage })));
@@ -57,6 +58,7 @@ export const router = createBrowserRouter([
           { path: 'customers', element: <CustomersPage /> },
           { path: 'dresses', element: <DressesPage /> },
           { path: 'payments', element: <PaymentsPage /> },
+          { path: 'disbursements', element: <DisbursementsPage /> },
           { path: 'custody', element: <CustodyPage /> },
           { path: 'custody-reports', element: <Navigate to='/custody' replace /> },
           { path: 'audit', element: <AuditExplorerPage /> },

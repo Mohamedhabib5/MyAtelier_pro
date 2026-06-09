@@ -22,6 +22,9 @@ class PaymentMethod(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     name: Mapped[str] = mapped_column(String(120), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     display_order: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    linked_account_id: Mapped[str | None] = mapped_column(ForeignKey("chart_of_accounts.id", ondelete="SET NULL"), nullable=True)
+
+    linked_account = relationship("ChartOfAccount", lazy="joined", foreign_keys=[linked_account_id])
 
 
 class PaymentDocument(Base, UUIDPrimaryKeyMixin, TimestampMixin):
@@ -106,7 +109,7 @@ class DisbursementVoucher(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     payee_type: Mapped[str] = mapped_column(String(30), nullable=False)  # 'customer', 'supplier', 'employee', 'expense'
     payee_id: Mapped[str | None] = mapped_column(String(40), nullable=True)
     payee_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
-    expense_category_id: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    expense_account_id: Mapped[str | None] = mapped_column(ForeignKey("chart_of_accounts.id", ondelete="SET NULL"), nullable=True)
     
     status: Mapped[str] = mapped_column(String(30), default="active", nullable=False)
     journal_entry_id: Mapped[str | None] = mapped_column(ForeignKey("journal_entries.id", ondelete="SET NULL"), nullable=True)
@@ -117,6 +120,7 @@ class DisbursementVoucher(Base, UUIDPrimaryKeyMixin, TimestampMixin):
 
     branch = relationship("Branch", lazy="joined")
     payment_method = relationship("PaymentMethod", lazy="joined")
+    expense_account = relationship("ChartOfAccount", lazy="joined", foreign_keys=[expense_account_id])
     journal_entry = relationship("JournalEntry", lazy="joined")
     voided_by = relationship("User", lazy="joined", foreign_keys=[voided_by_user_id])
     allocations = relationship(

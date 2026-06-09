@@ -97,16 +97,21 @@ export function BookingsPage() {
           state.setStatusFilter(value);
           state.setPage(0);
         }, [state.setStatusFilter, state.setPage])}
-        dateFrom={state.dateFrom}
-        onDateFromChange={useCallback((value) => {
-          state.setDateFrom(value);
+        activePreset={state.activePreset}
+        customFrom={state.customFrom}
+        customTo={state.customTo}
+        onSelectPreset={useCallback((preset) => {
+          state.selectPreset(preset);
           state.setPage(0);
-        }, [state.setDateFrom, state.setPage])}
-        dateTo={state.dateTo}
-        onDateToChange={useCallback((value) => {
-          state.setDateTo(value);
+        }, [state.selectPreset, state.setPage])}
+        onCustomFromChange={useCallback((value) => {
+          state.setCustomFrom(value);
           state.setPage(0);
-        }, [state.setDateTo, state.setPage])}
+        }, [state.setCustomFrom, state.setPage])}
+        onCustomToChange={useCallback((value) => {
+          state.setCustomTo(value);
+          state.setPage(0);
+        }, [state.setCustomTo, state.setPage])}
         page={state.page}
         pageSize={state.pageSize}
         onPageChange={state.setPage}

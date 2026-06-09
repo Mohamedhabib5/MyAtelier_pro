@@ -28,7 +28,12 @@ DEFAULT_CHART_TEMPLATE = [
     {"code": "2200", "name": "ضريبة المخرجات", "account_type": AccountTypeKey.LIABILITY.value, "parent_code": "2000", "allows_posting": True},
     {"code": "3100", "name": "رأس المال", "account_type": AccountTypeKey.EQUITY.value, "parent_code": "3000", "allows_posting": True},
     {"code": "4100", "name": "إيرادات تشغيلية", "account_type": AccountTypeKey.REVENUE.value, "parent_code": "4000", "allows_posting": False},
-    {"code": "5100", "name": "مصروفات تشغيلية", "account_type": AccountTypeKey.EXPENSE.value, "parent_code": "5000", "allows_posting": True},
+    {"code": "5100", "name": "مصروفات تشغيلية", "account_type": AccountTypeKey.EXPENSE.value, "parent_code": "5000", "allows_posting": False},
+    {"code": "5110", "name": "مصروف الإيجار", "account_type": AccountTypeKey.EXPENSE.value, "parent_code": "5100", "allows_posting": True},
+    {"code": "5120", "name": "مصروف الرواتب والأجور", "account_type": AccountTypeKey.EXPENSE.value, "parent_code": "5100", "allows_posting": True},
+    {"code": "5130", "name": "مصروف أقمشة وخامات", "account_type": AccountTypeKey.EXPENSE.value, "parent_code": "5100", "allows_posting": True},
+    {"code": "5140", "name": "مصروف كهرباء ومياه", "account_type": AccountTypeKey.EXPENSE.value, "parent_code": "5100", "allows_posting": True},
+    {"code": "5150", "name": "مصروف التسويق والإعلانات", "account_type": AccountTypeKey.EXPENSE.value, "parent_code": "5100", "allows_posting": True},
 
     # Level 3
     {"code": "1110", "name": "النقدية وما يعادلها", "account_type": AccountTypeKey.ASSET.value, "parent_code": "1100", "allows_posting": False},

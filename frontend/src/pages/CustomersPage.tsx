@@ -17,9 +17,10 @@ import { EMPTY_VALUE, useCommonText } from '../text/common';
 import { getCustomersExcelUrl, getCustomersExportUrl } from '../features/exports/api';
 import { downloadFile } from '../lib/api';
 import { useCustomersText } from '../text/customers';
+import { getLocalDateStr } from '../lib/dates';
 
 function emptyForm() {
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalDateStr();
   return { full_name: '', registration_date: today, groom_name: '', bride_name: '', phone: '', phone_2: '', email: '', address: '', notes: '', is_active: true } satisfies CustomerFormState;
 }
 

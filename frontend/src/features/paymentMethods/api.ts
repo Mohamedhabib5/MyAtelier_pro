@@ -10,6 +10,9 @@ export type PaymentMethodRecord = {
   name: string;
   is_active: boolean;
   display_order: number;
+  linked_account_id?: string | null;
+  linked_account_code?: string | null;
+  linked_account_name?: string | null;
 };
 
 export type PaymentMethodStatusFilter = 'all' | 'active' | 'inactive';
@@ -18,12 +21,14 @@ export type PaymentMethodCreatePayload = {
   name: string;
   code?: string | null;
   is_active?: boolean;
+  linked_account_id?: string | null;
 };
 
 export type PaymentMethodUpdatePayload = {
   name?: string | null;
   is_active?: boolean;
   display_order?: number;
+  linked_account_id?: string | null;
 };
 
 export function listPaymentMethods(status: PaymentMethodStatusFilter = 'active'): Promise<PaymentMethodRecord[]> {

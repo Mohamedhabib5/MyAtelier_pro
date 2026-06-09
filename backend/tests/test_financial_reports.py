@@ -79,7 +79,7 @@ def test_multi_branch_trial_balance_and_income_statement(app_client: TestClient)
             "branch_id": default_branch_id,
             "lines": [
                 {
-                    "account_id": account_ids["5100"],  # operating expense
+                    "account_id": account_ids["5110"],  # operating expense (Rent)
                     "debit_amount": "100.00",
                     "credit_amount": "0.00",
                 },

@@ -12,7 +12,8 @@ import CloseIcon from '@mui/icons-material/Close';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
 import { FloatingAnalyticsDock } from './FloatingAnalyticsDock';
-import { AppDateField } from '../../components/inputs/AppDateField';
+import { useDateRangeFilter } from '../../components/inputs/useDateRangeFilter';
+import { AppDateRangeFilter } from '../../components/inputs/AppDateRangeFilter';
 
 export default function AnalyticsPage() {
   const language = 'ar';
@@ -28,12 +29,16 @@ export default function AnalyticsPage() {
     { id: 'customer_address', label: isAr ? 'العنوان' : 'Address' },
   ], [isAr]);
 
-  const [dateFrom, setDateFrom] = useState(() => {
-    const d = new Date();
-    d.setMonth(d.getMonth() - 1);
-    return d.toISOString().split('T')[0];
-  });
-  const [dateTo, setDateTo] = useState(() => new Date().toISOString().split('T')[0]);
+  const {
+    dateFrom,
+    dateTo,
+    activePreset,
+    customFrom,
+    customTo,
+    selectPreset,
+    setCustomFrom,
+    setCustomTo,
+  } = useDateRangeFilter('thisMonth');
   
   // BI Context (Central Logic for Zoho/Power BI experience)
   const [groupStack, setGroupStack] = useState<any[]>([]);
@@ -155,23 +160,14 @@ export default function AnalyticsPage() {
                   {isAr ? 'تصفية بالتاريخ:' : 'Date Filter:'}
                 </Typography>
               </Stack>
-              <AppDateField
-                value={dateFrom}
-                onChange={(val) => setDateFrom(val)}
-                size='small'
-                sx={{ 
-                  '& .MuiInputBase-root': { borderRadius: 3, height: 36, fontSize: '0.8rem' },
-                  width: 140
-                }}
-              />
-              <AppDateField
-                value={dateTo}
-                onChange={(val) => setDateTo(val)}
-                size='small'
-                sx={{ 
-                  '& .MuiInputBase-root': { borderRadius: 3, height: 36, fontSize: '0.8rem' },
-                  width: 140
-                }}
+              <AppDateRangeFilter
+                language={language}
+                activePreset={activePreset}
+                customFrom={customFrom}
+                customTo={customTo}
+                onSelectPreset={selectPreset}
+                onCustomFromChange={setCustomFrom}
+                onCustomToChange={setCustomTo}
               />
               <Button 
                 variant='contained' 

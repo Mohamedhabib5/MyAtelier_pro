@@ -2,18 +2,29 @@ import { useDeferredValue, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { type BookingSortField } from './BookingsTableSection';
 import { type BookingSummaryRecord, type BookingCancellationPayload } from './api';
+import { useDateRangeFilter } from '../../components/inputs/useDateRangeFilter';
 
 export function useBookingsPageState() {
   const [searchParams] = useSearchParams();
-  const urlEditId = searchParams.get('edit');
+  const urlEditId = searchParams.get('edit') || searchParams.get('id');
 
   const [error, setError] = useState<string | null>(null);
   const [editingBookingId, setEditingBookingId] = useState<string | null>(urlEditId);
   const [creatingNew, setCreatingNew] = useState(false);
   const [searchInput, setSearchInput] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
+
+  const {
+    dateFrom,
+    dateTo,
+    activePreset,
+    customFrom,
+    customTo,
+    selectPreset,
+    setCustomFrom,
+    setCustomTo,
+  } = useDateRangeFilter('all');
+
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(10);
   const [sortBy, setSortBy] = useState<BookingSortField>('booking_date');
@@ -32,8 +43,14 @@ export function useBookingsPageState() {
     creatingNew, setCreatingNew,
     searchInput, setSearchInput,
     statusFilter, setStatusFilter,
-    dateFrom, setDateFrom,
-    dateTo, setDateTo,
+    dateFrom,
+    dateTo,
+    activePreset,
+    customFrom,
+    customTo,
+    selectPreset,
+    setCustomFrom,
+    setCustomTo,
     page, setPage,
     pageSize, setPageSize,
     sortBy, setSortBy,

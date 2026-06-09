@@ -22,10 +22,26 @@ ZERO = Decimal("0.00")
 def auto_post_disbursement_voucher(db: Session, actor: User, voucher: DisbursementVoucher) -> JournalEntry:
     repo = AccountingRepository(db)
     fiscal_period = resolve_fiscal_period(repo, voucher.company_id, voucher.voucher_date)
-    cash_account = resolve_bridge_account(db, voucher.company_id, "cash")
+    
+    if voucher.payment_method.linked_account_id:
+        from app.modules.accounting.models import ChartOfAccount
+        cash_account = db.get(ChartOfAccount, voucher.payment_method.linked_account_id)
+        if not cash_account or not cash_account.is_active:
+            cash_account = resolve_bridge_account(db, voucher.company_id, "cash")
+    else:
+        cash_account = resolve_bridge_account(db, voucher.company_id, "cash")
 
     if voucher.payee_type == "customer":
         debit_account = resolve_bridge_account(db, voucher.company_id, "customer_advances")
+    elif voucher.payee_type == "expense":
+        if not voucher.expense_account_id:
+            raise ValidationAppError("يجب تحديد حساب المصروف من شجرة الحسابات")
+        from app.modules.accounting.models import ChartOfAccount
+        debit_account = db.get(ChartOfAccount, voucher.expense_account_id)
+        if not debit_account or not debit_account.is_active:
+            raise NotFoundError("حساب المصروف غير موجود أو معطل في شجرة الحسابات")
+    elif voucher.payee_type == "supplier":
+        debit_account = resolve_bridge_account(db, voucher.company_id, "supplier_payables")
     else:
         debit_account = resolve_bridge_account(db, voucher.company_id, "customer_receivables")
 

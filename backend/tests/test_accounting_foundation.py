@@ -21,7 +21,7 @@ def test_chart_of_accounts_seeded_and_exposed(app_client: TestClient) -> None:
     expected_codes = [
         "1000", "1100", "1110", "1111", "1111001", "1112", "1112001", "1120", "1121", "1121001",
         "1200", "2000", "2100", "2110", "2120", "2121", "2121001", "2200", "3000", "3100", "4000",
-        "4100", "4110", "5000", "5100"
+        "4100", "4110", "5000", "5100", "5110", "5120", "5130", "5140", "5150"
     ]
     assert [row["code"] for row in rows] == expected_codes
     assert rows[0]["account_type"] == "asset"
@@ -54,7 +54,7 @@ def test_regular_user_can_view_accounting_foundation(app_client: TestClient) -> 
 
     response = app_client.get("/api/accounting/chart-of-accounts")
     assert response.status_code == 200
-    assert len(response.json()) == 25
+    assert len(response.json()) == 30
 
 
 def test_accounting_foundation_seeded_once(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -64,18 +64,18 @@ def test_accounting_foundation_seeded_once(tmp_path: Path, monkeypatch: pytest.M
     with build_test_client(db_path, storage_root, monkeypatch) as first_client:
         login(first_client)
         first_rows = first_client.get("/api/accounting/chart-of-accounts").json()
-        assert len(first_rows) == 25
+        assert len(first_rows) == 30
 
     with build_test_client(db_path, storage_root, monkeypatch) as second_client:
         login(second_client)
         second_rows = second_client.get("/api/accounting/chart-of-accounts").json()
-        assert len(second_rows) == 25
+        assert len(second_rows) == 30
         assert [row["code"] for row in second_rows] == [row["code"] for row in first_rows]
 
         session_factory = second_client.app.state.session_factory
         with session_factory() as db:
             accounts = db.scalars(select(ChartOfAccount)).all()
-        assert len(accounts) == 25
+        assert len(accounts) == 30
 
 
 def test_accounting_tree_level_and_posting_rules(app_client: TestClient) -> None:

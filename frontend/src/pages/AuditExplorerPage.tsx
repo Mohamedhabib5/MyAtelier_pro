@@ -6,7 +6,7 @@ import { SectionCard } from '../components/SectionCard';
 import { NightlyExportSummary } from '../features/audit/NightlyExportSummary';
 import { useAuditExplorer } from '../features/audit/hooks/useAuditExplorer';
 import { AuditIntegrityDialog } from '../features/audit/components/AuditIntegrityDialog';
-import { AppDateField } from '../components/inputs/AppDateField';
+import { AppDateRangeFilter } from '../components/inputs/AppDateRangeFilter';
 
 export function AuditExplorerPage() {
   const {
@@ -16,8 +16,14 @@ export function AuditExplorerPage() {
     targetType, setTargetType,
     targetId, setTargetId,
     branchId, setBranchId,
-    dateFrom, setDateFrom,
-    dateTo, setDateTo,
+    dateFrom,
+    dateTo,
+    activePreset,
+    customFrom,
+    customTo,
+    selectPreset,
+    setCustomFrom,
+    setCustomTo,
     mode, setMode,
     setFiltersVersion,
     verifying,
@@ -25,7 +31,6 @@ export function AuditExplorerPage() {
     showIntegrityDialog, setShowIntegrityDialog,
     auditQuery,
     labels,
-    applyQuickRange,
     exportNightlyOpsCsv,
     handleVerifyIntegrity,
     activeFilterPairs,
@@ -75,27 +80,18 @@ export function AuditExplorerPage() {
             <Grid size={{ xs: 12, md: 4 }}>
               <TextField fullWidth label={auditText.page.branchId} value={branchId} onChange={(event) => setBranchId(event.target.value)} />
             </Grid>
-            <Grid size={{ xs: 12, md: 4 }}>
-              <AppDateField label={auditText.page.dateFrom} value={dateFrom} onChange={(val) => setDateFrom(val)} />
-            </Grid>
-            <Grid size={{ xs: 12, md: 4 }}>
-              <AppDateField label={auditText.page.dateTo} value={dateTo} onChange={(val) => setDateTo(val)} />
+            <Grid size={{ xs: 12, md: 8 }}>
+              <AppDateRangeFilter
+                language={language}
+                activePreset={activePreset}
+                customFrom={customFrom}
+                customTo={customTo}
+                onSelectPreset={selectPreset}
+                onCustomFromChange={setCustomFrom}
+                onCustomToChange={setCustomTo}
+              />
             </Grid>
           </Grid>
-          <Stack direction='row' spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
-            <Typography variant='body2' color='text.secondary' sx={{ alignSelf: 'center' }}>
-              {auditText.page.quickRanges}
-            </Typography>
-            <Button variant='outlined' size='small' onClick={() => applyQuickRange('today')}>
-              {auditText.page.today}
-            </Button>
-            <Button variant='outlined' size='small' onClick={() => applyQuickRange('last24h')}>
-              {auditText.page.last24h}
-            </Button>
-            <Button variant='outlined' size='small' onClick={() => applyQuickRange('last7d')}>
-              {auditText.page.last7d}
-            </Button>
-          </Stack>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
             <Button variant='contained' onClick={() => setFiltersVersion((value) => value + 1)} sx={{ width: { xs: '100%', sm: 'auto' } }}>
               {auditText.page.applyFilters}
@@ -129,8 +125,7 @@ export function AuditExplorerPage() {
                 setTargetType('');
                 setTargetId('');
                 setBranchId('');
-                setDateFrom('');
-                setDateTo('');
+                selectPreset('all');
                 setMode('all');
                 setFiltersVersion((value) => value + 1);
               }}

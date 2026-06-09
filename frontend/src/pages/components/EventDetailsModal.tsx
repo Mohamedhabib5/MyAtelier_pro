@@ -18,7 +18,7 @@ export function EventDetailsModal({ event, open, onClose }: Props) {
   if (!event) return null;
 
   const handleGoToBooking = () => {
-    navigate(`/bookings?id=${event.booking_id}`);
+    navigate(`/bookings?edit=${event.booking_id}`);
     onClose();
   };
 

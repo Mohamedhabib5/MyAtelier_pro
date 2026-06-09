@@ -4,8 +4,9 @@ import { listAuditEvents, listDestructiveActions, listNightlyOpsEvents, verifyAu
 import { useAuditText } from '../../../text/audit';
 import { useLanguage } from '../../language/LanguageProvider';
 
+import { useDateRangeFilter } from '../../../components/inputs/useDateRangeFilter';
+
 export type AuditFilterMode = 'all' | 'destructive' | 'nightly_ops';
-export type QuickRange = 'today' | 'last24h' | 'last7d';
 
 export function useAuditExplorer() {
   const auditText = useAuditText();
@@ -16,8 +17,18 @@ export function useAuditExplorer() {
   const [targetType, setTargetType] = useState('');
   const [targetId, setTargetId] = useState('');
   const [branchId, setBranchId] = useState('');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
+
+  const {
+    dateFrom,
+    dateTo,
+    activePreset,
+    customFrom,
+    customTo,
+    selectPreset,
+    setCustomFrom,
+    setCustomTo,
+  } = useDateRangeFilter('all');
+
   const [mode, setMode] = useState<AuditFilterMode>('all');
   const [filtersVersion, setFiltersVersion] = useState(0);
   const [verifying, setVerifying] = useState(false);
@@ -72,32 +83,7 @@ export function useAuditExplorer() {
           close: 'Close',
         };
 
-  function formatDate(value: Date): string {
-    const year = value.getFullYear();
-    const month = String(value.getMonth() + 1).padStart(2, '0');
-    const day = String(value.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  }
 
-  function applyQuickRange(range: QuickRange) {
-    const today = new Date();
-    const end = formatDate(today);
-    if (range === 'today') {
-      setDateFrom(end);
-      setDateTo(end);
-      setFiltersVersion((value) => value + 1);
-      return;
-    }
-    const startDate = new Date(today);
-    if (range === 'last24h') {
-      startDate.setDate(startDate.getDate() - 1);
-    } else {
-      startDate.setDate(startDate.getDate() - 6);
-    }
-    setDateFrom(formatDate(startDate));
-    setDateTo(end);
-    setFiltersVersion((value) => value + 1);
-  }
 
   function exportNightlyOpsCsv() {
     const exportReason = window.prompt(auditText.page.exportReasonPrompt, '')?.trim() ?? '';
@@ -143,8 +129,14 @@ export function useAuditExplorer() {
     targetType, setTargetType,
     targetId, setTargetId,
     branchId, setBranchId,
-    dateFrom, setDateFrom,
-    dateTo, setDateTo,
+    dateFrom,
+    dateTo,
+    activePreset,
+    customFrom,
+    customTo,
+    selectPreset,
+    setCustomFrom,
+    setCustomTo,
     mode, setMode,
     filtersVersion, setFiltersVersion,
     verifying,
@@ -152,7 +144,6 @@ export function useAuditExplorer() {
     showIntegrityDialog, setShowIntegrityDialog,
     auditQuery,
     labels,
-    applyQuickRange,
     exportNightlyOpsCsv,
     handleVerifyIntegrity,
     activeFilterPairs,

@@ -77,6 +77,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     { to: '/customers', label: navigationText.pages.customers, icon: <Users size={20} /> },
     { to: '/dresses', label: navigationText.pages.dresses, icon: <Shirt size={20} /> },
     { to: '/payments', label: navigationText.pages.payments, icon: <Banknote size={20} /> },
+    { to: '/disbursements', label: navigationText.pages.disbursements, icon: <Banknote size={20} /> },
     { to: '/custody', label: custodyNavLabel, icon: <Warehouse size={20} /> },
     { to: '/reports', label: navigationText.pages.reports, icon: <BarChart3 size={20} /> },
     { to: '/analytics', label: navigationText.pages.analytics, icon: <LineChart size={20} /> },

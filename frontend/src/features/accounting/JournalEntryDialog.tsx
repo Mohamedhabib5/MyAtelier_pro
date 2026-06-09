@@ -9,6 +9,7 @@ import { useMutation } from '@tanstack/react-query';
 import { createJournalEntry, postJournalEntry, updateJournalEntry, ChartAccountRecord, JournalEntryRecord } from './api';
 import { queryClient } from '../../lib/queryClient';
 import { AppDateField } from '../../components/inputs/AppDateField';
+import { getLocalDateStr } from '../../lib/dates';
 
 type Props = {
   open: boolean;
@@ -31,7 +32,7 @@ export function JournalEntryDialog({ open, onClose, accounts, isAr, entry }: Pro
     { accountId: '', description: '', debit: '', credit: '' },
     { accountId: '', description: '', debit: '', credit: '' },
   ]);
-  const [entryDate, setEntryDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [entryDate, setEntryDate] = useState(() => getLocalDateStr());
   const [reference, setReference] = useState('');
   const [notes, setNotes] = useState('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -55,7 +56,7 @@ export function JournalEntryDialog({ open, onClose, accounts, isAr, entry }: Pro
           { accountId: '', description: '', debit: '', credit: '' },
           { accountId: '', description: '', debit: '', credit: '' },
         ]);
-        setEntryDate(new Date().toISOString().split('T')[0]);
+        setEntryDate(getLocalDateStr());
         setReference('');
         setNotes('');
       }
@@ -99,7 +100,7 @@ export function JournalEntryDialog({ open, onClose, accounts, isAr, entry }: Pro
       { accountId: '', description: '', debit: '', credit: '' },
       { accountId: '', description: '', debit: '', credit: '' },
     ]);
-    setEntryDate(new Date().toISOString().split('T')[0]);
+    setEntryDate(getLocalDateStr());
     setReference('');
     setNotes('');
     setErrorMsg(null);
