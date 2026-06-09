@@ -50,10 +50,11 @@ export function presetToRange(preset: DatePreset): { dateFrom: string; dateTo: s
     }
     case 'thisYear': {
       const start = new Date(today.getFullYear(), 0, 1);
-      return { dateFrom: toIso(start), dateTo: toIso(today) };
+      const end = new Date(today.getFullYear(), 11, 31);
+      return { dateFrom: toIso(start), dateTo: toIso(end) };
     }
     case 'all':
-      return { dateFrom: '2000-01-01', dateTo: toIso(today) };
+      return { dateFrom: '2000-01-01', dateTo: '2099-12-31' };
     default:
       return { dateFrom: toIso(startOfMonth(today)), dateTo: toIso(endOfMonth(today)) };
   }
