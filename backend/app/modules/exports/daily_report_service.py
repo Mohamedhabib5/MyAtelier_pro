@@ -99,6 +99,139 @@ def generate_daily_report_html(db: Session, company: Company, report_date: date)
 
     net_collections = total_collections - total_refunds
 
+    # 4. Calculate MTD & YTD Totals (MTD = Month to Date, YTD = Year to Date)
+    start_of_month = report_date.replace(day=1)
+    start_of_year = report_date.replace(month=1, day=1)
+
+    # Sum line prices of active bookings created in MTD
+    mtd_bookings_total = db.query(func.coalesce(func.sum(BookingLine.line_price), 0)).join(Booking).filter(
+        Booking.company_id == company.id,
+        Booking.booking_date >= start_of_month,
+        Booking.booking_date <= report_date,
+        Booking.status != 'cancelled'
+    ).scalar() or Decimal("0.00")
+
+    # Sum line prices of active bookings created in YTD
+    ytd_bookings_total = db.query(func.coalesce(func.sum(BookingLine.line_price), 0)).join(Booking).filter(
+        Booking.company_id == company.id,
+        Booking.booking_date >= start_of_year,
+        Booking.booking_date <= report_date,
+        Booking.status != 'cancelled'
+    ).scalar() or Decimal("0.00")
+
+    # Sum payments collected in MTD (excluding voided and refunds)
+    payments_mtd = db.query(PaymentDocument).filter(
+        PaymentDocument.company_id == company.id,
+        PaymentDocument.payment_date >= start_of_month,
+        PaymentDocument.payment_date <= report_date,
+        PaymentDocument.status != 'voided'
+    ).all()
+
+    mtd_collections_total = Decimal("0.00")
+    for p in payments_mtd:
+        if p.document_kind != "refund":
+            mtd_collections_total += document_total(p)
+
+    # Sum payments collected in YTD (excluding voided and refunds)
+    payments_ytd = db.query(PaymentDocument).filter(
+        PaymentDocument.company_id == company.id,
+        PaymentDocument.payment_date >= start_of_year,
+        PaymentDocument.payment_date <= report_date,
+        PaymentDocument.status != 'voided'
+    ).all()
+
+    ytd_collections_total = Decimal("0.00")
+    for p in payments_ytd:
+        if p.document_kind != "refund":
+            ytd_collections_total += document_total(p)
+
+    # 5. Retrieve bookings for the next two days
+    next_day_1 = report_date + timedelta(days=1)
+    next_day_2 = report_date + timedelta(days=2)
+
+    bookings_day1 = db.query(Booking).join(BookingLine).filter(
+        Booking.company_id == company.id,
+        Booking.status != 'cancelled',
+        BookingLine.service_date == next_day_1,
+        BookingLine.status != 'cancelled'
+    ).distinct().order_by(Booking.booking_number.asc()).all()
+
+    bookings_day2 = db.query(Booking).join(BookingLine).filter(
+        Booking.company_id == company.id,
+        Booking.status != 'cancelled',
+        BookingLine.service_date == next_day_2,
+        BookingLine.status != 'cancelled'
+    ).distinct().order_by(Booking.booking_number.asc()).all()
+
+    # Build next two days bookings tables
+    def format_bookings_day_table(day_date: date, day_bookings: list[Booking]) -> str:
+        if not day_bookings:
+            return f'<div class="no-data">لا توجد حجوزات مجدولة ليوم {day_date.strftime("%Y-%m-%d")}.</div>'
+        
+        table_html = f"""
+        <div style="font-size:14px; font-weight:600; margin: 15px 0 10px 0; color:#475569;">
+            مواعيد يوم {day_date.strftime("%Y-%m-%d")}
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>رقم الحجز</th>
+                    <th>العميل</th>
+                    <th>العروسة / العريس</th>
+                    <th>أرقام الهاتف</th>
+                    <th>نوع الحجز والخدمات المجدولة</th>
+                    <th>إجمالي الحجز</th>
+                    <th>المدفوع</th>
+                    <th>المتبقي</th>
+                    <th>ملاحظات</th>
+                </tr>
+            </thead>
+            <tbody>"""
+        
+        for b in day_bookings:
+            # Lines scheduled for this day
+            day_lines = [line for line in b.lines if line.service_date == day_date and line.status != 'cancelled']
+            lines_desc = []
+            for line in day_lines:
+                dress_info = f" (فستان: {line.dress.code})" if line.dress else ""
+                lines_desc.append(f"{line.service.name} - {line.department.name}{dress_info}")
+            lines_summary = "<br/>".join(lines_desc) if lines_desc else "خدمات أخرى"
+            
+            # Bride & Groom names
+            groom_bride = []
+            if b.customer.bride_name:
+                groom_bride.append(f"العروسة: {b.customer.bride_name}")
+            if b.customer.groom_name:
+                groom_bride.append(f"العريس: {b.customer.groom_name}")
+            groom_bride_summary = "<br/>".join(groom_bride) if groom_bride else "غير مسجل"
+            
+            # Phones
+            phones = []
+            if b.customer.phone:
+                phones.append(b.customer.phone)
+            if b.customer.phone_2:
+                phones.append(b.customer.phone_2)
+            phones_summary = "<br/>".join(phones) if phones else "-"
+            
+            table_html += f"""
+                <tr>
+                    <td><b>{b.booking_number}</b></td>
+                    <td>{b.customer.full_name}</td>
+                    <td>{groom_bride_summary}</td>
+                    <td>{phones_summary}</td>
+                    <td>{lines_summary}</td>
+                    <td>{float(booking_total_amount(b)):,.2f}</td>
+                    <td>{float(booking_paid_total(b)):,.2f}</td>
+                    <td>{float(booking_remaining_amount(b)):,.2f}</td>
+                    <td>{b.notes or '-'}</td>
+                </tr>"""
+        
+        table_html += "</tbody></table>"
+        return table_html
+
+    next_days_html = format_bookings_day_table(next_day_1, bookings_day1)
+    next_days_html += format_bookings_day_table(next_day_2, bookings_day2)
+
     # HTML/CSS Premium Template in RTL
     html = f"""<!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -265,6 +398,30 @@ def generate_daily_report_html(db: Session, company: Company, report_date: date)
             </div>
         </div>
 
+        <!-- ملخصات الشهر والسنة (MTD & YTD Summary) -->
+        <div class="section-title">ملخص مبيعات وتحصيلات الشهر والسنة</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>الفترة</th>
+                    <th>إجمالي الحجوزات (المبيعات)</th>
+                    <th>إجمالي التحصيلات (المقبوضات)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><b>منذ بداية الشهر (MTD)</b></td>
+                    <td><b>{float(mtd_bookings_total):,.2f} {company.default_currency}</b></td>
+                    <td><b>{float(mtd_collections_total):,.2f} {company.default_currency}</b></td>
+                </tr>
+                <tr>
+                    <td><b>منذ بداية السنة (YTD)</b></td>
+                    <td><b>{float(ytd_bookings_total):,.2f} {company.default_currency}</b></td>
+                    <td><b>{float(ytd_collections_total):,.2f} {company.default_currency}</b></td>
+                </tr>
+            </tbody>
+        </table>
+
         <!-- Bookings Section -->
         <div class="section-title">الحجوزات الجديدة المصممة اليوم</div>
         """
@@ -316,6 +473,10 @@ def generate_daily_report_html(db: Session, company: Company, report_date: date)
                     <td>{b.notes or '-'}</td>
                 </tr>"""
         html += "</tbody></table>"
+
+    # Next Two Days Appointments Section
+    html += '<div class="section-title">حجوزات ومواعيد اليومين التاليين</div>'
+    html += next_days_html
 
     # Payments Section
     html += '<div class="section-title">تفاصيل التحصيل وحركة الصندوق اليومية</div>'
@@ -531,7 +692,7 @@ def delete_daily_report_config(db: Session, config_id: str, company_id: str) -> 
         db.commit()
 
 
-def run_test_report_for_config(db: Session, config_id: str, company_id: str) -> dict:
+def run_test_report_for_config(db: Session, config_id: str, company_id: str, report_date: date | None = None) -> dict:
     company = get_company_settings(db)
     config = db.query(DailyEmailReportConfig).filter(
         DailyEmailReportConfig.id == config_id,
@@ -545,10 +706,10 @@ def run_test_report_for_config(db: Session, config_id: str, company_id: str) -> 
     except Exception as e:
         return {"success": False, "error": f"فشل فك تشفير كلمة المرور: {str(e)}"}
 
-    today = date.today()
+    target_date = report_date or date.today()
     try:
-        html_content = generate_daily_report_html(db, company, today)
-        subject = f"بريد تجريبي: التقرير اليومي لحجوزات وحصيلة يوم {today.strftime('%Y-%m-%d')} - {config.name}"
+        html_content = generate_daily_report_html(db, company, target_date)
+        subject = f"بريد تجريبي: التقرير اليومي لحجوزات وحصيلة يوم {target_date.strftime('%Y-%m-%d')} - {config.name}"
         
         send_email_report(
             sender_email=config.sender_email,

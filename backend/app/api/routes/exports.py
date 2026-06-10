@@ -417,6 +417,7 @@ def delete_daily_report_route(
 def test_daily_report_route(
     config_id: str,
     request: Request,
+    report_date: str | None = Query(default=None),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_exports_manage)
 ) -> dict:
@@ -425,7 +426,17 @@ def test_daily_report_route(
     from app.modules.core_platform.audit import record_audit
     
     company = get_company_settings(db)
-    res = run_test_report_for_config(db, config_id, company.id)
+    
+    target_date = None
+    if report_date:
+        from datetime import datetime
+        from fastapi import HTTPException
+        try:
+            target_date = datetime.strptime(report_date, "%Y-%m-%d").date()
+        except ValueError:
+            raise HTTPException(status_code=400, detail="صيغة التاريخ غير صحيحة، يجب أن تكون YYYY-MM-DD")
+            
+    res = run_test_report_for_config(db, config_id, company.id, target_date)
     
     record_audit(
         db,
@@ -434,6 +445,7 @@ def test_daily_report_route(
         target_type="daily_report_config",
         target_id=config_id,
         summary=f"Ran test dispatch for daily email report config ID {config_id}",
+        diff={"report_date": report_date} if report_date else None
     )
     
     return res

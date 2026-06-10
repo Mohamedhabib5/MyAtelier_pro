@@ -186,18 +186,32 @@ def create_app(settings_obj: Settings | None = None) -> FastAPI:
         
         # Content Security Policy (CSP)
         if not is_download:
-            # Allow self, data: for images, and unsafe-inline for MUI styles
-            csp = (
-                "default-src 'self'; "
-                "script-src 'self'; "
-                "style-src 'self' 'unsafe-inline'; "
-                "img-src 'self' data: blob:; "
-                "connect-src 'self'; "
-                "font-src 'self' data:; "
-                "frame-ancestors 'none'; "
-                "base-uri 'self'; "
-                "form-action 'self';"
-            )
+            is_docs = request.url.path in ('/docs', '/openapi.json', '/redoc') or request.url.path.startswith('/docs')
+            if is_docs:
+                csp = (
+                    "default-src 'self'; "
+                    "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+                    "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+                    "img-src 'self' data: blob: https://fastapi.tiangolo.com; "
+                    "connect-src 'self'; "
+                    "font-src 'self' data:; "
+                    "frame-ancestors 'none'; "
+                    "base-uri 'self'; "
+                    "form-action 'self';"
+                )
+            else:
+                # Allow self, data: for images, and unsafe-inline for MUI styles
+                csp = (
+                    "default-src 'self'; "
+                    "script-src 'self'; "
+                    "style-src 'self' 'unsafe-inline'; "
+                    "img-src 'self' data: blob:; "
+                    "connect-src 'self'; "
+                    "font-src 'self' data:; "
+                    "frame-ancestors 'none'; "
+                    "base-uri 'self'; "
+                    "form-action 'self';"
+                )
             response.headers.setdefault('Content-Security-Policy', csp)
         
         if request.url.path.startswith('/api/auth'):

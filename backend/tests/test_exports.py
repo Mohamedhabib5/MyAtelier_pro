@@ -372,3 +372,122 @@ def test_daily_email_report_configs_crud(app_client: TestClient, monkeypatch) ->
     assert resp.status_code == 200
     assert len(resp.json()) == initial_count
 
+
+def test_daily_email_report_html_generation_values(app_client: TestClient) -> None:
+    from datetime import date, timedelta
+    from app.modules.exports.daily_report_service import generate_daily_report_html
+    from app.modules.organization.service import get_company_settings
+    from app.modules.customers.models import Customer
+    from app.modules.bookings.models import Booking
+    
+    login(app_client)
+    customer_id = seed_customer(app_client)
+    service_bundle = seed_service_bundle(app_client)
+    
+    # 1. Update customer with groom/bride names and phone_2 directly in DB
+    session_factory = app_client.app.state.session_factory
+    with session_factory() as db:
+        cust = db.query(Customer).filter(Customer.id == customer_id).first()
+        cust.groom_name = "العريس علي"
+        cust.bride_name = "العروسة سارة"
+        cust.phone_2 = "01099999999"
+        db.commit()
+    
+    # 2. Create bookings:
+    today_date = date.today()
+    tomorrow_date = today_date + timedelta(days=1)
+    after_tomorrow_date = today_date + timedelta(days=2)
+    
+    # Booking 1: Today
+    b1 = create_booking_document(
+        app_client,
+        customer_id,
+        [build_booking_line_payload(service_bundle, service_date=today_date.isoformat(), line_price=1500, initial_payment_amount=500)],
+        booking_date=today_date.isoformat()
+    )
+    
+    # Booking 2: Tomorrow (scheduled on tomorrow_date)
+    b2 = create_booking_document(
+        app_client,
+        customer_id,
+        [build_booking_line_payload(service_bundle, service_date=tomorrow_date.isoformat(), line_price=2000, initial_payment_amount=800)],
+        booking_date=today_date.isoformat()
+    )
+    
+    # Booking 3: After Tomorrow (scheduled on after_tomorrow_date)
+    b3 = create_booking_document(
+        app_client,
+        customer_id,
+        [build_booking_line_payload(service_bundle, service_date=after_tomorrow_date.isoformat(), line_price=3000, initial_payment_amount=1000)],
+        booking_date=today_date.isoformat()
+    )
+    
+    # Generate HTML report for today
+    with session_factory() as db:
+        company = get_company_settings(db)
+        html = generate_daily_report_html(db, company, today_date)
+        
+    # Assert MTD/YTD sections exist
+    assert "ملخص مبيعات وتحصيلات الشهر والسنة" in html
+    assert "منذ بداية الشهر (MTD)" in html
+    assert "منذ بداية السنة (YTD)" in html
+    
+    # Assert next two days section exists
+    assert "حجوزات ومواعيد اليومين التاليين" in html
+    assert f"مواعيد يوم {tomorrow_date.strftime('%Y-%m-%d')}" in html
+    assert f"مواعيد يوم {after_tomorrow_date.strftime('%Y-%m-%d')}" in html
+    
+    # Assert groom and bride details exist in the tomorrow/after tomorrow lists
+    assert "العروسة: العروسة سارة" in html
+    assert "العريس: العريس علي" in html
+    assert "01099999999" in html
+    assert "01010010010" in html # seed_customer phone
+
+
+def test_daily_report_test_endpoint_custom_date(app_client: TestClient, monkeypatch) -> None:
+    login(app_client)
+    
+    # 1. Create a config first
+    create_payload = {
+        "name": "Custom Date Config",
+        "sender_email": "sender@gmail.com",
+        "sender_password": "supersecretpassword123",
+        "recipient_email": "recipient@gmail.com",
+        "send_hour": 18,
+        "is_active": True
+    }
+    resp = app_client.post('/api/exports/daily-reports', json=create_payload)
+    assert resp.status_code == 200
+    config_id = resp.json()["id"]
+    
+    # Mock send_email_report to inspect parameters
+    sent_reports = []
+    def mock_send_email_report(*args, **kwargs):
+        sent_reports.append((args, kwargs))
+        return True
+    
+    import app.modules.exports.daily_report_service as drs
+    monkeypatch.setattr(drs, "send_email_report", mock_send_email_report)
+    
+    # 2. Test successful dispatch with custom date
+    resp = app_client.post(f'/api/exports/daily-reports/{config_id}/test?report_date=2026-06-05')
+    assert resp.status_code == 200
+    assert resp.json()["success"] is True
+    assert len(sent_reports) == 1
+    
+    # Check that the subject/html reflects the custom date
+    kwargs = sent_reports[0][1]
+    assert "2026-06-05" in kwargs["subject"]
+    assert "2026-06-05" in kwargs["html_content"]
+    
+    # 3. Test invalid date formats
+    resp = app_client.post(f'/api/exports/daily-reports/{config_id}/test?report_date=invalid-date')
+    assert resp.status_code == 400
+    assert "صيغة التاريخ غير صحيحة" in resp.json()["detail"]
+    
+    resp = app_client.post(f'/api/exports/daily-reports/{config_id}/test?report_date=2026-13-45')
+    assert resp.status_code == 400
+    assert "صيغة التاريخ غير صحيحة" in resp.json()["detail"]
+
+
+
