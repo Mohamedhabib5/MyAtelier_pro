@@ -23,7 +23,7 @@ export function GeneralCompanyView() {
   const [branchName, setBranchName] = useState('');
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-
+  
   const companyQuery = useQuery({ queryKey: ['settings', 'company'], queryFn: getCompany });
   const activeBranchQuery = useQuery({ queryKey: ['settings', 'active-branch'], queryFn: getActiveBranch });
   
@@ -71,6 +71,18 @@ export function GeneralCompanyView() {
     },
   });
 
+  const handleSave = () => {
+    const payload = {
+      name,
+      legal_name: legalName || null,
+      default_currency: currency,
+      dresses_mode: dressesMode,
+    };
+    void saveCompanyMutation.mutateAsync(payload);
+  };
+
+  const isAr = language === 'ar';
+
   return (
     <Stack spacing={3}>
       {message ? <Alert severity='success'>{message}</Alert> : null}
@@ -78,43 +90,45 @@ export function GeneralCompanyView() {
 
       <Grid container spacing={3}>
         <Grid size={{ xs: 12, md: 7 }}>
-          <SectionCard title={settingsText.company.title} subtitle={settingsText.company.subtitle}>
-            <Stack spacing={2}>
-              <TextField label={settingsText.company.name} value={name} onChange={(event) => setName(event.target.value)} />
-              <TextField label={settingsText.company.legalName} value={legalName} onChange={(event) => setLegalName(event.target.value)} />
-              <TextField label={settingsText.company.currency} value={currency} onChange={(event) => setCurrency(event.target.value.toUpperCase())} />
-              
-              <TextField
-                select
-                SelectProps={{ native: true }}
-                label={language === 'ar' ? 'نظام تشغيل الفساتين' : 'Dresses Operating Mode'}
-                value={dressesMode}
-                disabled={hasDresses}
-                onChange={(event) => setDressesMode(event.target.value)}
-                helperText={
-                  hasDresses
-                    ? (language === 'ar'
-                        ? 'تم قفل هذا الخيار لوجود فساتين مدخلة بالفعل في النظام.'
-                        : 'This setting is locked because there are already dresses in the system.')
-                    : (language === 'ar'
-                        ? 'تحديد ما إذا كانت الفساتين حرة بالكامل أو مرتبطة إجبارياً بخدمات الصالون.'
-                        : 'Determine whether dresses are completely free or strictly coupled to salon services.')
-                }
-              >
-                <option value="free">{language === 'ar' ? 'نظام تشغيل حر (مفصول بالكامل)' : 'Free operating mode (fully decoupled)'}</option>
-                <option value="coupled">{language === 'ar' ? 'نظام تشغيل مرتبط بالخدمات' : 'Coupled operating mode (strictly linked)'}</option>
-              </TextField>
+          <Stack spacing={3}>
+            <SectionCard title={settingsText.company.title} subtitle={settingsText.company.subtitle}>
+              <Stack spacing={2}>
+                <TextField label={settingsText.company.name} value={name} onChange={(event) => setName(event.target.value)} />
+                <TextField label={settingsText.company.legalName} value={legalName} onChange={(event) => setLegalName(event.target.value)} />
+                <TextField label={settingsText.company.currency} value={currency} onChange={(event) => setCurrency(event.target.value.toUpperCase())} />
+                
+                <TextField
+                  select
+                  SelectProps={{ native: true }}
+                  label={language === 'ar' ? 'نظام تشغيل الفساتين' : 'Dresses Operating Mode'}
+                  value={dressesMode}
+                  disabled={hasDresses}
+                  onChange={(event) => setDressesMode(event.target.value)}
+                  helperText={
+                    hasDresses
+                      ? (language === 'ar'
+                          ? 'تم قفل هذا الخيار لوجود فساتين مدخلة بالفعل في النظام.'
+                          : 'This setting is locked because there are already dresses in the system.')
+                      : (language === 'ar'
+                          ? 'تحديد ما إذا كانت الفساتين حرة بالكامل أو مرتبطة إجبارياً بخدمات الصالون.'
+                          : 'Determine whether dresses are completely free or strictly coupled to salon services.')
+                  }
+                >
+                  <option value="free">{language === 'ar' ? 'نظام تشغيل حر (مفصول بالكامل)' : 'Free operating mode (fully decoupled)'}</option>
+                  <option value="coupled">{language === 'ar' ? 'نظام تشغيل مرتبط بالخدمات' : 'Coupled operating mode (strictly linked)'}</option>
+                </TextField>
 
-              <Button 
-                variant='contained' 
-                startIcon={<SaveOutlinedIcon />} 
-                onClick={() => void saveCompanyMutation.mutateAsync({ name, legal_name: legalName || null, default_currency: currency, dresses_mode: dressesMode })}
-                disabled={saveCompanyMutation.isPending}
-              >
-                {settingsText.company.save}
-              </Button>
-            </Stack>
-          </SectionCard>
+                <Button 
+                  variant='contained' 
+                  startIcon={<SaveOutlinedIcon />} 
+                  onClick={handleSave}
+                  disabled={saveCompanyMutation.isPending}
+                >
+                  {settingsText.company.save}
+                </Button>
+              </Stack>
+            </SectionCard>
+          </Stack>
         </Grid>
 
         <Grid size={{ xs: 12, md: 5 }}>

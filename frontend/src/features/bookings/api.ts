@@ -44,6 +44,7 @@ export type BookingSummaryRecord = {
   remaining_amount: number;
   notes: string | null;
   external_code: string | null;
+  created_by_name: string | null;
 };
 
 export type BookingDocumentRecord = BookingSummaryRecord & {

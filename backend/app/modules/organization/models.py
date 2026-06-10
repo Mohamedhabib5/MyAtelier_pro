@@ -17,6 +17,14 @@ class Company(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     dresses_mode: Mapped[str] = mapped_column(String(20), default="free", server_default="free", nullable=False)
 
+    # Daily automated email settings (Gmail optimized)
+    daily_report_sender_email: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    daily_report_sender_password: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    daily_report_smtp_server: Mapped[str | None] = mapped_column(String(120), default="smtp.gmail.com", server_default="smtp.gmail.com", nullable=True)
+    daily_report_smtp_port: Mapped[int | None] = mapped_column(Integer, default=587, server_default="587", nullable=True)
+    daily_report_recipient_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    daily_report_send_hour: Mapped[int] = mapped_column(Integer, default=21, server_default="21", nullable=False)
+
     branches = relationship("Branch", back_populates="company", lazy="selectin")
 
 

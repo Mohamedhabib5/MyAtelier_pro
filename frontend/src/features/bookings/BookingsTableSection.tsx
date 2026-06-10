@@ -87,6 +87,8 @@ export function BookingsTableSection({
       { colId: 'total_amount', field: 'total_amount', headerName: bookingsText.table.total, filter: 'agNumberColumnFilter' },
       { colId: 'paid_total', field: 'paid_total', headerName: bookingsText.table.paid, filter: 'agNumberColumnFilter' },
       { colId: 'remaining_amount', field: 'remaining_amount', headerName: bookingsText.table.remaining, filter: 'agNumberColumnFilter' },
+      { colId: 'notes', field: 'notes', headerName: bookingsText.table.notes, valueFormatter: ({ value }) => value ?? EMPTY_VALUE, flex: 1.2 },
+      { colId: 'created_by_name', field: 'created_by_name', headerName: bookingsText.table.createdBy, valueFormatter: ({ value }) => value ?? EMPTY_VALUE, flex: 1.0 },
       {
         colId: 'status',
         headerName: bookingsText.table.status,
@@ -119,7 +121,7 @@ export function BookingsTableSection({
           ) : null,
       },
     ],
-    [bookingsText.page.openDocument, bookingsText.table.bookingNumber, bookingsText.table.bookingDate, bookingsText.table.customer, bookingsText.table.lineCount, bookingsText.table.nextServiceDate, bookingsText.table.paid, bookingsText.table.remaining, bookingsText.table.serviceSummary, bookingsText.table.status, bookingsText.table.total, commonText.actions, commonText.cancel, commonText.delete, language, onDelete, onOpenCancel, onOpenEdit, sortBy, sortDir],
+    [bookingsText.page.openDocument, bookingsText.table.bookingNumber, bookingsText.table.bookingDate, bookingsText.table.customer, bookingsText.table.lineCount, bookingsText.table.nextServiceDate, bookingsText.table.paid, bookingsText.table.remaining, bookingsText.table.serviceSummary, bookingsText.table.status, bookingsText.table.total, bookingsText.table.notes, bookingsText.table.createdBy, commonText.actions, commonText.cancel, commonText.delete, language, onDelete, onOpenCancel, onOpenEdit, sortBy, sortDir],
   );
 
   return (

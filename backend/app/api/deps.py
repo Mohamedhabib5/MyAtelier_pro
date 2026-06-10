@@ -177,6 +177,8 @@ def limit_api_usage(request: Request) -> None:
 
 
 def limit_sensitive_ops(request: Request) -> None:
+    if request.method in ("GET", "HEAD", "OPTIONS"):
+        return
     client_ip = request.client.host if request.client else "unknown"
     if not sensitive_ops_rate_limiter.is_allowed(f"sensitive:{client_ip}"):
         raise RateLimitError()

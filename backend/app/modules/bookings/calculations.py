@@ -118,6 +118,7 @@ def serialize_booking_summary(booking: Booking) -> dict:
         'company_id': booking.company_id,
         'branch_id': booking.branch_id,
         'created_by_user_id': booking.created_by_user_id,
+        'created_by_name': booking.created_by.full_name if booking.created_by else None,
         'updated_by_user_id': booking.updated_by_user_id,
         'entity_version': booking.entity_version,
         'branch_name': booking.branch.name,

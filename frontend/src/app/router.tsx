@@ -26,6 +26,7 @@ const BackupPage = lazy(() => import('../pages/ops/BackupPage'));
 
 // Settings Views
 const GeneralCompanyView = lazy(() => import('../features/settings/views/GeneralCompanyView').then((module) => ({ default: module.GeneralCompanyView })));
+const DailyReportsView = lazy(() => import('../features/settings/views/DailyReportsView').then((module) => ({ default: module.DailyReportsView })));
 const GeneralBackupView = lazy(() => import('../features/settings/views/GeneralBackupView').then((module) => ({ default: module.GeneralBackupView })));
 const GeneralFinancialView = lazy(() => import('../features/settings/views/GeneralFinancialView').then((module) => ({ default: module.GeneralFinancialView })));
 const ThemeSettingsView = lazy(() => import('../features/settings/views/ThemeSettingsView').then((module) => ({ default: module.ThemeSettingsView })));
@@ -76,6 +77,7 @@ export const router = createBrowserRouter([
               { index: true, element: <Navigate to='/settings/general/company' replace /> },
               { path: 'general', element: <Navigate to='/settings/general/company' replace /> },
               { path: 'general/company', element: <GeneralCompanyView /> },
+              { path: 'general/daily-reports', element: <DailyReportsView /> },
               { path: 'general/backups', element: <GeneralBackupView /> },
               { path: 'general/financial', element: <GeneralFinancialView /> },
               { path: 'general/appearance', element: <ThemeSettingsView /> },

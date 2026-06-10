@@ -280,6 +280,7 @@ class BookingsRepository:
             .options(
                 joinedload(Booking.branch),
                 joinedload(Booking.customer),
+                joinedload(Booking.created_by),
                 selectinload(Booking.lines).joinedload(BookingLine.department),
                 selectinload(Booking.lines).joinedload(BookingLine.service).joinedload(ServiceCatalogItem.department),
                 selectinload(Booking.lines).joinedload(BookingLine.dress),

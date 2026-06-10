@@ -43,6 +43,12 @@ class CompanyResponse(BaseModel):
     is_active: bool
     dresses_mode: str
     branches: list[BranchResponse]
+    daily_report_sender_email: str | None = None
+    daily_report_sender_password: str | None = None
+    daily_report_smtp_server: str | None = None
+    daily_report_smtp_port: int | None = None
+    daily_report_recipient_email: str | None = None
+    daily_report_send_hour: int = 21
 
 
 class UpdateCompanyRequest(BaseModel):
@@ -50,6 +56,12 @@ class UpdateCompanyRequest(BaseModel):
     legal_name: str | None = Field(default=None, max_length=180)
     default_currency: str = Field(default='EGP', min_length=3, max_length=3)
     dresses_mode: str = Field(default='free', min_length=2, max_length=20)
+    daily_report_sender_email: str | None = Field(default=None, max_length=120)
+    daily_report_sender_password: str | None = Field(default=None, max_length=255)
+    daily_report_smtp_server: str | None = Field(default='smtp.gmail.com', max_length=120)
+    daily_report_smtp_port: int | None = Field(default=587, ge=1, le=65535)
+    daily_report_recipient_email: str | None = Field(default=None, max_length=255)
+    daily_report_send_hour: int = Field(default=21, ge=0, le=23)
 
 
 class FiscalPeriodResponse(BaseModel):

@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from typing import Literal
 
@@ -57,3 +57,40 @@ class ExportScheduleRunDueResponse(BaseModel):
     delivery_sent: bool
     delivery_detail: str
     runs: list[ExportScheduleRunDueItem]
+
+
+class DailyEmailReportConfigResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    company_id: str
+    name: str
+    sender_email: str
+    sender_password: str
+    smtp_server: str
+    smtp_port: int
+    recipient_email: str
+    send_hour: int
+    is_active: bool
+
+
+class DailyEmailReportConfigCreateRequest(BaseModel):
+    name: str = Field(min_length=2, max_length=120)
+    sender_email: str = Field(min_length=5, max_length=120)
+    sender_password: str = Field(min_length=1, max_length=255)
+    smtp_server: str = Field(default='smtp.gmail.com', max_length=120)
+    smtp_port: int = Field(default=587, ge=1, le=65535)
+    recipient_email: str = Field(min_length=5, max_length=255)
+    send_hour: int = Field(default=21, ge=0, le=23)
+    is_active: bool = True
+
+
+class DailyEmailReportConfigUpdateRequest(BaseModel):
+    name: str | None = Field(default=None, min_length=2, max_length=120)
+    sender_email: str | None = Field(default=None, min_length=5, max_length=120)
+    sender_password: str | None = Field(default=None, min_length=1, max_length=255)
+    smtp_server: str | None = Field(default=None, max_length=120)
+    smtp_port: int | None = Field(default=None, ge=1, le=65535)
+    recipient_email: str | None = Field(default=None, min_length=5, max_length=255)
+    send_hour: int | None = Field(default=None, ge=0, le=23)
+    is_active: bool | None = None

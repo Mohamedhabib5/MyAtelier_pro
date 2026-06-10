@@ -7,6 +7,8 @@ EXPORT_TRANSLATIONS_AR = {
     'customer_phone': 'رقم الهاتف',
     'customer_address': 'العنوان',
     'notes': 'ملاحظات',
+    'external_code': 'كود خارجي',
+    'created_by_name': 'منفذ العملية',
     'status': 'الحالة',
     'total_amount': 'المبلغ الإجمالي',
     'paid_total': 'إجمالي المدفوع',

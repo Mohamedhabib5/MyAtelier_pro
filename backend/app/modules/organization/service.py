@@ -78,7 +78,23 @@ def update_company_settings(db: Session, payload: UpdateCompanyRequest, actor_us
     company.name = payload.name.strip()
     company.legal_name = payload.legal_name.strip() if payload.legal_name else None
     company.default_currency = payload.default_currency.upper()
-    record_audit(db, actor_user_id=actor_user_id, action='company.updated', target_type='company', target_id=company.id, summary=f'Updated company settings for {company.name}', diff={'name': company.name, 'default_currency': company.default_currency, 'dresses_mode': company.dresses_mode})
+    
+    # Save daily email report settings
+    company.daily_report_sender_email = payload.daily_report_sender_email.strip() if payload.daily_report_sender_email else None
+    company.daily_report_sender_password = payload.daily_report_sender_password.strip() if payload.daily_report_sender_password else None
+    company.daily_report_smtp_server = payload.daily_report_smtp_server.strip() if payload.daily_report_smtp_server else 'smtp.gmail.com'
+    company.daily_report_smtp_port = payload.daily_report_smtp_port if payload.daily_report_smtp_port is not None else 587
+    company.daily_report_recipient_email = payload.daily_report_recipient_email.strip() if payload.daily_report_recipient_email else None
+    company.daily_report_send_hour = payload.daily_report_send_hour
+
+    record_audit(db, actor_user_id=actor_user_id, action='company.updated', target_type='company', target_id=company.id, summary=f'Updated company settings for {company.name}', diff={
+        'name': company.name, 
+        'default_currency': company.default_currency, 
+        'dresses_mode': company.dresses_mode,
+        'daily_report_sender_email': company.daily_report_sender_email,
+        'daily_report_recipient_email': company.daily_report_recipient_email,
+        'daily_report_send_hour': company.daily_report_send_hour
+    })
     db.commit()
     return repo.get_primary_company() or company
 

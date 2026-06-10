@@ -16,6 +16,12 @@ export type CompanyRecord = {
   is_active: boolean;
   dresses_mode: string;
   branches: BranchRecord[];
+  daily_report_sender_email?: string | null;
+  daily_report_sender_password?: string | null;
+  daily_report_smtp_server?: string | null;
+  daily_report_smtp_port?: number | null;
+  daily_report_recipient_email?: string | null;
+  daily_report_send_hour?: number;
 };
 
 export type BackupRecord = {
@@ -40,6 +46,12 @@ export type UpdateCompanyPayload = {
   legal_name?: string | null;
   default_currency: string;
   dresses_mode: string;
+  daily_report_sender_email?: string | null;
+  daily_report_sender_password?: string | null;
+  daily_report_smtp_server?: string | null;
+  daily_report_smtp_port?: number | null;
+  daily_report_recipient_email?: string | null;
+  daily_report_send_hour?: number;
 };
 
 export type CreateBranchPayload = {
@@ -332,6 +344,60 @@ export function importChartOfAccounts(file: File): Promise<{ message: string }> 
   return apiRequest<{ message: string }>('/api/accounting/chart-of-accounts/import', {
     method: 'POST',
     body: formData,
+  });
+}
+
+export type DailyReportConfigRecord = {
+  id: string;
+  company_id: string;
+  name: string;
+  sender_email: string;
+  sender_password: string;
+  smtp_server: string;
+  smtp_port: number;
+  recipient_email: string;
+  send_hour: number;
+  is_active: boolean;
+};
+
+export type CreateDailyReportConfigPayload = {
+  name: string;
+  sender_email: string;
+  sender_password: string;
+  smtp_server?: string;
+  smtp_port?: number;
+  recipient_email: string;
+  send_hour: number;
+  is_active: boolean;
+};
+
+export type UpdateDailyReportConfigPayload = Partial<CreateDailyReportConfigPayload>;
+
+export function listDailyReportConfigs(): Promise<DailyReportConfigRecord[]> {
+  return apiRequest<DailyReportConfigRecord[]>('/api/exports/daily-reports', { method: 'GET' });
+}
+
+export function createDailyReportConfig(payload: CreateDailyReportConfigPayload): Promise<DailyReportConfigRecord> {
+  return apiRequest<DailyReportConfigRecord>('/api/exports/daily-reports', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateDailyReportConfig(id: string, payload: UpdateDailyReportConfigPayload): Promise<DailyReportConfigRecord> {
+  return apiRequest<DailyReportConfigRecord>(`/api/exports/daily-reports/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteDailyReportConfig(id: string): Promise<void> {
+  return apiRequest<void>(`/api/exports/daily-reports/${id}`, { method: 'DELETE' });
+}
+
+export function testDailyReportConfig(id: string): Promise<{ success: boolean; message?: string; error?: string }> {
+  return apiRequest<{ success: boolean; message?: string; error?: string }>(`/api/exports/daily-reports/${id}/test`, {
+    method: 'POST',
   });
 }
 

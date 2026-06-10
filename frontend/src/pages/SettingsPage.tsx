@@ -13,6 +13,7 @@ export function SettingsPage() {
       path: '/settings/general',
       subTabs: [
         { label: settingsText.tabs.company, path: '/settings/general/company' },
+        { label: settingsText.tabs.dailyReports || 'التقارير البريدية اليومية', path: '/settings/general/daily-reports' },
         { label: settingsText.tabs.backups, path: '/settings/general/backups' },
         { label: settingsText.tabs.financial, path: '/settings/general/financial' },
         { label: settingsText.tabs.appearance, path: '/settings/general/appearance' },

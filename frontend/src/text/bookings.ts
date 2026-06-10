@@ -24,6 +24,8 @@ const bookingsText = {
       serviceSummary: 'ملخص الخدمات',
       status: 'الحالة',
       total: 'الإجمالي',
+      notes: 'الملاحظات',
+      createdBy: 'منفذ العملية',
     },
     editor: {
       addCustomer: 'إضافة عميل',
@@ -107,6 +109,8 @@ const bookingsText = {
       serviceSummary: 'Service summary',
       status: 'Status',
       total: 'Total',
+      notes: 'Notes',
+      createdBy: 'Created by',
     },
     editor: {
       addCustomer: 'Add customer',

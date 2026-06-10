@@ -61,6 +61,7 @@ class BookingSummaryResponse(BaseModel):
     remaining_amount: float
     notes: str | None
     external_code: str | None
+    created_by_name: str | None = None
 
 
 class BookingDocumentResponse(BookingSummaryResponse):

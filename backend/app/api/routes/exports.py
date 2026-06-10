@@ -6,7 +6,17 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import require_exports_manage, require_exports_view
 from app.db.session import get_db
-from app.modules.exports.schemas import ExportScheduleCreateRequest, ExportScheduleResponse, ExportScheduleRunDueRequest, ExportScheduleRunDueResponse, ExportScheduleRunResponse, ExportScheduleToggleResponse
+from app.modules.exports.schemas import (
+    ExportScheduleCreateRequest,
+    ExportScheduleResponse,
+    ExportScheduleRunDueRequest,
+    ExportScheduleRunDueResponse,
+    ExportScheduleRunResponse,
+    ExportScheduleToggleResponse,
+    DailyEmailReportConfigResponse,
+    DailyEmailReportConfigCreateRequest,
+    DailyEmailReportConfigUpdateRequest,
+)
 from app.modules.exports.schedule_service import create_export_schedule, list_export_schedules, run_due_export_schedules, run_export_schedule, toggle_export_schedule
 from app.modules.exports.pdf_service import build_simple_pdf_report, finance_pdf_lines, reports_pdf_lines
 from app.modules.exports.service import (
@@ -273,6 +283,160 @@ def run_due_export_schedules_route(
         trigger_source=payload.trigger_source,
     )
     return ExportScheduleRunDueResponse.model_validate(result)
+
+
+@router.post('/schedules/run-due-reports')
+def run_due_reports_route(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_exports_manage),
+) -> dict:
+    from app.modules.exports.daily_report_service import check_and_run_due_reports
+    from app.modules.core_platform.automation_audit import record_automation_job_run
+    
+    res = check_and_run_due_reports(db)
+    
+    record_automation_job_run(
+        db,
+        actor_user_id=current_user.id,
+        job_key="exports.daily_email_reports_dispatch",
+        summary="Dispatched daily email reports to active configs",
+        trigger_source="manual",
+        success=bool(res.get("failed_date") is None),
+        diff=res
+    )
+    return res
+
+
+@router.get('/daily-reports', response_model=list[DailyEmailReportConfigResponse])
+def get_daily_reports_route(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_exports_manage)
+) -> list[DailyEmailReportConfigResponse]:
+    from app.modules.organization.service import get_company_settings
+    from app.modules.exports.daily_report_service import list_daily_report_configs
+    company = get_company_settings(db)
+    configs = list_daily_report_configs(db, company.id)
+    return [DailyEmailReportConfigResponse.model_validate(c) for c in configs]
+
+
+@router.post('/daily-reports', response_model=DailyEmailReportConfigResponse)
+def create_daily_report_route(
+    payload: DailyEmailReportConfigCreateRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_exports_manage)
+) -> DailyEmailReportConfigResponse:
+    from app.modules.organization.service import get_company_settings
+    from app.modules.exports.daily_report_service import create_daily_report_config
+    from app.modules.core_platform.audit import record_audit
+    
+    company = get_company_settings(db)
+    config = create_daily_report_config(db, company.id, payload)
+    
+    record_audit(
+        db,
+        actor_user_id=current_user.id,
+        action="export.daily_report_config_created",
+        target_type="daily_report_config",
+        target_id=config["id"],
+        summary=f"Created daily email report configuration: {config['name']}",
+        diff={
+            "name": config["name"],
+            "sender_email": config["sender_email"],
+            "recipient_email": config["recipient_email"],
+            "send_hour": config["send_hour"],
+            "is_active": config["is_active"],
+        }
+    )
+    
+    return DailyEmailReportConfigResponse.model_validate(config)
+
+
+@router.patch('/daily-reports/{config_id}', response_model=DailyEmailReportConfigResponse)
+def update_daily_report_route(
+    config_id: str,
+    payload: DailyEmailReportConfigUpdateRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_exports_manage)
+) -> DailyEmailReportConfigResponse:
+    from app.modules.organization.service import get_company_settings
+    from app.modules.exports.daily_report_service import update_daily_report_config
+    from app.modules.core_platform.audit import record_audit
+    
+    company = get_company_settings(db)
+    config = update_daily_report_config(db, config_id, company.id, payload)
+    
+    record_audit(
+        db,
+        actor_user_id=current_user.id,
+        action="export.daily_report_config_updated",
+        target_type="daily_report_config",
+        target_id=config["id"],
+        summary=f"Updated daily email report configuration: {config['name']}",
+        diff={
+            "name": config["name"],
+            "sender_email": config["sender_email"],
+            "recipient_email": config["recipient_email"],
+            "send_hour": config["send_hour"],
+            "is_active": config["is_active"],
+        }
+    )
+    
+    return DailyEmailReportConfigResponse.model_validate(config)
+
+
+@router.delete('/daily-reports/{config_id}')
+def delete_daily_report_route(
+    config_id: str,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_exports_manage)
+) -> dict:
+    from app.modules.organization.service import get_company_settings
+    from app.modules.exports.daily_report_service import delete_daily_report_config
+    from app.modules.core_platform.audit import record_audit
+    
+    company = get_company_settings(db)
+    delete_daily_report_config(db, config_id, company.id)
+    
+    record_audit(
+        db,
+        actor_user_id=current_user.id,
+        action="export.daily_report_config_deleted",
+        target_type="daily_report_config",
+        target_id=config_id,
+        summary=f"Deleted daily email report configuration ID {config_id}",
+    )
+    
+    return {"success": True}
+
+
+@router.post('/daily-reports/{config_id}/test')
+def test_daily_report_route(
+    config_id: str,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_exports_manage)
+) -> dict:
+    from app.modules.organization.service import get_company_settings
+    from app.modules.exports.daily_report_service import run_test_report_for_config
+    from app.modules.core_platform.audit import record_audit
+    
+    company = get_company_settings(db)
+    res = run_test_report_for_config(db, config_id, company.id)
+    
+    record_audit(
+        db,
+        actor_user_id=current_user.id,
+        action="export.daily_report_config_test_run",
+        target_type="daily_report_config",
+        target_id=config_id,
+        summary=f"Ran test dispatch for daily email report config ID {config_id}",
+    )
+    
+    return res
 
 
 @router.post('/tickets')

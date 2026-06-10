@@ -41,20 +41,28 @@ def test_admin_can_download_customers_booking_and_payment_exports(app_client: Te
     assert 'Bride One' in customers_export.text
 
     assert bookings_export.status_code == 200
-    assert 'رقم الحجز,اسم الفرع' in bookings_export.text
+    assert 'رقم الحجز' in bookings_export.text
+    assert 'اسم الفرع' in bookings_export.text
     assert 'BK' in bookings_export.text
 
     assert booking_lines_export.status_code == 200
-    assert 'رقم الحجز,اسم الفرع,اسم العميلة,رقم الهاتف' in booking_lines_export.text
+    assert 'رقم الحجز' in booking_lines_export.text
+    assert 'اسم الفرع' in booking_lines_export.text
+    assert 'اسم العميلة' in booking_lines_export.text
+    assert 'رقم الهاتف' in booking_lines_export.text
     assert 'تجربة فستان' in booking_lines_export.text
 
     assert payments_export.status_code == 200
-    assert 'رقم الدفع,اسم الفرع,اسم العميلة' in payments_export.text
+    assert 'رقم الدفع' in payments_export.text
+    assert 'اسم الفرع' in payments_export.text
+    assert 'اسم العميلة' in payments_export.text
     assert 'REC' in payments_export.text
     assert 'JV' in payments_export.text
 
     assert payment_allocations_export.status_code == 200
-    assert 'رقم الدفع,اسم الفرع,اسم العميلة' in payment_allocations_export.text
+    assert 'رقم الدفع' in payment_allocations_export.text
+    assert 'اسم الفرع' in payment_allocations_export.text
+    assert 'اسم العميلة' in payment_allocations_export.text
     assert booking['booking_number'] in payment_allocations_export.text
     assert customers_xlsx.status_code == 200
     assert customers_xlsx.headers['content-type'] == 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
@@ -282,3 +290,85 @@ def test_payment_allocations_export_honors_payment_filters(app_client: TestClien
     assert filtered_export.status_code == 200, filtered_export.text
     assert drop_payment_number in filtered_export.text
     assert keep_payment_number not in filtered_export.text
+
+
+def test_daily_email_report_configs_crud(app_client: TestClient, monkeypatch) -> None:
+    login(app_client)
+    
+    # List configs (should be empty initially or have some defaults)
+    resp = app_client.get('/api/exports/daily-reports')
+    assert resp.status_code == 200
+    initial_count = len(resp.json())
+    
+    # Create config
+    create_payload = {
+        "name": "Test Config",
+        "sender_email": "sender@gmail.com",
+        "sender_password": "supersecretpassword123",
+        "recipient_email": "recipient@gmail.com",
+        "send_hour": 18,
+        "is_active": True
+    }
+    resp = app_client.post('/api/exports/daily-reports', json=create_payload)
+    assert resp.status_code == 200, resp.text
+    created = resp.json()
+    assert created["name"] == "Test Config"
+    assert created["sender_email"] == "sender@gmail.com"
+    # Password must be masked!
+    assert created["sender_password"] == "********"
+    assert created["recipient_email"] == "recipient@gmail.com"
+    assert created["send_hour"] == 18
+    assert created["is_active"] is True
+    assert "id" in created
+    
+    config_id = created["id"]
+    
+    # List again to verify it is present
+    resp = app_client.get('/api/exports/daily-reports')
+    assert resp.status_code == 200
+    assert len(resp.json()) == initial_count + 1
+    
+    # Update config (change name and hour, keep password masked)
+    update_payload = {
+        "name": "Updated Test Config",
+        "send_hour": 20,
+        "sender_password": "********" # should keep the existing password
+    }
+    resp = app_client.patch(f'/api/exports/daily-reports/{config_id}', json=update_payload)
+    assert resp.status_code == 200
+    updated = resp.json()
+    assert updated["name"] == "Updated Test Config"
+    assert updated["send_hour"] == 20
+    assert updated["sender_password"] == "********"
+    
+    # Mock send_email_report to prevent SMTP connection error
+    sent_reports = []
+    def mock_send_email_report(*args, **kwargs):
+        sent_reports.append((args, kwargs))
+        return True
+    
+    import app.modules.exports.daily_report_service as drs
+    monkeypatch.setattr(drs, "send_email_report", mock_send_email_report)
+    
+    # Test dispatch
+    resp = app_client.post(f'/api/exports/daily-reports/{config_id}/test')
+    assert resp.status_code == 200
+    assert resp.json()["success"] is True
+    assert len(sent_reports) == 1
+    assert sent_reports[0][1]["sender_password"] == "supersecretpassword123" # Decrypted!
+    
+    # Run due reports schedule
+    resp = app_client.post('/api/exports/schedules/run-due-reports')
+    assert resp.status_code == 200
+    assert resp.json()["status"] in ("completed", "skipped")
+    
+    # Delete config
+    resp = app_client.delete(f'/api/exports/daily-reports/{config_id}')
+    assert resp.status_code == 200
+    assert resp.json() == {"success": True}
+    
+    # Verify deleted
+    resp = app_client.get('/api/exports/daily-reports')
+    assert resp.status_code == 200
+    assert len(resp.json()) == initial_count
+

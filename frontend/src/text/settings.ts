@@ -92,6 +92,7 @@ const settingsText = {
       twoFactor: 'إعدادات الأمان والـ 2FA',
       exports: 'التصدير والاستخراج',
       appearance: 'المظهر والألوان',
+      dailyReports: 'التقارير البريدية اليومية',
     },
   },
   en: {
@@ -185,6 +186,7 @@ const settingsText = {
       twoFactor: 'Security & 2FA',
       exports: 'Exports & Data',
       appearance: 'Appearance & Theme',
+      dailyReports: 'Daily Email Reports',
     },
   },
 } as const;
