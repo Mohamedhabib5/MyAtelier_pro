@@ -116,6 +116,26 @@ def create_app(settings_obj: Settings | None = None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         _bootstrap_foundation(app, settings_obj)
+        
+        # Start background check for due reports on startup
+        import asyncio
+        from app.modules.exports.daily_report_service import check_and_run_due_reports
+        import logging
+
+        startup_logger = logging.getLogger("app.startup_reports")
+
+        async def run_startup_reports_check():
+            await asyncio.sleep(5)  # non-blocking delay to let the app start
+            startup_logger.info("Starting startup daily email reports check...")
+            try:
+                with app.state.session_factory() as db:
+                    res = check_and_run_due_reports(db)
+                    startup_logger.info(f"Startup daily email reports check completed: {res}")
+            except Exception as e:
+                startup_logger.error(f"Error running startup daily reports check: {str(e)}")
+
+        asyncio.create_task(run_startup_reports_check())
+
         try:
             yield
         finally:

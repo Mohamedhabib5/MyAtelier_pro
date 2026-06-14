@@ -242,6 +242,19 @@ function DailyReportConfigDialog({ open, config, onClose, isAr }: DialogProps) {
   const [recipientEmail, setRecipientEmail] = useState('');
   const [sendHour, setSendHour] = useState(21);
   const [isActive, setIsActive] = useState(true);
+  
+  const [sendDailySummary, setSendDailySummary] = useState(true);
+  const [notifyBookingCreated, setNotifyBookingCreated] = useState(false);
+  const [notifyBookingModified, setNotifyBookingModified] = useState(false);
+  const [notifyPaymentCaptured, setNotifyPaymentCaptured] = useState(false);
+  const [notifyPaymentRefunded, setNotifyPaymentRefunded] = useState(false);
+  const [notifyEntityDeleted, setNotifyEntityDeleted] = useState(true);
+  const [notifyOperationsDaily, setNotifyOperationsDaily] = useState(true);
+  const [notifyFinancialCritical, setNotifyFinancialCritical] = useState(true);
+  const [notifyBackupWarnings, setNotifyBackupWarnings] = useState(true);
+  const [bookingEmailTemplate, setBookingEmailTemplate] = useState('detailed');
+  const [paymentEmailTemplate, setPaymentEmailTemplate] = useState('detailed');
+
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -252,6 +265,17 @@ function DailyReportConfigDialog({ open, config, onClose, isAr }: DialogProps) {
       setRecipientEmail(config.recipient_email);
       setSendHour(config.send_hour);
       setIsActive(config.is_active);
+      setSendDailySummary(config.send_daily_summary ?? true);
+      setNotifyBookingCreated(config.notify_booking_created ?? false);
+      setNotifyBookingModified(config.notify_booking_modified ?? false);
+      setNotifyPaymentCaptured(config.notify_payment_captured ?? false);
+      setNotifyPaymentRefunded(config.notify_payment_refunded ?? false);
+      setNotifyEntityDeleted(config.notify_entity_deleted ?? true);
+      setNotifyOperationsDaily(config.notify_operations_daily ?? true);
+      setNotifyFinancialCritical(config.notify_financial_critical ?? true);
+      setNotifyBackupWarnings(config.notify_backup_warnings ?? true);
+      setBookingEmailTemplate(config.booking_email_template ?? 'detailed');
+      setPaymentEmailTemplate(config.payment_email_template ?? 'detailed');
     } else {
       setName('');
       setSenderEmail('');
@@ -259,6 +283,17 @@ function DailyReportConfigDialog({ open, config, onClose, isAr }: DialogProps) {
       setRecipientEmail('');
       setSendHour(21);
       setIsActive(true);
+      setSendDailySummary(true);
+      setNotifyBookingCreated(false);
+      setNotifyBookingModified(false);
+      setNotifyPaymentCaptured(false);
+      setNotifyPaymentRefunded(false);
+      setNotifyEntityDeleted(true);
+      setNotifyOperationsDaily(true);
+      setNotifyFinancialCritical(true);
+      setNotifyBackupWarnings(true);
+      setBookingEmailTemplate('detailed');
+      setPaymentEmailTemplate('detailed');
     }
   }, [config]);
 
@@ -273,6 +308,17 @@ function DailyReportConfigDialog({ open, config, onClose, isAr }: DialogProps) {
         is_active: isActive,
         smtp_server: 'smtp.gmail.com',
         smtp_port: 587,
+        send_daily_summary: sendDailySummary,
+        notify_booking_created: notifyBookingCreated,
+        notify_booking_modified: notifyBookingModified,
+        notify_payment_captured: notifyPaymentCaptured,
+        notify_payment_refunded: notifyPaymentRefunded,
+        notify_entity_deleted: notifyEntityDeleted,
+        notify_operations_daily: notifyOperationsDaily,
+        notify_financial_critical: notifyFinancialCritical,
+        notify_backup_warnings: notifyBackupWarnings,
+        booking_email_template: bookingEmailTemplate,
+        payment_email_template: paymentEmailTemplate,
       };
       if (config) {
         await updateDailyReportConfig(config.id, payload);
@@ -311,14 +357,14 @@ function DailyReportConfigDialog({ open, config, onClose, isAr }: DialogProps) {
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth='sm' fullWidth>
+    <Dialog open={open} onClose={onClose} maxWidth='md' fullWidth>
       <DialogTitle>
         {config
-          ? (isAr ? 'تعديل إعدادات التقرير البريدي' : 'Edit Email Report Configuration')
-          : (isAr ? 'إضافة إعدادات تقرير بريدي جديد' : 'Add New Email Report Configuration')}
+          ? (isAr ? 'تعديل إعدادات التقرير البريدي وتفضيلات التنبيهات' : 'Edit Email Report & Notification Config')
+          : (isAr ? 'إضافة إعدادات وتفضيلات تنبيهات بريدية جديدة' : 'Add New Email Report & Notification Config')}
       </DialogTitle>
       <DialogContent dividers>
-        <Stack spacing={2.5}>
+        <Stack spacing={3}>
           {error ? <Alert severity='error'>{error}</Alert> : null}
 
           <Alert severity='info' sx={{ whiteSpace: 'pre-line' }}>
@@ -341,73 +387,257 @@ function DailyReportConfigDialog({ open, config, onClose, isAr }: DialogProps) {
             )}
           </Alert>
 
-          <TextField
-            label={isAr ? 'الاسم التعريفي (مثال: تقرير الإدارة المالي)' : 'Configuration Name'}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            fullWidth
-            required
-          />
+          <Typography variant='subtitle1' color='primary' sx={{ fontWeight: 'bold' }}>
+            {isAr ? '1. إعدادات الخادم والاتصال الأساسية' : '1. Connection & Server Settings'}
+          </Typography>
 
-          <TextField
-            label={isAr ? 'بريد المرسل (جيميل)' : 'Sender Email (Gmail)'}
-            type='email'
-            placeholder='example@gmail.com'
-            value={senderEmail}
-            onChange={(e) => setSenderEmail(e.target.value)}
-            fullWidth
-            required
-          />
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label={isAr ? 'الاسم التعريفي (تقرير الإدارة المالي)' : 'Configuration Name'}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                fullWidth
+                required
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label={isAr ? 'الحالة' : 'Status'}
+                select
+                SelectProps={{ native: true }}
+                value={isActive ? 'true' : 'false'}
+                onChange={(e) => setIsActive(e.target.value === 'true')}
+                fullWidth
+              >
+                <option value='true'>{isAr ? 'نشط' : 'Active'}</option>
+                <option value='false'>{isAr ? 'موقف' : 'Inactive'}</option>
+              </TextField>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label={isAr ? 'بريد المرسل (جيميل)' : 'Sender Email (Gmail)'}
+                type='email'
+                placeholder='example@gmail.com'
+                value={senderEmail}
+                onChange={(e) => setSenderEmail(e.target.value)}
+                fullWidth
+                required
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label={isAr ? 'كلمة مرور التطبيق (App Password)' : 'App Password (16 characters)'}
+                type='password'
+                value={senderPassword}
+                placeholder='xxxx xxxx xxxx xxxx'
+                onChange={(e) => setSenderPassword(e.target.value)}
+                helperText={config ? (isAr ? 'اتركها دون تغيير (نجوم) إذا كنت لا ترغب في تعديلها.' : 'Leave as is (stars) if you do not want to modify it.') : undefined}
+                fullWidth
+                required
+              />
+            </Grid>
+            <Grid item xs={12} sm={8}>
+              <TextField
+                label={isAr ? 'بريد الاستلام (إيميلات متعددة مفصولة بفاصلة)' : 'Recipient Email(s) (comma-separated)'}
+                placeholder='admin@example.com, owner@example.com'
+                value={recipientEmail}
+                onChange={(e) => setRecipientEmail(e.target.value)}
+                fullWidth
+                required
+              />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <TextField
+                select
+                SelectProps={{ native: true }}
+                label={isAr ? 'ساعة الإرسال اليومي (توقيت محلي)' : 'Daily Send Hour (Local Time)'}
+                value={sendHour}
+                onChange={(e) => setSendHour(parseInt(e.target.value, 10))}
+                fullWidth
+              >
+                {Array.from({ length: 24 }).map((_, h) => (
+                  <option key={h} value={h}>
+                    {h === 0 ? (isAr ? '12:00 صباحاً (منتصف الليل)' : '12:00 AM') :
+                     h === 12 ? (isAr ? '12:00 مساءً (الظهر)' : '12:00 PM') :
+                     h < 12 ? (isAr ? `${h}:00 صباحاً` : `${h}:00 AM`) :
+                     (isAr ? `${h - 12}:00 مساءً` : `${h - 12}:00 PM`)}
+                  </option>
+                ))}
+              </TextField>
+            </Grid>
+          </Grid>
 
-          <TextField
-            label={isAr ? 'كلمة مرور التطبيق (App Password)' : 'App Password (16 characters)'}
-            type='password'
-            value={senderPassword}
-            placeholder='xxxx xxxx xxxx xxxx'
-            onChange={(e) => setSenderPassword(e.target.value)}
-            helperText={config ? (isAr ? 'اتركها دون تغيير (نجوم) إذا كنت لا ترغب في تعديلها.' : 'Leave as is (stars) if you do not want to modify it.') : undefined}
-            fullWidth
-            required
-          />
+          <Typography variant='subtitle1' color='primary' sx={{ fontWeight: 'bold', mt: 2 }}>
+            {isAr ? '2. إعدادات الملخصات والتقارير الدورية' : '2. Periodic Digests & Summaries'}
+          </Typography>
 
-          <TextField
-            label={isAr ? 'بريد الاستلام (إيميلات متعددة مفصولة بفاصلة)' : 'Recipient Email(s) (comma-separated)'}
-            placeholder='admin@example.com, owner@example.com'
-            value={recipientEmail}
-            onChange={(e) => setRecipientEmail(e.target.value)}
-            fullWidth
-            required
-          />
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                select
+                SelectProps={{ native: true }}
+                label={isAr ? 'إرسال التقرير المالي اليومي العام' : 'Send Daily Financial Summary'}
+                value={sendDailySummary ? 'true' : 'false'}
+                onChange={(e) => setSendDailySummary(e.target.value === 'true')}
+                fullWidth
+              >
+                <option value='true'>{isAr ? 'نعم (موصى به)' : 'Yes (Recommended)'}</option>
+                <option value='false'>{isAr ? 'لا' : 'No'}</option>
+              </TextField>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                select
+                SelectProps={{ native: true }}
+                label={isAr ? 'إرسال الملخص التشغيلي اليومي (الصباحي)' : 'Send Morning Operations Digest'}
+                value={notifyOperationsDaily ? 'true' : 'false'}
+                onChange={(e) => setNotifyOperationsDaily(e.target.value === 'true')}
+                fullWidth
+              >
+                <option value='true'>{isAr ? 'نعم (موصى به)' : 'Yes (Recommended)'}</option>
+                <option value='false'>{isAr ? 'لا' : 'No'}</option>
+              </TextField>
+            </Grid>
+          </Grid>
 
-          <TextField
-            select
-            SelectProps={{ native: true }}
-            label={isAr ? 'ساعة الإرسال اليومي (توقيت محلي)' : 'Daily Send Hour (Local Time)'}
-            value={sendHour}
-            onChange={(e) => setSendHour(parseInt(e.target.value, 10))}
-            fullWidth
-          >
-            {Array.from({ length: 24 }).map((_, h) => (
-              <option key={h} value={h}>
-                {h === 0 ? (isAr ? '12:00 صباحاً (منتصف الليل)' : '12:00 AM') :
-                 h === 12 ? (isAr ? '12:00 مساءً (الظهر)' : '12:00 PM') :
-                 h < 12 ? (isAr ? `${h}:00 صباحاً` : `${h}:00 AM`) :
-                 (isAr ? `${h - 12}:00 مساءً` : `${h - 12}:00 PM`)}
-              </option>
-            ))}
-          </TextField>
+          <Typography variant='subtitle1' color='primary' sx={{ fontWeight: 'bold', mt: 2 }}>
+            {isAr ? '3. التنبيهات اللحظية للأحداث (الحجوزات والمالية)' : '3. Instant Alerts (Bookings & Cash Flow)'}
+          </Typography>
 
-          <TextField
-            select
-            SelectProps={{ native: true }}
-            label={isAr ? 'الحالة' : 'Status'}
-            value={isActive ? 'true' : 'false'}
-            onChange={(e) => setIsActive(e.target.value === 'true')}
-            fullWidth
-          >
-            <option value='true'>{isAr ? 'نشط' : 'Active'}</option>
-            <option value='false'>{isAr ? 'موقف' : 'Inactive'}</option>
-          </TextField>
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                select
+                SelectProps={{ native: true }}
+                label={isAr ? 'تنبيه عند إضافة حجز جديد' : 'Alert on New Booking'}
+                value={notifyBookingCreated ? 'true' : 'false'}
+                onChange={(e) => setNotifyBookingCreated(e.target.value === 'true')}
+                fullWidth
+              >
+                <option value='false'>{isAr ? 'إيقاف التنبيه' : 'Disabled'}</option>
+                <option value='true'>{isAr ? 'تفعيل التنبيه الفوري' : 'Enabled'}</option>
+              </TextField>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                select
+                SelectProps={{ native: true }}
+                label={isAr ? 'تنبيه عند تعديل / إلغاء حجز قائم' : 'Alert on Booking Modification'}
+                value={notifyBookingModified ? 'true' : 'false'}
+                onChange={(e) => setNotifyBookingModified(e.target.value === 'true')}
+                fullWidth
+              >
+                <option value='false'>{isAr ? 'إيقاف التنبيه' : 'Disabled'}</option>
+                <option value='true'>{isAr ? 'تفعيل التنبيه الفوري' : 'Enabled'}</option>
+              </TextField>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                select
+                SelectProps={{ native: true }}
+                label={isAr ? 'تنبيه عند استلام دفعة مالية (سند قبض)' : 'Alert on Payment Capture (Receipt)'}
+                value={notifyPaymentCaptured ? 'true' : 'false'}
+                onChange={(e) => setNotifyPaymentCaptured(e.target.value === 'true')}
+                fullWidth
+              >
+                <option value='false'>{isAr ? 'إيقاف التنبيه' : 'Disabled'}</option>
+                <option value='true'>{isAr ? 'تفعيل التنبيه الفوري' : 'Enabled'}</option>
+              </TextField>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                select
+                SelectProps={{ native: true }}
+                label={isAr ? 'تنبيه عند صرف أو إرجاع مبالغ (سند صرف)' : 'Alert on Refund / Void (Disbursement)'}
+                value={notifyPaymentRefunded ? 'true' : 'false'}
+                onChange={(e) => setNotifyPaymentRefunded(e.target.value === 'true')}
+                fullWidth
+              >
+                <option value='false'>{isAr ? 'إيقاف التنبيه' : 'Disabled'}</option>
+                <option value='true'>{isAr ? 'تفعيل التنبيه الفوري' : 'Enabled'}</option>
+              </TextField>
+            </Grid>
+          </Grid>
+
+          <Typography variant='subtitle1' color='primary' sx={{ fontWeight: 'bold', mt: 2 }}>
+            {isAr ? '4. تنبيهات الأمن والسلامة وإدارة النظام' : '4. Security, Backups & Fiscal Auditing'}
+          </Typography>
+
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={4}>
+              <TextField
+                select
+                SelectProps={{ native: true }}
+                label={isAr ? 'تنبيه أمني عند حذف أي عنصر' : 'Alert on Data Deletion'}
+                value={notifyEntityDeleted ? 'true' : 'false'}
+                onChange={(e) => setNotifyEntityDeleted(e.target.value === 'true')}
+                fullWidth
+              >
+                <option value='true'>{isAr ? 'تفعيل (موصى به)' : 'Enabled (Recommended)'}</option>
+                <option value='false'>{isAr ? 'تعطيل' : 'Disabled'}</option>
+              </TextField>
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <TextField
+                select
+                SelectProps={{ native: true }}
+                label={isAr ? 'تنبيه أمني عند إغلاق الفترات / القيود اليدوية' : 'Alert on Fiscal Lock & JV'}
+                value={notifyFinancialCritical ? 'true' : 'false'}
+                onChange={(e) => setNotifyFinancialCritical(e.target.value === 'true')}
+                fullWidth
+              >
+                <option value='true'>{isAr ? 'تفعيل (موصى به)' : 'Enabled (Recommended)'}</option>
+                <option value='false'>{isAr ? 'تعطيل' : 'Disabled'}</option>
+              </TextField>
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <TextField
+                select
+                SelectProps={{ native: true }}
+                label={isAr ? 'تنبيه عند فشل أو تأخر النسخ الاحتياطي' : 'Alert on Backup Failure/Stale'}
+                value={notifyBackupWarnings ? 'true' : 'false'}
+                onChange={(e) => setNotifyBackupWarnings(e.target.value === 'true')}
+                fullWidth
+              >
+                <option value='true'>{isAr ? 'تفعيل (موصى به)' : 'Enabled (Recommended)'}</option>
+                <option value='false'>{isAr ? 'تعطيل' : 'Disabled'}</option>
+              </TextField>
+            </Grid>
+          </Grid>
+
+          <Typography variant='subtitle1' color='primary' sx={{ fontWeight: 'bold', mt: 2 }}>
+            {isAr ? '5. تخصيص قوالب الإيميلات المرسلة' : '5. Email Notification Templates'}
+          </Typography>
+
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                select
+                SelectProps={{ native: true }}
+                label={isAr ? 'شكل قالب إيميل الحجوزات' : 'Booking Notification Template'}
+                value={bookingEmailTemplate}
+                onChange={(e) => setBookingEmailTemplate(e.target.value)}
+                fullWidth
+              >
+                <option value='detailed'>{isAr ? 'تفصيلي (يحتوي على تفاصيل الخدمات والفساتين)' : 'Detailed (Services & Dresses)'}</option>
+                <option value='basic'>{isAr ? 'مختصر (معلومات الحجز الأساسية والإجمالي)' : 'Basic (Totals Only)'}</option>
+              </TextField>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                select
+                SelectProps={{ native: true }}
+                label={isAr ? 'شكل قالب إيميل السندات المالية' : 'Payment Notification Template'}
+                value={paymentEmailTemplate}
+                onChange={(e) => setPaymentEmailTemplate(e.target.value)}
+                fullWidth
+              >
+                <option value='detailed'>{isAr ? 'تفصيلي (يحتوي على توزيع المبالغ على المواعيد)' : 'Detailed (Allocation breakdown)'}</option>
+                <option value='basic'>{isAr ? 'مختصر (المبلغ الكلي وطريقة الدفع)' : 'Basic (Total & Method)'}</option>
+              </TextField>
+            </Grid>
+          </Grid>
         </Stack>
       </DialogContent>
       <DialogActions>

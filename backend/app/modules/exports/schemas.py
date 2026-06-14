@@ -73,6 +73,18 @@ class DailyEmailReportConfigResponse(BaseModel):
     send_hour: int
     is_active: bool
 
+    send_daily_summary: bool
+    notify_booking_created: bool
+    notify_booking_modified: bool
+    notify_payment_captured: bool
+    notify_payment_refunded: bool
+    notify_entity_deleted: bool
+    notify_operations_daily: bool
+    notify_financial_critical: bool
+    notify_backup_warnings: bool
+    booking_email_template: str
+    payment_email_template: str
+
 
 class DailyEmailReportConfigCreateRequest(BaseModel):
     name: str = Field(min_length=2, max_length=120)
@@ -84,6 +96,18 @@ class DailyEmailReportConfigCreateRequest(BaseModel):
     send_hour: int = Field(default=21, ge=0, le=23)
     is_active: bool = True
 
+    send_daily_summary: bool = True
+    notify_booking_created: bool = False
+    notify_booking_modified: bool = False
+    notify_payment_captured: bool = False
+    notify_payment_refunded: bool = False
+    notify_entity_deleted: bool = True
+    notify_operations_daily: bool = True
+    notify_financial_critical: bool = True
+    notify_backup_warnings: bool = True
+    booking_email_template: str = Field(default='detailed', max_length=40)
+    payment_email_template: str = Field(default='detailed', max_length=40)
+
 
 class DailyEmailReportConfigUpdateRequest(BaseModel):
     name: str | None = Field(default=None, min_length=2, max_length=120)
@@ -94,3 +118,15 @@ class DailyEmailReportConfigUpdateRequest(BaseModel):
     recipient_email: str | None = Field(default=None, min_length=5, max_length=255)
     send_hour: int | None = Field(default=None, ge=0, le=23)
     is_active: bool | None = None
+
+    send_daily_summary: bool | None = None
+    notify_booking_created: bool | None = None
+    notify_booking_modified: bool | None = None
+    notify_payment_captured: bool | None = None
+    notify_payment_refunded: bool | None = None
+    notify_entity_deleted: bool | None = None
+    notify_operations_daily: bool | None = None
+    notify_financial_critical: bool | None = None
+    notify_backup_warnings: bool | None = None
+    booking_email_template: str | None = Field(default=None, max_length=40)
+    payment_email_template: str | None = Field(default=None, max_length=40)

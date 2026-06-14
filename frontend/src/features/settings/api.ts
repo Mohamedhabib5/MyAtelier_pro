@@ -358,6 +358,17 @@ export type DailyReportConfigRecord = {
   recipient_email: string;
   send_hour: number;
   is_active: boolean;
+  send_daily_summary: boolean;
+  notify_booking_created: boolean;
+  notify_booking_modified: boolean;
+  notify_payment_captured: boolean;
+  notify_payment_refunded: boolean;
+  notify_entity_deleted: boolean;
+  notify_operations_daily: boolean;
+  notify_financial_critical: boolean;
+  notify_backup_warnings: boolean;
+  booking_email_template: string;
+  payment_email_template: string;
 };
 
 export type CreateDailyReportConfigPayload = {
@@ -369,6 +380,17 @@ export type CreateDailyReportConfigPayload = {
   recipient_email: string;
   send_hour: number;
   is_active: boolean;
+  send_daily_summary: boolean;
+  notify_booking_created: boolean;
+  notify_booking_modified: boolean;
+  notify_payment_captured: boolean;
+  notify_payment_refunded: boolean;
+  notify_entity_deleted: boolean;
+  notify_operations_daily: boolean;
+  notify_financial_critical: boolean;
+  notify_backup_warnings: boolean;
+  booking_email_template: string;
+  payment_email_template: string;
 };
 
 export type UpdateDailyReportConfigPayload = Partial<CreateDailyReportConfigPayload>;

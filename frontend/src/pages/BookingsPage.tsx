@@ -32,13 +32,11 @@ export function BookingsPage() {
     sortDir: state.sortDir,
     editingBookingId: state.editingBookingId,
   });
-
   function closeEditor() {
     state.setCreatingNew(false);
     state.setEditingBookingId(null);
     state.setEditorMode('edit');
   }
-
   const {
     handleSave,
     handleCreateCustomer,
@@ -204,13 +202,11 @@ export function BookingsPage() {
           }
         }}
       />
-
       <BookingRevenueOverrideDialog
         open={Boolean(state.reverseOverrideLineId)}
         onClose={() => state.setReverseOverrideLineId(null)}
         onConfirm={handleConfirmRevenueOverride}
       />
-
       <PeriodLockOverrideDialog
         open={Boolean(state.pendingCancelPayload)}
         titleAr='Override لإلغاء حجز'

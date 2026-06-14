@@ -726,6 +726,26 @@ def run_test_report_for_config(db: Session, config_id: str, company_id: str, rep
 
 
 def check_and_run_due_reports(db: Session):
+    # 1. Trigger morning operations digest if not sent today yet
+    from app.modules.core_platform.repository import CorePlatformRepository
+    from app.modules.exports.notification_service import send_daily_operations_digest
+    
+    today_str = date.today().isoformat()
+    core_repo = CorePlatformRepository(db)
+    setting_key = "exports.last_ops_digest_sent_date"
+    last_sent_setting = core_repo.get_setting(setting_key)
+    
+    if not last_sent_setting or last_sent_setting.value != today_str:
+        logger.info("Operations digest not sent today yet. Triggering send_daily_operations_digest...")
+        try:
+            send_daily_operations_digest(db)
+            core_repo.set_setting(setting_key, today_str)
+            db.commit()
+            logger.info("Successfully sent operations digest for today and updated setting.")
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Failed to send operations digest: {str(e)}")
+
     configs = db.query(DailyEmailReportConfig).filter(DailyEmailReportConfig.is_active == True).all()
     if not configs:
         logger.info("No active daily email report configurations found. Skipping run.")

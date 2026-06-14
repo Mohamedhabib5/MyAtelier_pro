@@ -4,6 +4,8 @@ from decimal import Decimal
 
 from sqlalchemy.orm import Session
 
+from app.modules.exports.notification_service import dispatch_booking_notification, dispatch_deletion_notification
+
 from app.core.exceptions import ValidationAppError, ConflictError
 from app.core.messages import BOOKING_CANCELLED_NO_EDIT, BOOKING_LINE_NOT_FOUND, BOOKING_LINE_RECOGNIZED_DELETE_ERROR, BOOKING_LINE_PAID_DELETE_ERROR
 from app.modules.bookings.calculations import derive_booking_status, line_paid_total, serialize_booking_document
@@ -61,11 +63,7 @@ def create_booking(db: Session, actor: User, payload: BookingDocumentCreateReque
     )
     db.flush()
     record_audit(
-        db,
-        actor_user_id=actor.id,
-        action="booking.created",
-        target_type="booking",
-        target_id=booking.id,
+        db, actor_user_id=actor.id, action="booking.created", target_type="booking", target_id=booking.id,
         summary=f"Created booking {booking.booking_number}",
         diff={
             "status": booking.status,
@@ -75,6 +73,7 @@ def create_booking(db: Session, actor: User, payload: BookingDocumentCreateReque
         },
     )
     db.commit()
+    dispatch_booking_notification(db, booking, is_new=True)
     return serialize_booking_document(reload_booking_or_404(repo, booking.id))
 
 
@@ -126,11 +125,7 @@ def update_booking(db: Session, actor: User, booking_id: str, payload: BookingDo
     )
     db.flush()
     record_audit(
-        db,
-        actor_user_id=actor.id,
-        action="booking.updated",
-        target_type="booking",
-        target_id=booking.id,
+        db, actor_user_id=actor.id, action="booking.updated", target_type="booking", target_id=booking.id,
         summary=f"Updated booking {booking.booking_number}",
         diff={
             "status": booking.status,
@@ -139,6 +134,7 @@ def update_booking(db: Session, actor: User, booking_id: str, payload: BookingDo
         },
     )
     db.commit()
+    dispatch_booking_notification(db, booking, is_new=False)
     return serialize_booking_document(reload_booking_or_404(BookingsRepository(db), booking.id))
 
 
@@ -188,16 +184,9 @@ def create_compensation_booking(db: Session, actor: User, original_booking_id: s
     repo.add_booking(booking)
     db.flush()
     record_audit(
-        db,
-        actor_user_id=actor.id,
-        action="booking.compensation_created",
-        target_type="booking",
-        target_id=booking.id,
+        db, actor_user_id=actor.id, action="booking.compensation_created", target_type="booking", target_id=booking.id,
         summary=f"Created compensation booking {booking.booking_number} from {original.booking_number}",
-        diff={
-            "parent_id": original.id,
-            "amount": float(line.line_price)
-        },
+        diff={"parent_id": original.id, "amount": float(line.line_price)},
     )
     db.commit()
     return serialize_booking_document(reload_booking_or_404(repo, booking.id))
@@ -221,11 +210,7 @@ def delete_booking(db: Session, actor: User, booking_id: str, branch_id: str) ->
                 dress.status = 'available'
 
     record_audit(
-        db,
-        actor_user_id=actor.id,
-        action="booking.deleted",
-        target_type="booking",
-        target_id=booking.id,
+        db, actor_user_id=actor.id, action="booking.deleted", target_type="booking", target_id=booking.id,
         summary=f"Permanently deleted booking {booking.booking_number}",
         diff={
             "booking_number": booking.booking_number,
@@ -233,8 +218,18 @@ def delete_booking(db: Session, actor: User, booking_id: str, branch_id: str) ->
             "line_count": len(booking.lines)
         },
     )
+    booking_num = booking.booking_number
+    cust_name = booking.customer.full_name if booking.customer else "غير معروف"
+    line_count = len(booking.lines)
     db.delete(booking)
     db.commit()
+    dispatch_deletion_notification(
+        db, 
+        actor_username=actor.username, 
+        entity_name="حجز (Booking)", 
+        entity_ident=booking_id, 
+        details=f"رقم الحجز: {booking_num}، العميلة: {cust_name}، عدد الخدمات: {line_count}"
+    )
 
 
 def delete_booking_line(db: Session, actor: User, booking_id: str, line_id: str, branch_id: str) -> dict:
@@ -257,11 +252,7 @@ def delete_booking_line(db: Session, actor: User, booking_id: str, line_id: str,
             dress.status = 'available'
 
     record_audit(
-        db,
-        actor_user_id=actor.id,
-        action="booking_line.deleted",
-        target_type="booking_line",
-        target_id=line.id,
+        db, actor_user_id=actor.id, action="booking_line.deleted", target_type="booking_line", target_id=line.id,
         summary=f"Permanently deleted line {line.line_number} from booking {booking.booking_number}",
         diff={
             "booking_id": booking.id,
@@ -269,6 +260,9 @@ def delete_booking_line(db: Session, actor: User, booking_id: str, line_id: str,
             "service_name": line.service.name
         },
     )
+    line_num = line.line_number
+    service_name = line.service.name if line.service else "غير معروف"
+    booking_num = booking.booking_number
     db.delete(line)
     db.flush()
     
@@ -276,6 +270,13 @@ def delete_booking_line(db: Session, actor: User, booking_id: str, line_id: str,
     # For now, we'll just derive the status again
     booking.status = derive_booking_status(booking.lines)
     db.commit()
+    dispatch_deletion_notification(
+        db, 
+        actor_username=actor.username, 
+        entity_name="سطر حجز (Booking Line)", 
+        entity_ident=line_id, 
+        details=f"السطر رقم {line_num} من الحجز {booking_num}، خدمة: {service_name}"
+    )
     return serialize_booking_document(reload_booking_or_404(BookingsRepository(db), booking.id))
  
  

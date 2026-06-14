@@ -307,148 +307,7 @@ def run_due_reports_route(
     return res
 
 
-@router.get('/daily-reports', response_model=list[DailyEmailReportConfigResponse])
-def get_daily_reports_route(
-    request: Request,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_exports_manage)
-) -> list[DailyEmailReportConfigResponse]:
-    from app.modules.organization.service import get_company_settings
-    from app.modules.exports.daily_report_service import list_daily_report_configs
-    company = get_company_settings(db)
-    configs = list_daily_report_configs(db, company.id)
-    return [DailyEmailReportConfigResponse.model_validate(c) for c in configs]
 
-
-@router.post('/daily-reports', response_model=DailyEmailReportConfigResponse)
-def create_daily_report_route(
-    payload: DailyEmailReportConfigCreateRequest,
-    request: Request,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_exports_manage)
-) -> DailyEmailReportConfigResponse:
-    from app.modules.organization.service import get_company_settings
-    from app.modules.exports.daily_report_service import create_daily_report_config
-    from app.modules.core_platform.audit import record_audit
-    
-    company = get_company_settings(db)
-    config = create_daily_report_config(db, company.id, payload)
-    
-    record_audit(
-        db,
-        actor_user_id=current_user.id,
-        action="export.daily_report_config_created",
-        target_type="daily_report_config",
-        target_id=config["id"],
-        summary=f"Created daily email report configuration: {config['name']}",
-        diff={
-            "name": config["name"],
-            "sender_email": config["sender_email"],
-            "recipient_email": config["recipient_email"],
-            "send_hour": config["send_hour"],
-            "is_active": config["is_active"],
-        }
-    )
-    
-    return DailyEmailReportConfigResponse.model_validate(config)
-
-
-@router.patch('/daily-reports/{config_id}', response_model=DailyEmailReportConfigResponse)
-def update_daily_report_route(
-    config_id: str,
-    payload: DailyEmailReportConfigUpdateRequest,
-    request: Request,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_exports_manage)
-) -> DailyEmailReportConfigResponse:
-    from app.modules.organization.service import get_company_settings
-    from app.modules.exports.daily_report_service import update_daily_report_config
-    from app.modules.core_platform.audit import record_audit
-    
-    company = get_company_settings(db)
-    config = update_daily_report_config(db, config_id, company.id, payload)
-    
-    record_audit(
-        db,
-        actor_user_id=current_user.id,
-        action="export.daily_report_config_updated",
-        target_type="daily_report_config",
-        target_id=config["id"],
-        summary=f"Updated daily email report configuration: {config['name']}",
-        diff={
-            "name": config["name"],
-            "sender_email": config["sender_email"],
-            "recipient_email": config["recipient_email"],
-            "send_hour": config["send_hour"],
-            "is_active": config["is_active"],
-        }
-    )
-    
-    return DailyEmailReportConfigResponse.model_validate(config)
-
-
-@router.delete('/daily-reports/{config_id}')
-def delete_daily_report_route(
-    config_id: str,
-    request: Request,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_exports_manage)
-) -> dict:
-    from app.modules.organization.service import get_company_settings
-    from app.modules.exports.daily_report_service import delete_daily_report_config
-    from app.modules.core_platform.audit import record_audit
-    
-    company = get_company_settings(db)
-    delete_daily_report_config(db, config_id, company.id)
-    
-    record_audit(
-        db,
-        actor_user_id=current_user.id,
-        action="export.daily_report_config_deleted",
-        target_type="daily_report_config",
-        target_id=config_id,
-        summary=f"Deleted daily email report configuration ID {config_id}",
-    )
-    
-    return {"success": True}
-
-
-@router.post('/daily-reports/{config_id}/test')
-def test_daily_report_route(
-    config_id: str,
-    request: Request,
-    report_date: str | None = Query(default=None),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_exports_manage)
-) -> dict:
-    from app.modules.organization.service import get_company_settings
-    from app.modules.exports.daily_report_service import run_test_report_for_config
-    from app.modules.core_platform.audit import record_audit
-    
-    company = get_company_settings(db)
-    
-    target_date = None
-    if report_date:
-        from datetime import datetime
-        from fastapi import HTTPException
-        try:
-            target_date = datetime.strptime(report_date, "%Y-%m-%d").date()
-        except ValueError:
-            raise HTTPException(status_code=400, detail="صيغة التاريخ غير صحيحة، يجب أن تكون YYYY-MM-DD")
-            
-    res = run_test_report_for_config(db, config_id, company.id, target_date)
-    
-    record_audit(
-        db,
-        actor_user_id=current_user.id,
-        action="export.daily_report_config_test_run",
-        target_type="daily_report_config",
-        target_id=config_id,
-        summary=f"Ran test dispatch for daily email report config ID {config_id}",
-        diff={"report_date": report_date} if report_date else None
-    )
-    
-    return res
 
 
 @router.post('/tickets')
@@ -740,3 +599,227 @@ def _xlsx_response(filename: str, content: bytes) -> Response:
         'Access-Control-Expose-Headers': 'Content-Disposition'
     }
     return Response(content=content, media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', headers=headers)
+
+
+def _mask_config_password(config) -> DailyEmailReportConfigResponse:
+    from app.modules.exports.schemas import DailyEmailReportConfigResponse
+    c_dict = {
+        "id": config.id,
+        "company_id": config.company_id,
+        "name": config.name,
+        "sender_email": config.sender_email,
+        "sender_password": "********",
+        "smtp_server": config.smtp_server,
+        "smtp_port": config.smtp_port,
+        "recipient_email": config.recipient_email,
+        "send_hour": config.send_hour,
+        "is_active": config.is_active,
+        "send_daily_summary": config.send_daily_summary,
+        "notify_booking_created": config.notify_booking_created,
+        "notify_booking_modified": config.notify_booking_modified,
+        "notify_payment_captured": config.notify_payment_captured,
+        "notify_payment_refunded": config.notify_payment_refunded,
+        "notify_entity_deleted": config.notify_entity_deleted,
+        "notify_operations_daily": config.notify_operations_daily,
+        "notify_financial_critical": config.notify_financial_critical,
+        "notify_backup_warnings": config.notify_backup_warnings,
+        "booking_email_template": config.booking_email_template,
+        "payment_email_template": config.payment_email_template,
+    }
+    return DailyEmailReportConfigResponse(**c_dict)
+
+
+@router.get('/daily-reports', response_model=list[DailyEmailReportConfigResponse])
+def list_daily_report_configs_route(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_exports_view)
+) -> list[DailyEmailReportConfigResponse]:
+    from app.modules.exports.models import DailyEmailReportConfig
+    from app.modules.organization.service import get_company_settings
+    company = get_company_settings(db)
+    configs = db.query(DailyEmailReportConfig).filter(DailyEmailReportConfig.company_id == company.id).all()
+    return [_mask_config_password(c) for c in configs]
+
+
+@router.post('/daily-reports', response_model=DailyEmailReportConfigResponse)
+def create_daily_report_config_route(
+    payload: DailyEmailReportConfigCreateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_exports_manage)
+) -> DailyEmailReportConfigResponse:
+    from app.modules.exports.models import DailyEmailReportConfig
+    from app.modules.organization.service import get_company_settings
+    from app.modules.core_platform.security_service import encrypt_secret
+    
+    company = get_company_settings(db)
+    encrypted_password = encrypt_secret(payload.sender_password)
+    
+    config = DailyEmailReportConfig(
+        company_id=company.id,
+        name=payload.name,
+        sender_email=payload.sender_email,
+        sender_password=encrypted_password,
+        smtp_server=payload.smtp_server,
+        smtp_port=payload.smtp_port,
+        recipient_email=payload.recipient_email,
+        send_hour=payload.send_hour,
+        is_active=payload.is_active,
+        send_daily_summary=payload.send_daily_summary,
+        notify_booking_created=payload.notify_booking_created,
+        notify_booking_modified=payload.notify_booking_modified,
+        notify_payment_captured=payload.notify_payment_captured,
+        notify_payment_refunded=payload.notify_payment_refunded,
+        notify_entity_deleted=payload.notify_entity_deleted,
+        notify_operations_daily=payload.notify_operations_daily,
+        notify_financial_critical=payload.notify_financial_critical,
+        notify_backup_warnings=payload.notify_backup_warnings,
+        booking_email_template=payload.booking_email_template,
+        payment_email_template=payload.payment_email_template,
+    )
+    db.add(config)
+    db.flush()
+    
+    from app.modules.core_platform.audit import record_audit
+    record_audit(
+        db,
+        actor_user_id=current_user.id,
+        action="export.daily_report_config_created",
+        target_type="daily_email_report_config",
+        target_id=config.id,
+        summary=f"Created daily email report configuration: {config.name}",
+    )
+    db.commit()
+    db.refresh(config)
+    return _mask_config_password(config)
+
+
+@router.patch('/daily-reports/{config_id}', response_model=DailyEmailReportConfigResponse)
+def update_daily_report_config_route(
+    config_id: str,
+    payload: DailyEmailReportConfigUpdateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_exports_manage)
+) -> DailyEmailReportConfigResponse:
+    from app.modules.exports.models import DailyEmailReportConfig
+    from app.modules.core_platform.security_service import encrypt_secret
+    from app.core.exceptions import NotFoundError
+    
+    config = db.query(DailyEmailReportConfig).filter(DailyEmailReportConfig.id == config_id).first()
+    if not config:
+        raise NotFoundError("لم يتم العثور على التكوين البريدي")
+        
+    if payload.name is not None:
+        config.name = payload.name
+    if payload.sender_email is not None:
+        config.sender_email = payload.sender_email
+    if payload.sender_password is not None and payload.sender_password != "********":
+        config.sender_password = encrypt_secret(payload.sender_password)
+    if payload.smtp_server is not None:
+        config.smtp_server = payload.smtp_server
+    if payload.smtp_port is not None:
+        config.smtp_port = payload.smtp_port
+    if payload.recipient_email is not None:
+        config.recipient_email = payload.recipient_email
+    if payload.send_hour is not None:
+        config.send_hour = payload.send_hour
+    if payload.is_active is not None:
+        config.is_active = payload.is_active
+    if payload.send_daily_summary is not None:
+        config.send_daily_summary = payload.send_daily_summary
+    if payload.notify_booking_created is not None:
+        config.notify_booking_created = payload.notify_booking_created
+    if payload.notify_booking_modified is not None:
+        config.notify_booking_modified = payload.notify_booking_modified
+    if payload.notify_payment_captured is not None:
+        config.notify_payment_captured = payload.notify_payment_captured
+    if payload.notify_payment_refunded is not None:
+        config.notify_payment_refunded = payload.notify_payment_refunded
+    if payload.notify_entity_deleted is not None:
+        config.notify_entity_deleted = payload.notify_entity_deleted
+    if payload.notify_operations_daily is not None:
+        config.notify_operations_daily = payload.notify_operations_daily
+    if payload.notify_financial_critical is not None:
+        config.notify_financial_critical = payload.notify_financial_critical
+    if payload.notify_backup_warnings is not None:
+        config.notify_backup_warnings = payload.notify_backup_warnings
+    if payload.booking_email_template is not None:
+        config.booking_email_template = payload.booking_email_template
+    if payload.payment_email_template is not None:
+        config.payment_email_template = payload.payment_email_template
+        
+    db.flush()
+    from app.modules.core_platform.audit import record_audit
+    record_audit(
+        db,
+        actor_user_id=current_user.id,
+        action="export.daily_report_config_updated",
+        target_type="daily_email_report_config",
+        target_id=config.id,
+        summary=f"Updated daily email report configuration: {config.name}",
+    )
+    db.commit()
+    db.refresh(config)
+    return _mask_config_password(config)
+
+
+@router.delete('/daily-reports/{config_id}')
+def delete_daily_report_config_route(
+    config_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_exports_manage)
+) -> dict:
+    from app.modules.exports.models import DailyEmailReportConfig
+    from app.core.exceptions import NotFoundError
+    
+    config = db.query(DailyEmailReportConfig).filter(DailyEmailReportConfig.id == config_id).first()
+    if not config:
+        raise NotFoundError("لم يتم العثور على التكوين البريدي")
+        
+    db.delete(config)
+    
+    from app.modules.core_platform.audit import record_audit
+    record_audit(
+        db,
+        actor_user_id=current_user.id,
+        action="export.daily_report_config_deleted",
+        target_type="daily_email_report_config",
+        target_id=config_id,
+        summary=f"Deleted daily email report configuration: {config.name}",
+    )
+    db.commit()
+    return {"success": True}
+
+
+@router.post('/daily-reports/{config_id}/test')
+def test_daily_report_config_route(
+    config_id: str,
+    report_date: str | None = Query(default=None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_exports_manage)
+) -> dict:
+    from app.modules.exports.daily_report_service import run_test_report_for_config
+    from app.modules.organization.service import get_company_settings
+    from datetime import date
+    from fastapi import HTTPException
+    
+    parsed_date = None
+    if report_date:
+        try:
+            parsed_date = date.fromisoformat(report_date)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="صيغة التاريخ غير صحيحة")
+            
+    company = get_company_settings(db)
+    res = run_test_report_for_config(db, config_id, company.id, report_date=parsed_date)
+    
+    from app.modules.core_platform.audit import record_audit
+    record_audit(
+        db,
+        actor_user_id=current_user.id,
+        action="export.daily_report_config_test_run",
+        target_type="daily_email_report_config",
+        target_id=config_id,
+        summary=f"Ran test dispatch for daily email report config ID {config_id}",
+    )
+    
+    return res

@@ -1,22 +1,24 @@
-FROM node:22-alpine
+# Stage 1: Build the React application
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Install chromium for tests if needed, but run app as node user
-RUN apk add --no-cache chromium
-ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
-ENV PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium-browser
-
 COPY package.json package-lock.json* ./
-RUN npm install --legacy-peer-deps
+# Install dependencies
+RUN npm ci
 
 COPY . .
+RUN npm run build
 
-# Ensure permissions for node user
-# RUN chown -R node:node /app
+# Stage 2: Serve the static files with Nginx
+FROM nginx:alpine
 
-# USER node
+# Copy the custom nginx configuration into the image
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-EXPOSE 5173
+# Copy build files from Stage 1 to the Nginx html folder
+COPY --from=builder /app/dist /usr/share/nginx/html
 
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]

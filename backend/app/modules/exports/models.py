@@ -36,6 +36,18 @@ class DailyEmailReportConfig(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     send_hour: Mapped[int] = mapped_column(Integer, default=21, server_default='21', nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default='true', nullable=False)
 
+    send_daily_summary: Mapped[bool] = mapped_column(Boolean, default=True, server_default='true', nullable=False)
+    notify_booking_created: Mapped[bool] = mapped_column(Boolean, default=False, server_default='false', nullable=False)
+    notify_booking_modified: Mapped[bool] = mapped_column(Boolean, default=False, server_default='false', nullable=False)
+    notify_payment_captured: Mapped[bool] = mapped_column(Boolean, default=False, server_default='false', nullable=False)
+    notify_payment_refunded: Mapped[bool] = mapped_column(Boolean, default=False, server_default='false', nullable=False)
+    notify_entity_deleted: Mapped[bool] = mapped_column(Boolean, default=True, server_default='true', nullable=False)
+    notify_operations_daily: Mapped[bool] = mapped_column(Boolean, default=True, server_default='true', nullable=False)
+    notify_financial_critical: Mapped[bool] = mapped_column(Boolean, default=True, server_default='true', nullable=False)
+    notify_backup_warnings: Mapped[bool] = mapped_column(Boolean, default=True, server_default='true', nullable=False)
+    booking_email_template: Mapped[str] = mapped_column(String(40), default='detailed', server_default="'detailed'", nullable=False)
+    payment_email_template: Mapped[str] = mapped_column(String(40), default='detailed', server_default="'detailed'", nullable=False)
+
     company = relationship('Company', lazy='select')
 
 
