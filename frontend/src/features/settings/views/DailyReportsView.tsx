@@ -392,7 +392,7 @@ function DailyReportConfigDialog({ open, config, onClose, isAr }: DialogProps) {
           </Typography>
 
           <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 label={isAr ? 'الاسم التعريفي (تقرير الإدارة المالي)' : 'Configuration Name'}
                 value={name}
@@ -401,7 +401,7 @@ function DailyReportConfigDialog({ open, config, onClose, isAr }: DialogProps) {
                 required
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 label={isAr ? 'الحالة' : 'Status'}
                 select
@@ -414,7 +414,7 @@ function DailyReportConfigDialog({ open, config, onClose, isAr }: DialogProps) {
                 <option value='false'>{isAr ? 'موقف' : 'Inactive'}</option>
               </TextField>
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 label={isAr ? 'بريد المرسل (جيميل)' : 'Sender Email (Gmail)'}
                 type='email'
@@ -425,7 +425,7 @@ function DailyReportConfigDialog({ open, config, onClose, isAr }: DialogProps) {
                 required
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 label={isAr ? 'كلمة مرور التطبيق (App Password)' : 'App Password (16 characters)'}
                 type='password'
@@ -437,7 +437,7 @@ function DailyReportConfigDialog({ open, config, onClose, isAr }: DialogProps) {
                 required
               />
             </Grid>
-            <Grid item xs={12} sm={8}>
+            <Grid size={{ xs: 12, sm: 8 }}>
               <TextField
                 label={isAr ? 'بريد الاستلام (إيميلات متعددة مفصولة بفاصلة)' : 'Recipient Email(s) (comma-separated)'}
                 placeholder='admin@example.com, owner@example.com'
@@ -447,7 +447,7 @@ function DailyReportConfigDialog({ open, config, onClose, isAr }: DialogProps) {
                 required
               />
             </Grid>
-            <Grid item xs={12} sm={4}>
+            <Grid size={{ xs: 12, sm: 4 }}>
               <TextField
                 select
                 SelectProps={{ native: true }}
@@ -473,7 +473,7 @@ function DailyReportConfigDialog({ open, config, onClose, isAr }: DialogProps) {
           </Typography>
 
           <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 select
                 SelectProps={{ native: true }}
@@ -486,7 +486,7 @@ function DailyReportConfigDialog({ open, config, onClose, isAr }: DialogProps) {
                 <option value='false'>{isAr ? 'لا' : 'No'}</option>
               </TextField>
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 select
                 SelectProps={{ native: true }}
@@ -506,7 +506,7 @@ function DailyReportConfigDialog({ open, config, onClose, isAr }: DialogProps) {
           </Typography>
 
           <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 select
                 SelectProps={{ native: true }}
@@ -519,7 +519,7 @@ function DailyReportConfigDialog({ open, config, onClose, isAr }: DialogProps) {
                 <option value='true'>{isAr ? 'تفعيل التنبيه الفوري' : 'Enabled'}</option>
               </TextField>
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 select
                 SelectProps={{ native: true }}
@@ -532,7 +532,7 @@ function DailyReportConfigDialog({ open, config, onClose, isAr }: DialogProps) {
                 <option value='true'>{isAr ? 'تفعيل التنبيه الفوري' : 'Enabled'}</option>
               </TextField>
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 select
                 SelectProps={{ native: true }}
@@ -545,7 +545,7 @@ function DailyReportConfigDialog({ open, config, onClose, isAr }: DialogProps) {
                 <option value='true'>{isAr ? 'تفعيل التنبيه الفوري' : 'Enabled'}</option>
               </TextField>
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 select
                 SelectProps={{ native: true }}
@@ -565,7 +565,7 @@ function DailyReportConfigDialog({ open, config, onClose, isAr }: DialogProps) {
           </Typography>
 
           <Grid container spacing={2}>
-            <Grid item xs={12} sm={4}>
+            <Grid size={{ xs: 12, sm: 4 }}>
               <TextField
                 select
                 SelectProps={{ native: true }}
@@ -578,7 +578,7 @@ function DailyReportConfigDialog({ open, config, onClose, isAr }: DialogProps) {
                 <option value='false'>{isAr ? 'تعطيل' : 'Disabled'}</option>
               </TextField>
             </Grid>
-            <Grid item xs={12} sm={4}>
+            <Grid size={{ xs: 12, sm: 4 }}>
               <TextField
                 select
                 SelectProps={{ native: true }}
@@ -591,7 +591,7 @@ function DailyReportConfigDialog({ open, config, onClose, isAr }: DialogProps) {
                 <option value='false'>{isAr ? 'تعطيل' : 'Disabled'}</option>
               </TextField>
             </Grid>
-            <Grid item xs={12} sm={4}>
+            <Grid size={{ xs: 12, sm: 4 }}>
               <TextField
                 select
                 SelectProps={{ native: true }}
@@ -611,7 +611,7 @@ function DailyReportConfigDialog({ open, config, onClose, isAr }: DialogProps) {
           </Typography>
 
           <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 select
                 SelectProps={{ native: true }}
@@ -624,7 +624,7 @@ function DailyReportConfigDialog({ open, config, onClose, isAr }: DialogProps) {
                 <option value='basic'>{isAr ? 'مختصر (معلومات الحجز الأساسية والإجمالي)' : 'Basic (Totals Only)'}</option>
               </TextField>
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
                 select
                 SelectProps={{ native: true }}
