@@ -57,12 +57,12 @@ services:
       - .env
     environment:
       - DATABASE_URL=postgresql+psycopg://${POSTGRES_USER:-beauty}:${POSTGRES_PASSWORD:-beauty}@db:5432/${POSTGRES_DB:-myatelier_pro}
-    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips='*'"
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips='nginx'"
     volumes:
       - ./backend:/app
       - ./storage:/app/storage
-    ports:
-      - "8000:8000"
+    expose:
+      - "8000"
     mem_limit: 1.2g
     memswap_limit: 1.4g
     depends_on:

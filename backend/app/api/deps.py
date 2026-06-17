@@ -1,5 +1,6 @@
 from __future__ import annotations
 from datetime import UTC, datetime
+import json
 
 from fastapi import Depends, Request
 from sqlalchemy.orm import Session
@@ -13,7 +14,8 @@ from app.modules.identity.access import ensure_permission
 from app.modules.identity.models import User
 from app.modules.identity.service import get_user_or_404, user_has_role
 from app.core.redis_client import redis_client
-import json
+from app.modules.organization.branch_context import ensure_active_branch
+from app.modules.organization.models import Branch
 
 
 def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
@@ -37,10 +39,8 @@ def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
         raise AuthenticationError(ACTIVE_ACCOUNT_REQUIRED)
 
     # 3. Check for 2FA pending state (Stateful Security)
-    # We skip this check for auth routes to allow the user to verify their 2FA code
     is_2fa_pending = request.session.get("2fa_pending", False)
     
-    # Safety: If 2FA is not enabled for the user, it shouldn't be pending
     if not current_user.is_2fa_enabled and is_2fa_pending:
         is_2fa_pending = False
         request.session["2fa_pending"] = False
@@ -56,11 +56,11 @@ def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
 def PermissionRequired(permission_key: str):
     """
     Unified Permission Factory to replace individual requirement functions.
-    Usage: Depends(PermissionRequired("atelier.view_reservations"))
+    Usage: Depends(PermissionRequired("payments.view"))
     """
     def _dependency(current_user: User = Depends(get_current_user)) -> User:
-        import os
-        if os.getenv("TESTING") == "true":
+        from app.core.config import get_settings
+        if get_settings().security_bypass_for_tests:
             from app.modules.identity.access import permission_keys_for_user
             perms = permission_keys_for_user(current_user)
         else:
@@ -76,7 +76,6 @@ def PermissionRequired(permission_key: str):
                     redis_client.setex(cache_key, 300, json.dumps(perms))
                     perms = perms_set
             except Exception:
-                # Fallback to DB if Redis fails
                 from app.modules.identity.access import permission_keys_for_user
                 perms = permission_keys_for_user(current_user)
 
@@ -94,80 +93,32 @@ def require_admin(current_user: User = Depends(get_current_user)) -> User:
     return current_user
 
 
-def require_users_manage(current_user: User = Depends(get_current_user)) -> User:
-    return PermissionRequired("users.manage")(current_user)
-
-def require_self_manage(current_user: User = Depends(get_current_user)) -> User:
-    return PermissionRequired("users.self_manage")(current_user)
-
-def require_settings_manage(current_user: User = Depends(get_current_user)) -> User:
-    return PermissionRequired("settings.manage")(current_user)
-
-def require_finance_view(current_user: User = Depends(get_current_user)) -> User:
-    return PermissionRequired("finance.view")(current_user)
-
-def require_reconcile_cash(current_user: User = Depends(get_current_user)) -> User:
-    return PermissionRequired("finance.reconcile_cash")(current_user)
-
-def require_reports_view(current_user: User = Depends(get_current_user)) -> User:
-    return PermissionRequired("reports.view")(current_user)
-
-def require_exports_view(current_user: User = Depends(get_current_user)) -> User:
-    return PermissionRequired("exports.view")(current_user)
-
-def require_exports_manage(current_user: User = Depends(get_current_user)) -> User:
-    return PermissionRequired("exports.manage")(current_user)
-
-def require_accounting_view(current_user: User = Depends(get_current_user)) -> User:
-    return PermissionRequired("accounting.view")(current_user)
-
-def require_accounting_manage(current_user: User = Depends(get_current_user)) -> User:
-    return PermissionRequired("accounting.manage")(current_user)
-
-def require_customers_view(current_user: User = Depends(get_current_user)) -> User:
-    return PermissionRequired("customers.view")(current_user)
-
-def require_customers_manage(current_user: User = Depends(get_current_user)) -> User:
-    return PermissionRequired("customers.manage")(current_user)
-
-def require_catalog_view(current_user: User = Depends(get_current_user)) -> User:
-    return PermissionRequired("catalog.view")(current_user)
-
-def require_catalog_manage(current_user: User = Depends(get_current_user)) -> User:
-    return PermissionRequired("catalog.manage")(current_user)
-
-def require_dresses_view(current_user: User = Depends(get_current_user)) -> User:
-    return PermissionRequired("dresses.view")(current_user)
-
-def require_dresses_manage(current_user: User = Depends(get_current_user)) -> User:
-    return PermissionRequired("dresses.manage")(current_user)
-
-def require_bookings_view(current_user: User = Depends(get_current_user)) -> User:
-    return PermissionRequired("bookings.view")(current_user)
-
-def require_bookings_manage(current_user: User = Depends(get_current_user)) -> User:
-    return PermissionRequired("bookings.manage")(current_user)
-
-def require_payments_view(current_user: User = Depends(get_current_user)) -> User:
-    return PermissionRequired("payments.view")(current_user)
-
-def require_payments_manage(current_user: User = Depends(get_current_user)) -> User:
-    return PermissionRequired("payments.manage")(current_user)
-
-def require_audit_view(current_user: User = Depends(get_current_user)) -> User:
-    return PermissionRequired("audit.view")(current_user)
-
-def require_destructive_manage(current_user: User = Depends(get_current_user)) -> User:
-    return PermissionRequired("destructive.manage")(current_user)
-
-def require_period_lock_manage(current_user: User = Depends(get_current_user)) -> User:
-    return PermissionRequired("period_lock.manage")(current_user)
-
-def require_custody_view(current_user: User = Depends(get_current_user)) -> User:
-    return PermissionRequired("custody.view")(current_user)
-
-def require_custody_manage(current_user: User = Depends(get_current_user)) -> User:
-    return PermissionRequired("custody.manage")(current_user)
+# Unified Direct Factory Assignments to support OpenAPI dependency introspection
+require_users_manage = PermissionRequired("users.manage")
+require_self_manage = PermissionRequired("users.self_manage")
+require_settings_manage = PermissionRequired("settings.manage")
+require_finance_view = PermissionRequired("finance.view")
+require_reconcile_cash = PermissionRequired("finance.reconcile_cash")
+require_reports_view = PermissionRequired("reports.view")
+require_exports_view = PermissionRequired("exports.view")
+require_exports_manage = PermissionRequired("exports.manage")
+require_accounting_view = PermissionRequired("accounting.view")
+require_accounting_manage = PermissionRequired("accounting.manage")
+require_customers_view = PermissionRequired("customers.view")
+require_customers_manage = PermissionRequired("customers.manage")
+require_catalog_view = PermissionRequired("catalog.view")
+require_catalog_manage = PermissionRequired("catalog.manage")
+require_dresses_view = PermissionRequired("dresses.view")
+require_dresses_manage = PermissionRequired("dresses.manage")
+require_bookings_view = PermissionRequired("bookings.view")
+require_bookings_manage = PermissionRequired("bookings.manage")
+require_payments_view = PermissionRequired("payments.view")
+require_payments_manage = PermissionRequired("payments.manage")
+require_audit_view = PermissionRequired("audit.view")
+require_destructive_manage = PermissionRequired("destructive.manage")
+require_period_lock_manage = PermissionRequired("period_lock.manage")
+require_custody_view = PermissionRequired("custody.view")
+require_custody_manage = PermissionRequired("custody.manage")
 
 
 def limit_api_usage(request: Request) -> None:
@@ -191,8 +142,7 @@ def require_identity_view(current_user: User = Depends(get_current_user)) -> Use
     """
     ensure_permission(current_user, "users.self_manage")
     return current_user
-from app.modules.organization.branch_context import ensure_active_branch
-from app.modules.organization.models import Branch
+
 
 def get_active_branch(request: Request, db: Session = Depends(get_db)) -> Branch:
     return ensure_active_branch(db, request.session)

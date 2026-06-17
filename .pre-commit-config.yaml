@@ -1,0 +1,17 @@
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.18.0
+    hooks:
+      - id: gitleaks
+  - repo: local
+    hooks:
+      - id: no-large-files
+        name: Reject files larger than 1MB
+        entry: bash -c 'if [ $(stat -c%s "$1") -gt 1048576 ]; then echo "File $1 is larger than 1MB"; exit 1; fi' --
+        language: system
+        pass_filenames: true
+      - id: no-sensitive-extensions
+        name: Reject .sql/.db/.bak/.env files
+        entry: bash -c 'case "$1" in *.sql|*.db|*.sqlite|*.bak|*.env|*.zip) echo "Rejected: $1"; exit 1;; esac' --
+        language: system
+        pass_filenames: true

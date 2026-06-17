@@ -1,5 +1,6 @@
 from functools import lru_cache
 from pathlib import Path
+import os
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -41,6 +42,10 @@ class Settings(BaseSettings):
     export_delivery_webhook_url: str = ""
     max_image_size_bytes: int = 307200  # 300 KB
     redis_url: str = "redis://localhost:6379/0"
+    redis_password: str | None = None
+
+    # H4: Flag to bypass security checks in testing environment ONLY
+    security_bypass_for_tests: bool = False
 
     csrf_cookie_name: str = "myatelier_pro_csrf"
     csrf_header_name: str = "X-CSRF-Token"
@@ -72,6 +77,19 @@ class Settings(BaseSettings):
     def normalized_session_same_site(self) -> str:
         return self.session_same_site.strip().lower()
 
+    def effective_redis_url(self) -> str:
+        """H5: Reconstruct redis_url with password if missing in env."""
+        url = self.redis_url
+        redis_pass = self.redis_password or os.getenv("REDIS_PASSWORD")
+        if redis_pass and "@" in url and not url.split("://", 1)[1].split("@", 1)[0]:
+            scheme, rest = url.split("://", 1)
+            host_part = rest.split("@", 1)[1]
+            return f"{scheme}://:{redis_pass}@{host_part}"
+        elif redis_pass and "@" not in url:
+            scheme, rest = url.split("://", 1)
+            return f"{scheme}://:{redis_pass}@{rest}"
+        return url
+
     def validate_runtime_settings(self) -> None:
         same_site = self.normalized_session_same_site()
         if same_site not in VALID_SAMESITE_VALUES:
@@ -101,14 +119,18 @@ class Settings(BaseSettings):
         if self.default_admin_password.strip() == "admin123":
             raise ValueError("CRITICAL: DEFAULT_ADMIN_PASSWORD must be changed from default.")
 
+        if self.security_bypass_for_tests:
+            raise ValueError("CRITICAL: security_bypass_for_tests must be False in production.")
+
         cors_origins = self.cors_origins()
         if not cors_origins or "*" in cors_origins:
             raise ValueError("CRITICAL: Valid APP_FRONTEND_ORIGINS (no '*') are required in production.")
         
         if any(origin.startswith("http://localhost") or origin.startswith("http://127.0.0.1") for origin in cors_origins):
-            # Allow localhost only if it is explicitly on port 8080 (Nginx proxy) to facilitate easy production testing
-            if not any(":8080" in origin for origin in cors_origins):
-                raise ValueError("CRITICAL: Localhost origins are not allowed in production (except via port 8080 proxy).")
+            raise ValueError(
+                "CRITICAL: Localhost origins are not allowed in production. "
+                "Use a real domain name for APP_FRONTEND_ORIGINS."
+            )
 
         trusted_hosts = self.trusted_hosts()
         if not trusted_hosts or "*" in trusted_hosts:

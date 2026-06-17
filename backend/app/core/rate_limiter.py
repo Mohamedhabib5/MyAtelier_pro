@@ -16,8 +16,9 @@ class InMemoryRateLimiter:
         self._lock = threading.Lock()
 
     def is_allowed(self, key: str) -> bool:
-        import os
-        if os.getenv("TESTING") == "true":
+        # H4: استخدم settings flag بدلاً من env var مباشر
+        from app.core.config import get_settings
+        if get_settings().security_bypass_for_tests:
             return True
         now = time.time()
         with self._lock:
@@ -62,8 +63,8 @@ class RedisRateLimiter:
         self.client = redis.from_url(redis_url)
 
     def is_allowed(self, key: str) -> bool:
-        import os
-        if os.getenv("TESTING") == "true":
+        from app.core.config import get_settings
+        if get_settings().security_bypass_for_tests:
             return True
             
         now = time.time()
@@ -93,13 +94,25 @@ def get_rate_limiter(requests: int, window_seconds: int):
     Factory to return the appropriate rate limiter based on settings.
     """
     from app.core.config import get_settings
+    from app.core.redis_client import ping_redis
     settings = get_settings()
     
-    # Use Redis in production if redis_url is set, otherwise fallback to memory
-    if settings.is_production() and settings.redis_url.startswith("redis"):
+    url = settings.effective_redis_url()
+    
+    if settings.is_production():
+        # H5: Redis is mandatory in production. No silent fallback.
+        if not url.startswith("redis"):
+            raise RuntimeError("Redis URL is required in production.")
+        if not ping_redis():
+            raise RuntimeError("Redis connection is required in production but failed.")
+        return RedisRateLimiter(requests, window_seconds, url)
+        
+    # Non-production: try Redis first if configured and reachable, else fallback to memory
+    if url.startswith("redis"):
         try:
-            return RedisRateLimiter(requests, window_seconds, settings.redis_url)
-        except ImportError:
+            if ping_redis():
+                return RedisRateLimiter(requests, window_seconds, url)
+        except Exception:
             pass
             
     return InMemoryRateLimiter(requests, window_seconds)

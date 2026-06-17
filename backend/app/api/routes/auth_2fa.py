@@ -85,6 +85,13 @@ def verify_login_2fa(
         record_audit(db, actor_user_id=current_user.id, action="auth.2fa_login_success", target_type="user", target_id=current_user.id, summary="2FA login success")
         db.commit()
         return AuthUserResponse(**profile)
+
+    # === جديد: تحقق من السبب — هل أصبح 2FA غير مُفعَّل؟ ===
+    if not current_user.is_2fa_enabled or not current_user.totp_secret:
+        # الجلسة أصبحت غير متسقة — امسحها وأجبر إعادة تسجيل الدخول
+        request.session.clear()
+        raise AuthorizationError("انتهت صلاحية جلسة التحقق. يرجى إعادة تسجيل الدخول")
+    # ===
     
     record_audit(db, actor_user_id=current_user.id, action="auth.2fa_login_failed", target_type="user", target_id=current_user.id, summary="2FA login failed", success=False)
     db.commit()
@@ -101,6 +108,13 @@ def verify_login_backup(
     if not request.session.get("2fa_pending"):
         raise AuthorizationError("لا يوجد طلب تحقق ثنائي معلق")
 
+    # === جديد: Rate limit نفس مفتاح /verify ===
+    client_ip = request.client.host if request.client else "unknown"
+    rate_limit_key = f"2fa:{client_ip}:{current_user.id}"
+    if not two_fa_rate_limiter.is_allowed(rate_limit_key):
+        raise RateLimitError("محاولات كثيرة جداً. يرجى المحاولة لاحقاً")
+    # ===
+
     if verify_backup_code_login(db, current_user, payload.code):
         request.session["2fa_pending"] = False
         branch = ensure_active_branch(db, request.session)
@@ -112,6 +126,8 @@ def verify_login_backup(
             "effective_language": request.session.get("language", current_user.preferred_language),
             "is_2fa_required": False
         })
+        record_audit(db, actor_user_id=current_user.id, action="auth.2fa_backup_login_success", target_type="user", target_id=current_user.id, summary="2FA backup login success")
+        db.commit()
         return AuthUserResponse(**profile)
     
     record_audit(db, actor_user_id=current_user.id, action="auth.2fa_backup_code_failed", target_type="user", target_id=current_user.id, summary="2FA backup code login failed", success=False)

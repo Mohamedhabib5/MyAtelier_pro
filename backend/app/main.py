@@ -115,26 +115,45 @@ def create_app(settings_obj: Settings | None = None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
+        # Redis startup health check (H5)
+        from app.core.redis_client import ping_redis
+        import logging
+        startup_logger = logging.getLogger("app.startup")
+        
+        if not ping_redis():
+            if settings_obj.is_production():
+                startup_logger.error("CRITICAL: Redis connection failed. Redis is required in production.")
+                raise RuntimeError("Redis connection failed. Redis is required in production.")
+            else:
+                startup_logger.warning("Redis connection failed. Falling back to in-memory rate limiting.")
+        else:
+            startup_logger.info("Redis connection health check passed.")
+
         _bootstrap_foundation(app, settings_obj)
         
         # Start background check for due reports on startup
         import asyncio
         from app.modules.exports.daily_report_service import check_and_run_due_reports
-        import logging
 
-        startup_logger = logging.getLogger("app.startup_reports")
+        reports_logger = logging.getLogger("app.startup_reports")
 
         async def run_startup_reports_check():
             await asyncio.sleep(5)  # non-blocking delay to let the app start
-            startup_logger.info("Starting startup daily email reports check...")
+            reports_logger.info("Starting startup daily email reports check...")
             try:
                 with app.state.session_factory() as db:
                     res = check_and_run_due_reports(db)
-                    startup_logger.info(f"Startup daily email reports check completed: {res}")
+                    reports_logger.info(f"Startup daily email reports check completed: {res}")
             except Exception as e:
-                startup_logger.error(f"Error running startup daily reports check: {str(e)}")
+                reports_logger.error(f"Error running startup daily reports check: {str(e)}")
 
-        asyncio.create_task(run_startup_reports_check())
+        startup_reports_task = asyncio.create_task(run_startup_reports_check())
+        
+        # Keep a strong reference and log unhandled exceptions (Q4)
+        startup_reports_task.add_done_callback(
+            lambda t: t.exception() and reports_logger.error(f"Startup daily reports check task crashed: {t.exception()}")
+        )
+        app.state.startup_reports_task = startup_reports_task
 
         try:
             yield

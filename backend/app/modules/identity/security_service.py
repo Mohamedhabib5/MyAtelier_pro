@@ -25,7 +25,6 @@ def setup_2fa(db: Session, user: User) -> dict:
     
     return {
         "provisioning_uri": provisioning_uri,
-        "secret_plain": secret # Return plain for manual entry if needed
     }
 
 
@@ -59,9 +58,22 @@ def activate_2fa(db: Session, user: User, code: str) -> list[str]:
 
 
 def verify_2fa_login(db: Session, user: User, code: str) -> bool:
-    """Verifies a TOTP code during the login flow."""
+    """Verifies a TOTP code during the login flow.
+    
+    Fail-closed: returns False if 2FA is not enabled or secret is missing.
+    The caller is responsible for clearing the 2fa_pending session state
+    and redirecting the user to re-authenticate.
+    """
     if not user.is_2fa_enabled or not user.totp_secret:
-        return True # Fallback if accidentally called
+        # Fail-closed: لا نسمح بالمتابعة إذا كان 2FA غير مُفعَّل.
+        # لو وصلنا لهذه النقطة مع 2fa_pending=True في الجلسة، فهناك
+        # عدم اتساق (race condition) — المستخدم عطَّل 2FA أثناء الجلسة.
+        SecurityNotificationService.notify_security_event(
+            "2fa_inconsistent_state",
+            {"user_id": user.id, "username": user.username,
+             "reason": "2FA disabled during pending session"}
+        )
+        return False
     
     secret = decrypt_secret(user.totp_secret)
     totp = pyotp.TOTP(secret)

@@ -196,26 +196,34 @@ export const TwoFASetupModal: React.FC<Props> = ({ open, onClose, onComplete }) 
                   >
                     <QRCodeSVG value={setupData.provisioning_uri} size={180} />
                   </Paper>
-                  <Typography variant="body2" color="text.secondary" gutterBottom>
-                    أو أدخل الرمز يدوياً إذا كنت لا تستطيع المسح:
-                  </Typography>
-                  <Box sx={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center', 
-                    gap: 1, 
-                    mb: 3,
-                    bgcolor: 'rgba(0,0,0,0.04)',
-                    p: 1.5,
-                    borderRadius: 2
-                  }}>
-                    <Typography sx={{ letterSpacing: 2, fontFamily: 'monospace', fontWeight: 'bold' }}>
-                      {setupData.secret_plain}
-                    </Typography>
-                    <IconButton size="small" onClick={() => copyToClipboard(setupData.secret_plain)}>
-                      {copied ? <Check size={18} color={theme.palette.success.main} /> : <Copy size={18} />}
-                    </IconButton>
-                  </Box>
+                  {(() => {
+                    const match = setupData.provisioning_uri.match(/[?&]secret=([^&]+)/i);
+                    const secretPlain = match ? match[1] : '';
+                    return (
+                      <>
+                        <Typography variant="body2" color="text.secondary" gutterBottom>
+                          أو أدخل الرمز يدوياً إذا كنت لا تستطيع المسح:
+                        </Typography>
+                        <Box sx={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center', 
+                          gap: 1, 
+                          mb: 3,
+                          bgcolor: 'rgba(0,0,0,0.04)',
+                          p: 1.5,
+                          borderRadius: 2
+                        }}>
+                          <Typography sx={{ letterSpacing: 2, fontFamily: 'monospace', fontWeight: 'bold' }}>
+                            {secretPlain}
+                          </Typography>
+                          <IconButton size="small" onClick={() => copyToClipboard(secretPlain)}>
+                            {copied ? <Check size={18} color={theme.palette.success.main} /> : <Copy size={18} />}
+                          </IconButton>
+                        </Box>
+                      </>
+                    );
+                  })()}
                   <Button variant="contained" onClick={() => setActiveStep(2)} sx={{ borderRadius: 10, px: 4 }}>
                     تم المسح، التالي
                   </Button>

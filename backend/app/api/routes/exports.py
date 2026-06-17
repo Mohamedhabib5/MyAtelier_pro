@@ -347,11 +347,29 @@ def generate_download_ticket(
 def consume_download_ticket(
     ticket_id: str,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_exports_view),
 ) -> Response:
     ticket = ticket_store.consume_ticket(ticket_id)
     if not ticket:
         from fastapi import HTTPException
         raise HTTPException(status_code=403, detail="Invalid or expired download ticket")
+
+    # Verify ticket ownership
+    if str(current_user.id) != ticket["user_id"]:
+        from app.modules.core_platform.audit import record_audit
+        record_audit(
+            db,
+            actor_user_id=current_user.id,
+            action="export.ticket_ownership_violation",
+            target_type="export_ticket",
+            target_id=ticket_id,
+            summary=f"User {current_user.id} tried to consume ticket owned by {ticket['user_id']}",
+            success=False,
+            error_code="ticket_ownership_mismatch",
+        )
+        db.commit()
+        from fastapi import HTTPException
+        raise HTTPException(status_code=403, detail="Ticket does not belong to current user")
 
     user_id = ticket["user_id"]
     path = ticket["path"]

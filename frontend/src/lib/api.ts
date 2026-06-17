@@ -104,7 +104,10 @@ export async function apiRequest<T>(input: string, init?: RequestInit): Promise<
  * @param url - The export API URL (e.g. /api/exports/bookings.xlsx?branch_id=...)
  */
 export async function downloadFile(url: string): Promise<void> {
-  console.log(`[Download] Initiating ticket request for: ${url}`);
+  const isDev = typeof import.meta !== 'undefined' && import.meta.env?.DEV;
+  if (isDev) {
+    console.log(`[Download] Initiating ticket request for: ${url}`);
+  }
   try {
     // ── Step 1: Security ──────────────────────────────────────────────────
     // Request a secure, single-use download ticket from the backend.
@@ -114,7 +117,9 @@ export async function downloadFile(url: string): Promise<void> {
       { method: 'POST' }
     );
 
-    console.log(`[Download] Ticket received: ${ticketResult.ticket}`);
+    if (isDev) {
+      console.log(`[Download] Ticket received: ${ticketResult.ticket}`);
+    }
 
     // ── Step 2: Fetch as blob ─────────────────────────────────────────────
     // Fetch the actual file content. We use fetch() (not location.href) so we
@@ -151,7 +156,9 @@ export async function downloadFile(url: string): Promise<void> {
       }
     }
 
-    console.log(`[Download] Saving as: "${filename}"`);
+    if (isDev) {
+      console.log(`[Download] Saving as: "${filename}"`);
+    }
 
     // ── Step 4: Trigger download with correct filename ────────────────────
     // Create a temporary blob: URL. Unlike http: URLs, the browser WILL respect
@@ -176,7 +183,9 @@ export async function downloadFile(url: string): Promise<void> {
     }, 1000);
 
   } catch (error) {
-    console.error('[Download] Error downloading file:', error);
+    if (isDev) {
+      console.error('[Download] Error downloading file:', error);
+    }
     // Last-resort fallback: direct navigation (filename will be UUID, but file will download)
     window.location.href = url;
   }
