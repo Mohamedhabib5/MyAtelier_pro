@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import base64
 import hashlib
 import hmac
 import os
 from base64 import b64decode, b64encode
+from typing import Any
+
+from cryptography.fernet import Fernet
 
 PBKDF2_ALGO = "pbkdf2_sha256"
 PBKDF2_ITERATIONS = 260_000
@@ -39,8 +43,6 @@ def role_list_contains(role_names: list[str], role_name: str) -> bool:
 
 
 def _get_fernet() -> Any:
-    from cryptography.fernet import Fernet
-    import base64
     from app.core.config import get_settings
     settings = get_settings()
     # Ensure key is 32 bytes and base64 encoded
