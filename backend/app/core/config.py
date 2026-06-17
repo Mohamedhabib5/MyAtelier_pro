@@ -81,14 +81,23 @@ class Settings(BaseSettings):
         """H5: Reconstruct redis_url with password if missing in env."""
         url = self.redis_url
         redis_pass = self.redis_password or os.getenv("REDIS_PASSWORD")
-        if redis_pass and "@" in url and not url.split("://", 1)[1].split("@", 1)[0]:
+        if not redis_pass:
+            return url
+        # If URL already contains credentials (user:pass@host), don't override
+        try:
             scheme, rest = url.split("://", 1)
+        except ValueError:
+            return url
+        if "@" in rest:
+            # Check if password slot is already filled (e.g. redis://:existingpass@host)
+            userinfo = rest.split("@", 1)[0]
+            if ":" in userinfo and userinfo.split(":", 1)[1]:
+                return url  # Password already present
+            # Password slot empty (e.g. redis://@host or redis://:@host)
             host_part = rest.split("@", 1)[1]
             return f"{scheme}://:{redis_pass}@{host_part}"
-        elif redis_pass and "@" not in url:
-            scheme, rest = url.split("://", 1)
-            return f"{scheme}://:{redis_pass}@{rest}"
-        return url
+        # No @ at all — inject password
+        return f"{scheme}://:{redis_pass}@{rest}"
 
     def validate_runtime_settings(self) -> None:
         same_site = self.normalized_session_same_site()
