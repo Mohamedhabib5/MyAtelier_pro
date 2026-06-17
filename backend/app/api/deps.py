@@ -84,6 +84,8 @@ def PermissionRequired(permission_key: str):
             raise AuthorizationError(missing_permission_message(permission_key))
             
         return current_user
+    # P3.2: Set __name__ so FastAPI OpenAPI introspection can distinguish dependencies
+    _dependency.__name__ = f"require_{permission_key.replace('.', '_')}"
     return _dependency
 
 
