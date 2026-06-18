@@ -183,7 +183,7 @@ jobs:
           trap 'jobs -p | xargs -r kill' EXIT
 
           cd backend
-          python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 > ../backend-e2e.log 2>&1 &
+          python -m uvicorn app.main:create_app --factory --host 127.0.0.1 --port 8000 > ../backend-e2e.log 2>&1 &
           cd ..
 
           cd frontend

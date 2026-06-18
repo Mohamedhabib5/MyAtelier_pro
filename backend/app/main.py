@@ -310,5 +310,3 @@ def create_app(settings_obj: Settings | None = None) -> FastAPI:
 
     return app
 
-
-app = create_app()
