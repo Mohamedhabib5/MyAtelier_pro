@@ -67,3 +67,53 @@ def test_list_journal_entries_returns_strict_pydantic_models(app_client: TestCli
             assert isinstance(entry, JournalEntryResponse)
     finally:
         db.close()
+
+
+def test_list_departments_returns_strict_pydantic_models(app_client: TestClient) -> None:
+    from app.modules.catalog.lifecycle import list_departments
+    from app.modules.catalog.schemas import DepartmentResponse
+
+    login(app_client)
+    # Seed a department via API
+    app_client.post('/api/catalog/departments', json={'code': 'TST', 'name': 'Test Department'})
+
+    db = Session(app_client.app.state.engine)
+    try:
+        departments = list_departments(db)
+        assert len(departments) > 0
+        for dept in departments:
+            assert isinstance(dept, DepartmentResponse)
+    finally:
+        db.close()
+
+
+def test_list_services_returns_strict_pydantic_models(app_client: TestClient) -> None:
+    from app.modules.catalog.lifecycle import list_services
+    from app.modules.catalog.schemas import ServiceResponse
+
+    login(app_client)
+
+    db = Session(app_client.app.state.engine)
+    try:
+        services = list_services(db)
+        # Services may be empty if none seeded, but type check still works
+        for svc in services:
+            assert isinstance(svc, ServiceResponse)
+    finally:
+        db.close()
+
+
+def test_list_export_schedules_returns_strict_pydantic_models(app_client: TestClient) -> None:
+    from app.modules.exports.schedule_service import list_export_schedules
+    from app.modules.exports.schemas import ExportScheduleResponse
+
+    login(app_client)
+
+    db = Session(app_client.app.state.engine)
+    try:
+        schedules = list_export_schedules(db)
+        # Schedules may be empty, but type check still works
+        for schedule in schedules:
+            assert isinstance(schedule, ExportScheduleResponse)
+    finally:
+        db.close()

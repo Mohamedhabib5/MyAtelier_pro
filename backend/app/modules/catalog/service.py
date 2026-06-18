@@ -8,7 +8,7 @@ from app.core.exceptions import NotFoundError, ValidationAppError
 from app.core.security import norm_text
 from app.modules.catalog.models import Department, ServiceCatalogItem
 from app.modules.catalog.repository import CatalogRepository
-from app.modules.catalog.schemas import DepartmentCreateRequest, DepartmentUpdateRequest, ServiceCreateRequest, ServiceUpdateRequest
+from app.modules.catalog.schemas import DepartmentCreateRequest, DepartmentResponse, DepartmentUpdateRequest, ServiceCreateRequest, ServiceResponse, ServiceUpdateRequest
 from app.modules.core_platform.service import record_audit
 from app.modules.identity.models import User
 from app.modules.organization.service import get_company_settings
@@ -18,13 +18,13 @@ PRICE_QUANT = Decimal('0.01')
 RATE_QUANT = Decimal('0.01')
 
 
-def list_departments(db: Session) -> list[dict]:
+def list_departments(db: Session) -> list[DepartmentResponse]:
     company = get_company_settings(db)
     rows = CatalogRepository(db).list_departments(company.id)
     return [_serialize_department(row) for row in rows]
 
 
-def create_department(db: Session, actor: User, payload: DepartmentCreateRequest) -> dict:
+def create_department(db: Session, actor: User, payload: DepartmentCreateRequest) -> DepartmentResponse:
     company = get_company_settings(db)
     repo = CatalogRepository(db)
     code = _clean(payload.code).upper()
@@ -58,7 +58,7 @@ def create_department(db: Session, actor: User, payload: DepartmentCreateRequest
     return _serialize_department(department)
 
 
-def update_department(db: Session, actor: User, department_id: str, payload: DepartmentUpdateRequest) -> dict:
+def update_department(db: Session, actor: User, department_id: str, payload: DepartmentUpdateRequest) -> DepartmentResponse:
     company = get_company_settings(db)
     repo = CatalogRepository(db)
     department = _get_department_for_company(repo, company.id, department_id)
@@ -88,7 +88,7 @@ def update_department(db: Session, actor: User, department_id: str, payload: Dep
     return _serialize_department(department)
 
 
-def set_dress_department(db: Session, actor: User, department_id: str) -> dict:
+def set_dress_department(db: Session, actor: User, department_id: str) -> DepartmentResponse:
     company = get_company_settings(db)
     repo = CatalogRepository(db)
     department = _get_department_for_company(repo, company.id, department_id)
@@ -117,13 +117,13 @@ def set_dress_department(db: Session, actor: User, department_id: str) -> dict:
     return _serialize_department(department)
 
 
-def list_services(db: Session) -> list[dict]:
+def list_services(db: Session) -> list[ServiceResponse]:
     company = get_company_settings(db)
     rows = CatalogRepository(db).list_services(company.id)
     return [_serialize_service(row) for row in rows]
 
 
-def create_service(db: Session, actor: User, payload: ServiceCreateRequest) -> dict:
+def create_service(db: Session, actor: User, payload: ServiceCreateRequest) -> ServiceResponse:
     company = get_company_settings(db)
     repo = CatalogRepository(db)
     department = _get_department_for_company(repo, company.id, payload.department_id)
@@ -167,7 +167,7 @@ def create_service(db: Session, actor: User, payload: ServiceCreateRequest) -> d
     return _serialize_service(service)
 
 
-def update_service(db: Session, actor: User, service_id: str, payload: ServiceUpdateRequest) -> dict:
+def update_service(db: Session, actor: User, service_id: str, payload: ServiceUpdateRequest) -> ServiceResponse:
     company = get_company_settings(db)
     repo = CatalogRepository(db)
     service = _get_service_for_company(repo, company.id, service_id)
@@ -223,8 +223,8 @@ def _get_service_for_company(repo: CatalogRepository, company_id: str, service_i
     return service
 
 
-def _serialize_department(department: Department) -> dict:
-    return {
+def _serialize_department(department: Department) -> DepartmentResponse:
+    return DepartmentResponse.model_validate({
         'id': department.id,
         'company_id': department.company_id,
         'created_by_user_id': department.created_by_user_id,
@@ -235,7 +235,7 @@ def _serialize_department(department: Department) -> dict:
         'is_active': department.is_active,
         'is_dress_department': department.is_dress_department,
         'display_order': department.display_order,
-    }
+    })
 
 def _unmark_dress_departments(db: Session, company_id: str):
     repo = CatalogRepository(db)
@@ -245,8 +245,8 @@ def _unmark_dress_departments(db: Session, company_id: str):
         db.flush()
 
 
-def _serialize_service(service: ServiceCatalogItem) -> dict:
-    return {
+def _serialize_service(service: ServiceCatalogItem) -> ServiceResponse:
+    return ServiceResponse.model_validate({
         'id': service.id,
         'company_id': service.company_id,
         'created_by_user_id': service.created_by_user_id,
@@ -261,7 +261,7 @@ def _serialize_service(service: ServiceCatalogItem) -> dict:
         'notes': service.notes,
         'is_active': service.is_active,
         'display_order': service.display_order,
-    }
+    })
 
 
 def _clean(value: str) -> str:

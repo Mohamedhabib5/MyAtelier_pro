@@ -246,22 +246,22 @@ def download_custody_export_xlsx(
 
 @router.get('/schedules', response_model=list[ExportScheduleResponse])
 def list_export_schedules_route(db: Session = Depends(get_db), _: User = Depends(require_exports_view)) -> list[ExportScheduleResponse]:
-    return [ExportScheduleResponse.model_validate(item) for item in list_export_schedules(db)]
+    return list_export_schedules(db)
 
 
 @router.post('/schedules', response_model=ExportScheduleResponse)
 def create_export_schedule_route(payload: ExportScheduleCreateRequest, request: Request, db: Session = Depends(get_db), current_user: User = Depends(require_exports_manage)) -> ExportScheduleResponse:
-    return ExportScheduleResponse.model_validate(create_export_schedule(db, current_user, payload, request.session))
+    return create_export_schedule(db, current_user, payload, request.session)
 
 
 @router.post('/schedules/{schedule_id}/run', response_model=ExportScheduleRunResponse)
 def run_export_schedule_route(schedule_id: str, db: Session = Depends(get_db), current_user: User = Depends(require_exports_manage)) -> ExportScheduleRunResponse:
-    return ExportScheduleRunResponse.model_validate(run_export_schedule(db, current_user, schedule_id))
+    return run_export_schedule(db, current_user, schedule_id)
 
 
 @router.post('/schedules/{schedule_id}/toggle', response_model=ExportScheduleToggleResponse)
 def toggle_export_schedule_route(schedule_id: str, db: Session = Depends(get_db), current_user: User = Depends(require_exports_manage)) -> ExportScheduleToggleResponse:
-    return ExportScheduleToggleResponse.model_validate({'schedule': toggle_export_schedule(db, current_user, schedule_id)})
+    return ExportScheduleToggleResponse(schedule=toggle_export_schedule(db, current_user, schedule_id))
 
 
 @router.post('/schedules/run-due', response_model=ExportScheduleRunDueResponse)
@@ -282,7 +282,7 @@ def run_due_export_schedules_route(
         delivery_dry_run=payload.delivery_dry_run,
         trigger_source=payload.trigger_source,
     )
-    return ExportScheduleRunDueResponse.model_validate(result)
+    return result
 
 
 @router.post('/schedules/run-due-reports')
