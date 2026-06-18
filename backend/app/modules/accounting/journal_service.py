@@ -15,6 +15,7 @@ from app.modules.accounting.schemas import (
     JournalEntryLineWriteRequest,
     JournalEntryReverseRequest,
     JournalEntryUpdateRequest,
+    JournalEntryResponse,
 )
 from app.modules.accounting.party_validation import validate_party_fields
 from app.modules.accounting.service import DEFAULT_JOURNAL_SEQUENCE_KEY, ensure_accounting_foundation
@@ -26,18 +27,18 @@ from app.modules.organization.service import get_company_settings
 ZERO = Decimal("0.00")
 
 
-def list_journal_entries(db: Session) -> list[dict]:
+def list_journal_entries(db: Session) -> list[JournalEntryResponse]:
     ensure_accounting_foundation(db)
     company = get_company_settings(db)
     rows = AccountingRepository(db).list_journal_entries(company.id)
     return [_serialize_entry(entry) for entry in rows]
 
 
-def get_journal_entry(db: Session, entry_id: str) -> dict:
+def get_journal_entry(db: Session, entry_id: str) -> JournalEntryResponse:
     return _serialize_entry(_get_entry_or_404(db, entry_id))
 
 
-def create_draft_journal_entry(db: Session, actor: User, payload: JournalEntryCreateRequest) -> dict:
+def create_draft_journal_entry(db: Session, actor: User, payload: JournalEntryCreateRequest) -> JournalEntryResponse:
     ensure_accounting_foundation(db)
     company = get_company_settings(db)
     repo = AccountingRepository(db)
@@ -74,7 +75,7 @@ def create_draft_journal_entry(db: Session, actor: User, payload: JournalEntryCr
     return get_journal_entry(db, entry.id)
 
 
-def update_draft_journal_entry(db: Session, actor: User, entry_id: str, payload: JournalEntryUpdateRequest) -> dict:
+def update_draft_journal_entry(db: Session, actor: User, entry_id: str, payload: JournalEntryUpdateRequest) -> JournalEntryResponse:
     entry = _get_entry_or_404(db, entry_id)
     if entry.status != JournalEntryStatus.DRAFT.value:
         raise ValidationAppError("يمكن تعديل القيود المسودة فقط")
@@ -100,7 +101,7 @@ def update_draft_journal_entry(db: Session, actor: User, entry_id: str, payload:
     return get_journal_entry(db, entry.id)
 
 
-def post_journal_entry(db: Session, actor: User, entry_id: str) -> dict:
+def post_journal_entry(db: Session, actor: User, entry_id: str) -> JournalEntryResponse:
     entry = _get_entry_or_404(db, entry_id)
     if entry.status != JournalEntryStatus.DRAFT.value:
         raise ValidationAppError("يمكن ترحيل القيود المسودة فقط")
@@ -124,7 +125,7 @@ def post_journal_entry(db: Session, actor: User, entry_id: str) -> dict:
     return get_journal_entry(db, entry.id)
 
 
-def reverse_journal_entry(db: Session, actor: User, entry_id: str, payload: JournalEntryReverseRequest) -> dict:
+def reverse_journal_entry(db: Session, actor: User, entry_id: str, payload: JournalEntryReverseRequest) -> JournalEntryResponse:
     entry = _get_entry_or_404(db, entry_id)
     if entry.status != JournalEntryStatus.POSTED.value:
         raise ValidationAppError("يمكن عكس القيود المرحّلة فقط")
@@ -236,10 +237,10 @@ def _validate_balanced_lines(lines: list[JournalEntryLine]) -> None:
         raise ValidationAppError("القيد غير متوازن")
 
 
-def _serialize_entry(entry: JournalEntry) -> dict:
+def _serialize_entry(entry: JournalEntry) -> JournalEntryResponse:
     total_debit = sum((_normalize_amount(line.debit_amount) for line in entry.lines), ZERO)
     total_credit = sum((_normalize_amount(line.credit_amount) for line in entry.lines), ZERO)
-    return {
+    payload = {
         "id": entry.id,
         "company_id": entry.company_id,
         "fiscal_period_id": entry.fiscal_period_id,
@@ -273,6 +274,7 @@ def _serialize_entry(entry: JournalEntry) -> dict:
             for line in entry.lines
         ],
     }
+    return JournalEntryResponse.model_validate(payload)
 
 
 def _normalize_amount(value: Decimal | None) -> Decimal:

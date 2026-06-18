@@ -47,3 +47,23 @@ def test_list_bookings_returns_strict_pydantic_models(app_client: TestClient) ->
         assert isinstance(bookings[0], BookingSummaryResponse)
     finally:
         db.close()
+
+
+def test_list_journal_entries_returns_strict_pydantic_models(app_client: TestClient) -> None:
+    from app.modules.accounting.journal_service import list_journal_entries
+    from app.modules.accounting.schemas import JournalEntryResponse
+    from .test_accounting_journal_workflow import _chart_map, _draft_payload
+
+    login(app_client)
+    account_ids = _chart_map(app_client)
+    created = app_client.post("/api/accounting/journal-entries", json=_draft_payload(account_ids))
+    assert created.status_code == 201, created.text
+
+    db = Session(app_client.app.state.engine)
+    try:
+        entries = list_journal_entries(db)
+        assert len(entries) > 0
+        for entry in entries:
+            assert isinstance(entry, JournalEntryResponse)
+    finally:
+        db.close()
