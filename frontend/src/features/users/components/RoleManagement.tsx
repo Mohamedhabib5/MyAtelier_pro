@@ -51,7 +51,7 @@ export const RoleManagement: React.FC = () => {
       const [r, p] = await Promise.all([fetchRoles(), fetchPermissions()]);
       setRoles(r);
       setPermissions(p);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(err.message || text.errorLoad);
     } finally {
       setLoading(false);
@@ -90,7 +90,7 @@ export const RoleManagement: React.FC = () => {
       setOpen(false);
       loadData();
       setTimeout(() => setSuccess(null), 3000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(err.message || text.errorSave);
     } finally {
       setLoading(false);
@@ -104,7 +104,7 @@ export const RoleManagement: React.FC = () => {
       setSuccess('تم حذف الدور');
       loadData();
       setTimeout(() => setSuccess(null), 3000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(err.message);
     }
   };
@@ -117,7 +117,7 @@ export const RoleManagement: React.FC = () => {
       setSuccess('تم نسخ الدور بنجاح');
       loadData();
       setTimeout(() => setSuccess(null), 3000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(err.message);
     }
   };

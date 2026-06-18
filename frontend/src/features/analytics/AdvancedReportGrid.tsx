@@ -23,13 +23,13 @@ interface Props {
   dateTo?: string;
   branchId?: string;
   // Lifted Props
-  groupStack: any[];
-  setGroupStack: (stack: any[]) => void;
-  drillDownPath: any[];
-  setDrillDownPath: (path: any[]) => void;
+  groupStack: GroupField[];
+  setGroupStack: (stack: GroupField[]) => void;
+  drillDownPath: { label: string; value: string }[];
+  setDrillDownPath: (path: { label: string; value: string }[]) => void;
   selectedBookingId: string | null;
   setSelectedBookingId: (id: string | null) => void;
-  availableGroups?: any[];
+  availableGroups?: GroupField[];
 }
 
 type GroupField = { id: keyof AdvancedBIRecord; label: string };

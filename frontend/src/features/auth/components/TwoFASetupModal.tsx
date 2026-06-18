@@ -38,7 +38,7 @@ export const TwoFASetupModal: React.FC<Props> = ({ open, onClose, onComplete }) 
       const data = await setup2FA();
       setSetupData(data);
       setActiveStep(1);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(err.message || authText.startSetupFailed);
     } finally {
       setLoading(false);
@@ -53,7 +53,7 @@ export const TwoFASetupModal: React.FC<Props> = ({ open, onClose, onComplete }) 
       const data = await activate2FA(verificationCode);
       setBackupCodes(data.backup_codes);
       setActiveStep(3);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(err.message || authText.invalidCode);
     } finally {
       setLoading(false);

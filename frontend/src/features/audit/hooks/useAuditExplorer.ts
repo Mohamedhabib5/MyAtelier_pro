@@ -105,7 +105,7 @@ export function useAuditExplorer() {
       const result = await verifyAuditIntegrity();
       setIntegrityResult(result);
       setShowIntegrityDialog(true);
-    } catch (err: any) {
+    } catch (err: unknown) {
       alert(`فشل التحقق: ${err.message}`);
     } finally {
       setVerifying(false);

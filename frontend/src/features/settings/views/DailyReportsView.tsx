@@ -96,7 +96,7 @@ export function DailyReportsView() {
       } else {
         setError(res.error || (isAr ? 'فشل إرسال البريد التجريبي.' : 'Failed to send test email.'));
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(err.message || 'Error occurred during test dispatch.');
     } finally {
       setTestingId(null);

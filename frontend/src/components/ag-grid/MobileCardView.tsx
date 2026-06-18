@@ -12,11 +12,17 @@ import { MoreVertical, ChevronRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useThemeSettings } from '../../features/theme/ThemeSettingsProvider';
 
+interface ColumnDef {
+  field?: string;
+  headerName?: string;
+  hide?: boolean;
+}
+
 interface Props<Row> {
   rows: Row[];
-  columns: any[];
-  onRowClicked?: (params: any) => void;
-  getRowId?: (params: any) => string;
+  columns: ColumnDef[];
+  onRowClicked?: (params: { data: Row }) => void;
+  getRowId?: (params: { data: Row }) => string;
 }
 
 export function MobileCardView<Row>({ rows, columns, onRowClicked, getRowId }: Props<Row>) {
