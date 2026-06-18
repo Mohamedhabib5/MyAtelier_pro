@@ -288,16 +288,18 @@ def export_aging_report_excel_route(
 
 # --- Accounting Bridge Configuration Endpoints ---
 
-from app.api.deps import PermissionRequired, get_current_user
+from app.api.deps import get_current_user
 from app.core.exceptions import AuthorizationError
 from app.modules.organization.service import get_company_settings
+from app.modules.identity.access import permission_keys_for_user
 
 
 def require_accounting_bridge_manage(current_user: User = Depends(get_current_user)) -> User:
-    try:
-        return PermissionRequired("accounting.bridge_manage")(current_user)
-    except AuthorizationError:
-        return PermissionRequired("accounting.manage")(current_user)
+    perms = permission_keys_for_user(current_user)
+    if "accounting.bridge_manage" in perms or "accounting.manage" in perms:
+        return current_user
+    from app.core.messages import missing_permission_message
+    raise AuthorizationError(missing_permission_message("accounting.bridge_manage"))
 
 
 @router.get("/bridge-configs", response_model=list[AccountingBridgeConfigResponse])
