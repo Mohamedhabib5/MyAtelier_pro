@@ -61,6 +61,11 @@ def create_customer(db: Session, actor: User, payload: CustomerCreateRequest) ->
 def update_customer(db: Session, actor: User, customer_id: str, payload: CustomerUpdateRequest) -> dict:
     repo = CustomersRepository(db)
     customer = _get_company_customer_or_404(db, repo, customer_id)
+    
+    if payload.entity_version is not None and payload.entity_version != customer.entity_version:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=409, detail="تم تعديل هذه البيانات بواسطة مستخدم آخر، يرجى تحديث الصفحة.")
+
     company = get_company_settings(db)
 
     phone = _clean(payload.phone)

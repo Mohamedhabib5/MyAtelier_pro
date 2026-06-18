@@ -43,9 +43,16 @@ def test_routes_do_not_import_helper_modules_directly() -> None:
     route_files = [
         repo_root / "app" / "api" / "routes" / "bookings.py",
         repo_root / "app" / "api" / "routes" / "payments.py",
-        repo_root / "app" / "api" / "routes" / "exports.py",
     ]
+    exports_dir = repo_root / "app" / "api" / "routes" / "exports"
+    if exports_dir.is_dir():
+        route_files.extend(exports_dir.rglob("*.py"))
+    else:
+        route_files.append(repo_root / "app" / "api" / "routes" / "exports.py")
+
     for route_path in route_files:
+        if not route_path.exists():
+            continue
         imported_modules = _collect_imported_modules(route_path)
         direct_helpers = imported_modules.intersection(helper_module_imports)
         assert not direct_helpers, (

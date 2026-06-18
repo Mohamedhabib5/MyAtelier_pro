@@ -82,3 +82,9 @@ jobs:
 
     - name: Run Frontend Tests
       run: npm run test:unit
+
+    - name: Build frontend
+      run: npm run build
+
+    - name: Run frontend text check
+      run: npm run check:text

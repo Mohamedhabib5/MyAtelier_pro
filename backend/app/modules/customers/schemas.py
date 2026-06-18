@@ -46,6 +46,7 @@ class CustomerUpdateRequest(BaseModel):
     address: str = Field(min_length=2, max_length=255)
     notes: str | None = None
     is_active: bool = True
+    entity_version: int | None = None
 
 
 class CustomerArchiveRequest(BaseModel):

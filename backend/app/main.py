@@ -135,8 +135,11 @@ def create_app(settings_obj: Settings | None = None) -> FastAPI:
         # Start background check for due reports on startup
         import asyncio
         from app.modules.exports.daily_report_service import check_and_run_due_reports
+        from app.modules.core_platform.audit import verify_chain_integrity
+        import logging
 
         reports_logger = logging.getLogger("app.startup_reports")
+        startup_logger = logging.getLogger("app.startup")
 
         async def run_startup_reports_check():
             await asyncio.sleep(5)  # non-blocking delay to let the app start
@@ -156,9 +159,33 @@ def create_app(settings_obj: Settings | None = None) -> FastAPI:
         )
         app.state.startup_reports_task = startup_reports_task
 
+        async def run_startup_audit_check():
+            await asyncio.sleep(5)
+            startup_logger.info("Starting startup audit chain integrity check...")
+            try:
+                with app.state.session_factory() as db:
+                    res = verify_chain_integrity(db)
+                    if res["success"]:
+                        startup_logger.info(f"Audit chain is intact. Verified {res['total_verified']} logs.")
+                    else:
+                        startup_logger.warning(f"Audit chain verification failed! Issues: {res['issues']}")
+            except Exception as e:
+                startup_logger.error(f"Error running startup audit chain integrity check: {str(e)}")
+
+        startup_audit_task = asyncio.create_task(run_startup_audit_check())
+        startup_audit_task.add_done_callback(
+            lambda t: t.exception() and startup_logger.error(f"Startup audit chain check task crashed: {t.exception()}")
+        )
+        app.state.startup_audit_task = startup_audit_task
+
+        import concurrent.futures
+        app.state.email_executor = concurrent.futures.ThreadPoolExecutor(max_workers=4)
+
         try:
             yield
         finally:
+            if hasattr(app.state, "email_executor"):
+                app.state.email_executor.shutdown(wait=False)
             app.state.engine.dispose()
 
     _ensure_storage_dirs(settings_obj)

@@ -2,9 +2,9 @@ services:
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-myatelier_pro}
-      POSTGRES_USER: ${POSTGRES_USER:-beauty}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-beauty}
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB required}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD required}
     command: >
       postgres
       -c shared_buffers=256MB
@@ -17,7 +17,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-beauty} -d ${POSTGRES_DB:-myatelier_pro}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -27,19 +27,21 @@ services:
         max-size: "10m"
         max-file: "3"
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
 
   redis:
     image: redis:7-alpine
     container_name: myatelier_redis
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-your-super-strong-redis-password-here-2026}
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD required}
     environment:
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-your-super-strong-redis-password-here-2026}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD required}
     mem_limit: 400m
     memswap_limit: 500m
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "--pass", "${REDIS_PASSWORD:-your-super-strong-redis-password-here-2026}", "ping"]
+      test: ["CMD", "redis-cli", "--pass", "${REDIS_PASSWORD}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -49,6 +51,8 @@ services:
         max-size: "10m"
         max-file: "3"
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
 
   backend:
     build:
@@ -56,14 +60,15 @@ services:
     env_file:
       - .env
     environment:
-      - DATABASE_URL=postgresql+psycopg://${POSTGRES_USER:-beauty}:${POSTGRES_PASSWORD:-beauty}@db:5432/${POSTGRES_DB:-myatelier_pro}
+      - DATABASE_URL=postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
     command: sh -c "alembic upgrade head && uvicorn app.main:create_app --factory --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips='nginx'"
     volumes:
-      - ./backend:/app
       - ./storage:/app/storage
-      - ./.git:/app/.git
-    expose:
-      - "8000"
+    read_only: true
+    tmpfs:
+      - /tmp
+    ports:
+      - "8000:8000"
     mem_limit: 1.2g
     memswap_limit: 1.4g
     depends_on:
@@ -75,6 +80,8 @@ services:
         max-size: "10m"
         max-file: "3"
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
 
   nginx:
     build:
@@ -85,6 +92,11 @@ services:
       - "8080:80"
     mem_limit: 300m
     memswap_limit: 400m
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/run
+      - /var/cache/nginx
     depends_on:
       - backend
     logging:
@@ -93,6 +105,8 @@ services:
         max-size: "10m"
         max-file: "3"
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
 
 volumes:
   postgres_data:

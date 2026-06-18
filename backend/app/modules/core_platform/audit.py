@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
 from app.core.request_context import get_audit_request_context
 from app.modules.core_platform.models import AuditLog
 from app.modules.core_platform.repository import CorePlatformRepository
-from app.modules.core_platform.security_service import calculate_log_hash
+from app.core.security import calculate_log_hash
 
 
 def record_audit(
@@ -34,6 +35,7 @@ def record_audit(
     current_hash = calculate_log_hash(prev_hash, action, target_id, summary, diff_json)
     
     entry = AuditLog(
+        occurred_at=datetime.now(timezone.utc),
         actor_user_id=actor_user_id,
         action=action,
         target_type=target_type,
@@ -61,13 +63,37 @@ def verify_chain_integrity(db: Session) -> dict:
     Returns a status report.
     """
     repo = CorePlatformRepository(db)
-    logs = repo.list_audit_logs_ascending() # Need to ensure this exists or use query
+    raw_logs = repo.list_audit_logs_ascending()
     
+    # Reconstruct the sorted list of logs by tracing the previous_log_hash -> log_hash chain
+    logs_by_prev: dict[str | None, AuditLog] = {}
+    all_hashes = {log.log_hash for log in raw_logs if log.log_hash}
+    
+    root_log = None
+    for log in raw_logs:
+        # If there are duplicates or multiple branchings, keep track, but mapping prev -> log
+        logs_by_prev[log.previous_log_hash] = log
+        if log.previous_log_hash is None or log.previous_log_hash not in all_hashes:
+            root_log = log
+            
+    sorted_logs = []
+    current = root_log
+    visited = set()
+    while current and current.id not in visited:
+        visited.add(current.id)
+        sorted_logs.append(current)
+        current = logs_by_prev.get(current.log_hash)
+        
+    # Append any remaining unvisited logs to ensure everything is checked
+    for log in raw_logs:
+        if log.id not in visited:
+            sorted_logs.append(log)
+            
     issues = []
     last_hash = None
     count = 0
     
-    for log in logs:
+    for log in sorted_logs:
         # 1. Verify previous_log_hash matches our last_hash
         if log.previous_log_hash != last_hash:
             issues.append({
@@ -77,20 +103,29 @@ def verify_chain_integrity(db: Session) -> dict:
                 "actual": log.previous_log_hash
             })
         
-        # 2. Recalculate hash and verify
-        recalculated = calculate_log_hash(
+        # 2. Recalculate hash and verify (Accept both v1 raw and v2 HMAC)
+        recalculated_hmac = calculate_log_hash(
             log.previous_log_hash,
             log.action,
             log.target_id,
             log.summary,
-            log.diff_json
+            log.diff_json,
+            use_hmac=True
+        )
+        recalculated_raw = calculate_log_hash(
+            log.previous_log_hash,
+            log.action,
+            log.target_id,
+            log.summary,
+            log.diff_json,
+            use_hmac=False
         )
         
-        if log.log_hash != recalculated:
+        if log.log_hash not in (recalculated_hmac, recalculated_raw):
             issues.append({
                 "log_id": log.id,
                 "error": "Invalid log_hash (recalculation mismatch)",
-                "expected": recalculated,
+                "expected": "HMAC or RAW mismatch",
                 "actual": log.log_hash
             })
             

@@ -58,7 +58,7 @@ export function AddAccountDialog({ open, onClose, accounts, isAr, account }: Pro
   }, [open, account, accounts]);
 
   const mutation = useMutation({
-    mutationFn: (payload: any) => {
+    mutationFn: (payload: Record<string, any>) => {
       if (account) {
         return updateChartAccount(account.id, payload);
       } else {
@@ -69,7 +69,7 @@ export function AddAccountDialog({ open, onClose, accounts, isAr, account }: Pro
       await queryClient.invalidateQueries({ queryKey: ['accounting', 'chart'] });
       handleClose();
     },
-    onError: (err: any) => {
+    onError: (err: Error | any) => {
       setErrorMsg(err.message || (isAr ? 'حدث خطأ أثناء حفظ الحساب.' : 'An error occurred.'));
     },
   });
@@ -91,7 +91,7 @@ export function AddAccountDialog({ open, onClose, accounts, isAr, account }: Pro
       setErrorMsg(isAr ? '⚠️ الكود والاسم حقول مطلوبة.' : '⚠️ Code and Name are required.');
       return;
     }
-    const payload: any = {
+    const payload: Record<string, any> = {
       name: name.trim(),
       account_type: accountType,
       parent_account_id: parentAccount ? parentAccount.id : null,

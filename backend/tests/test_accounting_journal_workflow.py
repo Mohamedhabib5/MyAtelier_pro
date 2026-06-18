@@ -146,3 +146,76 @@ def test_document_sequence_no_race_condition(app_client: TestClient) -> None:
     valid_results = [r for r in results if r]
     # Check that all generated sequence numbers are unique
     assert len(set(valid_results)) == len(valid_results), "Duplicate document sequence generated!"
+
+def test_db_level_journal_balance_constraint(db_session, setup_company_and_admin) -> None:
+    import uuid
+    from psycopg.errors import RaiseException
+    from sqlalchemy.exc import IntegrityError, InternalError, ProgrammingError
+    from app.modules.accounting.models import JournalEntry, JournalEntryLine
+
+    company = setup_company_and_admin["company"]
+    
+    # 1. Create a balanced entry directly in DB
+    je_balanced = JournalEntry(
+        id=str(uuid.uuid4()),
+        company_id=company.id,
+        entry_number="JV-BAL-1",
+        entry_date=date.today(),
+        status="draft",
+        total_debit=Decimal("100"),
+        total_credit=Decimal("100")
+    )
+    db_session.add(je_balanced)
+    db_session.flush()
+
+    line1 = JournalEntryLine(
+        id=str(uuid.uuid4()),
+        journal_entry_id=je_balanced.id,
+        account_id=setup_company_and_admin["admin_user"].id, # just a dummy string for account_id for test
+        debit_amount=Decimal("100"),
+        credit_amount=Decimal("0")
+    )
+    line2 = JournalEntryLine(
+        id=str(uuid.uuid4()),
+        journal_entry_id=je_balanced.id,
+        account_id=setup_company_and_admin["admin_user"].id,
+        debit_amount=Decimal("0"),
+        credit_amount=Decimal("100")
+    )
+    db_session.add(line1)
+    db_session.add(line2)
+    
+    # Should commit successfully (balanced)
+    db_session.commit()
+    
+    # 2. Create an UNBALANCED entry directly in DB
+    je_unbalanced = JournalEntry(
+        id=str(uuid.uuid4()),
+        company_id=company.id,
+        entry_number="JV-UNBAL-2",
+        entry_date=date.today(),
+        status="draft",
+        total_debit=Decimal("100"),
+        total_credit=Decimal("100")
+    )
+    db_session.add(je_unbalanced)
+    db_session.flush()
+
+    line3 = JournalEntryLine(
+        id=str(uuid.uuid4()),
+        journal_entry_id=je_unbalanced.id,
+        account_id=setup_company_and_admin["admin_user"].id,
+        debit_amount=Decimal("100"),
+        credit_amount=Decimal("0")
+    )
+    db_session.add(line3)
+    db_session.flush() # Should NOT fail here because initially deferred
+    
+    # Try to commit unbalanced
+    import pytest
+    with pytest.raises(Exception) as exc:
+        db_session.commit()
+    
+    assert "not balanced" in str(exc.value) or "Journal entry" in str(exc.value)
+    db_session.rollback()
+

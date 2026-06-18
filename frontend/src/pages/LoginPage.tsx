@@ -116,12 +116,10 @@ export function LoginPage() {
                     <ShieldCheck size={32} />
                   </Box>
                   <Typography variant='h4' fontWeight='800' gutterBottom>
-                    {is2FARequired ? (useBackupCode ? 'كود الطوارئ' : 'التحقق الثنائي') : 'MyAtelier Pro'}
+                    {is2FARequired ? (useBackupCode ? loginText.backupCodeTitle : loginText.twoFA_Title) : loginText.loginTitle}
                   </Typography>
                   <Typography color='text.secondary' variant='body2'>
-                    {is2FARequired 
-                      ? 'يرجى إدخال رمز التحقق الإضافي للمتابعة' 
-                      : 'سجل دخولك لإدارة ورشتك بكفاءة'}
+                    {is2FARequired ? loginText.twoFA_Subtitle : loginText.loginSubtitle}
                   </Typography>
                 </Box>
 
@@ -175,7 +173,7 @@ export function LoginPage() {
                   ) : (
                     <>
                       <TextField 
-                        label={useBackupCode ? 'كود النسخ الاحتياطي' : 'رمز التحقق (6 أرقام)'} 
+                        label={useBackupCode ? loginText.backupCodeLabel : loginText.twoFA_CodeLabel} 
                         value={twoFACode} 
                         onChange={(event) => setTwoFACode(event.target.value)} 
                         autoFocus
@@ -196,7 +194,7 @@ export function LoginPage() {
                         startIcon={<Key size={16} />}
                         sx={{ alignSelf: 'center', borderRadius: 10 }}
                       >
-                        {useBackupCode ? 'استخدام رمز التطبيق' : 'استخدم كود النسخ الاحتياطي'}
+                        {useBackupCode ? loginText.useAppCode : loginText.useBackupCode}
                       </Button>
                     </>
                   )}
@@ -217,7 +215,7 @@ export function LoginPage() {
                     boxShadow: '0 10px 15px -3px rgba(37, 99, 235, 0.3)'
                   }}
                 >
-                  {is2FARequired ? 'تأكيد الرمز' : loginText.submit}
+                  {is2FARequired ? loginText.confirmCode : loginText.submit}
                 </Button>
 
 

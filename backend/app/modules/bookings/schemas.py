@@ -99,7 +99,7 @@ class BookingDocumentCreateRequest(BaseModel):
 
 
 class BookingDocumentUpdateRequest(BookingDocumentCreateRequest):
-    pass
+    entity_version: int | None = None
 
 
 class CalendarEventResponse(BaseModel):

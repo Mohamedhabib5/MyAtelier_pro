@@ -26,7 +26,7 @@ export function CustodyPage() {
 
   const caseRows = queries.casesQuery.data?.items ?? [];
   const caseTotal = queries.casesQuery.data?.total ?? 0;
-  const caseOptions = useMemo(() => queries.allCasesQuery.data ?? [], [queries.allCasesQuery.data]);
+  const caseOptions = useMemo(() => queries.allCasesQuery.data?.items ?? [], [queries.allCasesQuery.data]);
   const selectedCase = useMemo(() => caseOptions.find((item: any) => item.id === state.targetCaseId) ?? null, [caseOptions, state.targetCaseId]);
   const existingCaseLineIds = useMemo(() => caseOptions.map((item: any) => item.booking_line_id).filter((value: any): value is string => Boolean(value)), [caseOptions]);
 

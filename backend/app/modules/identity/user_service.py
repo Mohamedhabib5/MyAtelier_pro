@@ -21,7 +21,7 @@ from app.modules.identity.schemas import (
     UserGridPreferenceState,
     FreezeUserRequest
 )
-from app.modules.core_platform.security_service import SecurityNotificationService
+from app.core.security import SecurityNotificationService
 from app.core.redis_client import redis_client
 
 

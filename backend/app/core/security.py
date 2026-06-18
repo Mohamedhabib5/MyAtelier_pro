@@ -41,8 +41,7 @@ def role_list_contains(role_names: list[str], role_name: str) -> bool:
     normalized = {item.strip().lower() for item in role_names}
     return role_name.strip().lower() in normalized
 
-
-def _get_fernet() -> Any:
+def _get_fernet() -> Fernet:
     from app.core.config import get_settings
     settings = get_settings()
     # Ensure key is 32 bytes and base64 encoded
@@ -64,9 +63,13 @@ def decrypt_secret(encrypted_text: str) -> str:
     return f.decrypt(encrypted_text.encode()).decode()
 
 
-def calculate_log_hash(prev_hash: str | None, action: str, target_id: str | None, summary: str, diff_json: str | None) -> str:
-    """Calculates a SHA-256 hash for an audit log entry, chaining it to the previous one."""
+def calculate_log_hash(prev_hash: str | None, action: str, target_id: str | None, summary: str, diff_json: str | None, use_hmac: bool = True) -> str:
+    """Calculates a SHA-256 hash or HMAC for an audit log entry, chaining it to the previous one."""
+    from app.core.config import get_settings
     content = f"{prev_hash or 'ROOT'}|{action}|{target_id or ''}|{summary}|{diff_json or ''}"
+    if use_hmac:
+        key = get_settings().app_secret_key.encode()
+        return hmac.new(key, content.encode(), hashlib.sha256).hexdigest()
     return hashlib.sha256(content.encode()).hexdigest()
 
 

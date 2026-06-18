@@ -54,3 +54,23 @@ def app_client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Test
 
     with build_test_client(db_path, storage_root, monkeypatch) as client:
         yield client
+
+
+@pytest.fixture()
+def db_session(app_client: TestClient) -> Iterator[Session]:
+    from sqlalchemy.orm import Session
+    session_factory = app_client.app.state.session_factory
+    with session_factory() as db:
+        yield db
+
+
+@pytest.fixture()
+def setup_company_and_admin(db_session: Session) -> dict:
+    from app.modules.organization.models import Company
+    from app.modules.identity.models import User
+    company = db_session.query(Company).first()
+    admin_user = db_session.query(User).filter(User.username == "admin").first()
+    return {
+        "company": company,
+        "admin_user": admin_user
+    }

@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from app.modules.organization.service import get_company_settings
 from app.modules.exports.models import DailyEmailReportConfig
 from app.modules.exports.daily_report_service import send_email_report
-from app.modules.core_platform.security_service import decrypt_secret
+from app.core.security import decrypt_secret
 from app.modules.bookings.calculations import booking_total_amount, booking_paid_total, booking_remaining_amount
 
 logger = logging.getLogger("notifications")
@@ -20,12 +20,30 @@ def get_active_email_config(db: Session) -> DailyEmailReportConfig | None:
     return db.query(DailyEmailReportConfig).filter(DailyEmailReportConfig.is_active == True).first()
 
 
+def _safe_send_email(sender_email, sender_password, recipient_emails, subject, html_content, smtp_server, smtp_port):
+    try:
+        send_email_report(sender_email, sender_password, recipient_emails, subject, html_content, smtp_server, smtp_port)
+    except Exception as e:
+        logger.error(f"Background email task failed: {str(e)}")
+
 def send_email_async(sender_email: str, sender_password: str, recipient_emails: str, subject: str, html_content: str, smtp_server: str, smtp_port: int):
-    threading.Thread(
-        target=send_email_report,
-        args=(sender_email, sender_password, recipient_emails, subject, html_content, smtp_server, smtp_port),
-        daemon=True
-    ).start()
+    try:
+        from app.main import app
+        executor = getattr(app.state, "email_executor", None)
+    except ImportError:
+        executor = None
+
+    if executor:
+        executor.submit(
+            _safe_send_email,
+            sender_email, sender_password, recipient_emails, subject, html_content, smtp_server, smtp_port
+        )
+    else:
+        threading.Thread(
+            target=_safe_send_email,
+            args=(sender_email, sender_password, recipient_emails, subject, html_content, smtp_server, smtp_port),
+            daemon=True
+        ).start()
 
 
 def generate_booking_html(booking, template_type: str, is_new: bool) -> str:

@@ -29,22 +29,6 @@ def upgrade() -> None:
     )
     op.create_index(op.f('ix_daily_email_report_logs_report_date'), 'daily_email_report_logs', ['report_date'], unique=True)
     op.create_index(op.f('ix_daily_email_report_logs_status'), 'daily_email_report_logs', ['status'], unique=False)
-    op.create_table('export_schedules',
-    sa.Column('company_id', sa.String(), nullable=False),
-    sa.Column('branch_id', sa.String(), nullable=True),
-    sa.Column('name', sa.String(length=120), nullable=False),
-    sa.Column('export_type', sa.String(length=40), nullable=False),
-    sa.Column('cadence', sa.String(length=20), nullable=False),
-    sa.Column('next_run_on', sa.Date(), nullable=False),
-    sa.Column('last_run_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('is_active', sa.Boolean(), nullable=False),
-    sa.Column('id', sa.String(), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.ForeignKeyConstraint(['branch_id'], ['branches.id'], name=op.f('fk_export_schedules_branch_id_branches'), ondelete='SET NULL'),
-    sa.ForeignKeyConstraint(['company_id'], ['companies.id'], name=op.f('fk_export_schedules_company_id_companies'), ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('id', name=op.f('pk_export_schedules'))
-    )
     op.add_column('companies', sa.Column('daily_report_sender_email', sa.String(length=120), nullable=True))
     op.add_column('companies', sa.Column('daily_report_sender_password', sa.String(length=255), nullable=True))
     op.add_column('companies', sa.Column('daily_report_smtp_server', sa.String(length=120), server_default='smtp.gmail.com', nullable=True))
@@ -62,7 +46,6 @@ def downgrade() -> None:
     op.drop_column('companies', 'daily_report_smtp_server')
     op.drop_column('companies', 'daily_report_sender_password')
     op.drop_column('companies', 'daily_report_sender_email')
-    op.drop_table('export_schedules')
     op.drop_index(op.f('ix_daily_email_report_logs_status'), table_name='daily_email_report_logs')
     op.drop_index(op.f('ix_daily_email_report_logs_report_date'), table_name='daily_email_report_logs')
     op.drop_table('daily_email_report_logs')

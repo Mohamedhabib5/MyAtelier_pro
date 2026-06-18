@@ -64,6 +64,15 @@ export async function apiRequest<T>(input: string, init?: RequestInit): Promise<
     } catch {
       detail = response.statusText || detail;
     }
+    if (response.status === 409) {
+      if (typeof detail === 'string' && (detail.includes('تم تعديل') || detail === 'Conflict')) {
+        detail = 'تم تعديل هذه البيانات بواسطة مستخدم آخر، يرجى تحديث الصفحة.';
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('optimistic-lock-error', { detail }));
+        }
+      }
+    }
+
     throw new ApiError(detail, response.status);
   }
 

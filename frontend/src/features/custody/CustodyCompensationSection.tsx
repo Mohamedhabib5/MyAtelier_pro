@@ -110,14 +110,14 @@ export function CustodyCompensationSection({
           onChange={(event) => {
             const val = event.target.value;
             setCompTypeId(val);
-            const found = typesQuery.data?.find((t: any) => t.id === val);
+            const found = typesQuery.data?.find((t: { id: string; name: string }) => t.id === val);
             if (found && found.default_price > 0) {
               setCompAmount(found.default_price.toString());
             }
           }}
           fullWidth
         >
-          {(typesQuery.data ?? []).map((item: any) => (
+          {(typesQuery.data ?? []).map((item: { id: string; name: string }) => (
             <MenuItem key={item.id} value={item.id}>
               {item.name}
             </MenuItem>

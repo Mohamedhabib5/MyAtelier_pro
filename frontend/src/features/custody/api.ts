@@ -65,11 +65,11 @@ export type CustodyCompensationCollectPayload = {
   override_reason?: string | null;
 };
 
-export function listCustodyCases(view: CustodyCaseView, page?: number, pageSize?: number): Promise<any> {
+export function listCustodyCases(view: CustodyCaseView, page?: number, pageSize?: number): Promise<{ items: CustodyCaseRecord[]; total: number; page: number; size: number; pages: number }> {
   let url = `/api/custody?view=${view}`;
   if (page !== undefined) url += `&page=${page}`;
   if (pageSize !== undefined) url += `&page_size=${pageSize}`;
-  return apiRequest<any>(url, { method: 'GET' });
+  return apiRequest<{ items: CustodyCaseRecord[]; total: number; page: number; size: number; pages: number }>(url, { method: 'GET' });
 }
 
 export function getCustodyCase(caseId: string): Promise<CustodyCaseRecord> {

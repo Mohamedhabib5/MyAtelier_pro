@@ -9,6 +9,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { Copy, Check, Download, AlertTriangle, ShieldCheck, Key, Smartphone, Lock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { setup2FA, activate2FA, type TwoFASetupResponse } from '../api';
+import { useLoginText } from '../../../text/auth';
 
 type Props = {
   open: boolean;
@@ -16,10 +17,12 @@ type Props = {
   onComplete: () => void;
 };
 
-const steps = ['الإعداد', 'المسح الضوئي', 'التحقق', 'الأمان الإضافي'];
+// steps handled in component
 
 export const TwoFASetupModal: React.FC<Props> = ({ open, onClose, onComplete }) => {
   const theme = useTheme();
+  const authText = useLoginText();
+  const steps = [authText.stepSetup, authText.stepScan, authText.stepVerify, authText.stepSecurity];
   const [activeStep, setActiveStep] = useState(0);
   const [setupData, setSetupData] = useState<TwoFASetupResponse | null>(null);
   const [verificationCode, setVerificationCode] = useState('');
@@ -36,7 +39,7 @@ export const TwoFASetupModal: React.FC<Props> = ({ open, onClose, onComplete }) 
       setSetupData(data);
       setActiveStep(1);
     } catch (err: any) {
-      setError(err.message || 'فشل بدء إعداد التحقق الثنائي');
+      setError(err.message || authText.startSetupFailed);
     } finally {
       setLoading(false);
     }
@@ -51,7 +54,7 @@ export const TwoFASetupModal: React.FC<Props> = ({ open, onClose, onComplete }) 
       setBackupCodes(data.backup_codes);
       setActiveStep(3);
     } catch (err: any) {
-      setError(err.message || 'رمز التحقق غير صحيح');
+      setError(err.message || authText.invalidCode);
     } finally {
       setLoading(false);
     }
@@ -97,7 +100,7 @@ export const TwoFASetupModal: React.FC<Props> = ({ open, onClose, onComplete }) 
       }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, mb: 1 }}>
           <ShieldCheck size={32} color={theme.palette.primary.main} />
-          تفعيل التحقق الثنائي
+          {authText.setupTitle}
         </Box>
       </DialogTitle>
       
@@ -134,23 +137,22 @@ export const TwoFASetupModal: React.FC<Props> = ({ open, onClose, onComplete }) 
               >
                 <Box sx={{ textAlign: 'center', py: 2 }}>
                   <Typography variant="h6" gutterBottom fontWeight="bold" color="text.primary">
-                    عزز أمان حسابك
+                    {authText.enhanceSecurityTitle}
                   </Typography>
                   <Typography variant="body1" color="text.secondary" sx={{ mb: 4, px: 4 }}>
-                    يحمي التحقق الثنائي حسابك عبر طلب رمز إضافي عند تسجيل الدخول من جهاز جديد. 
-                    ستحتاج إلى تطبيق مثل Google Authenticator أو Microsoft Authenticator.
+                    {authText.enhanceSecurityDesc}
                   </Typography>
                   <Box sx={{ display: 'flex', justifyContent: 'center', gap: 4, mb: 4 }}>
                     <Box sx={{ textAlign: 'center' }}>
                       <Smartphone size={40} color={theme.palette.text.disabled} />
-                      <Typography variant="caption" display="block">تطبيق الهاتف</Typography>
+                      <Typography variant="caption" display="block">{authText.phoneApp}</Typography>
                     </Box>
                     <Box sx={{ alignSelf: 'center' }}>
                       <Typography variant="h4" color="text.disabled">→</Typography>
                     </Box>
                     <Box sx={{ textAlign: 'center' }}>
                       <Lock size={40} color={theme.palette.primary.main} />
-                      <Typography variant="caption" display="block">حساب محمي</Typography>
+                      <Typography variant="caption" display="block">{authText.protectedAccount}</Typography>
                     </Box>
                   </Box>
                   <Button 
@@ -165,7 +167,7 @@ export const TwoFASetupModal: React.FC<Props> = ({ open, onClose, onComplete }) 
                       boxShadow: theme.shadows[4]
                     }}
                   >
-                    بدء الإعداد الآن
+                    {authText.startSetupNow}
                   </Button>
                 </Box>
               </motion.div>
@@ -181,7 +183,7 @@ export const TwoFASetupModal: React.FC<Props> = ({ open, onClose, onComplete }) 
               >
                 <Box sx={{ textAlign: 'center' }}>
                   <Typography variant="subtitle1" gutterBottom fontWeight="bold">
-                    1. امسح رمز QR من هاتفك
+                    {authText.scanQROrManual}
                   </Typography>
                   <Paper 
                     elevation={0}
@@ -196,36 +198,28 @@ export const TwoFASetupModal: React.FC<Props> = ({ open, onClose, onComplete }) 
                   >
                     <QRCodeSVG value={setupData.provisioning_uri} size={180} />
                   </Paper>
-                  {(() => {
-                    const match = setupData.provisioning_uri.match(/[?&]secret=([^&]+)/i);
-                    const secretPlain = match ? match[1] : '';
-                    return (
-                      <>
-                        <Typography variant="body2" color="text.secondary" gutterBottom>
-                          أو أدخل الرمز يدوياً إذا كنت لا تستطيع المسح:
-                        </Typography>
-                        <Box sx={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          justifyContent: 'center', 
-                          gap: 1, 
-                          mb: 3,
-                          bgcolor: 'rgba(0,0,0,0.04)',
-                          p: 1.5,
-                          borderRadius: 2
-                        }}>
-                          <Typography sx={{ letterSpacing: 2, fontFamily: 'monospace', fontWeight: 'bold' }}>
-                            {secretPlain}
-                          </Typography>
-                          <IconButton size="small" onClick={() => copyToClipboard(secretPlain)}>
-                            {copied ? <Check size={18} color={theme.palette.success.main} /> : <Copy size={18} />}
-                          </IconButton>
-                        </Box>
-                      </>
-                    );
-                  })()}
+                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                    {authText.manualEntryDesc}
+                  </Typography>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    gap: 1, 
+                    mb: 3,
+                    bgcolor: 'rgba(0,0,0,0.04)',
+                    p: 1.5,
+                    borderRadius: 2
+                  }}>
+                    <Typography sx={{ letterSpacing: 2, fontFamily: 'monospace', fontWeight: 'bold' }}>
+                      {setupData.secret_plain}
+                    </Typography>
+                    <IconButton size="small" onClick={() => copyToClipboard(setupData.secret_plain)}>
+                      {copied ? <Check size={18} color={theme.palette.success.main} /> : <Copy size={18} />}
+                    </IconButton>
+                  </Box>
                   <Button variant="contained" onClick={() => setActiveStep(2)} sx={{ borderRadius: 10, px: 4 }}>
-                    تم المسح، التالي
+                    {authText.scannedNext}
                   </Button>
                 </Box>
               </motion.div>
@@ -241,10 +235,10 @@ export const TwoFASetupModal: React.FC<Props> = ({ open, onClose, onComplete }) 
               >
                 <Box sx={{ textAlign: 'center', py: 2 }}>
                   <Typography variant="subtitle1" gutterBottom fontWeight="bold">
-                    2. أدخل الرمز المكون من 6 أرقام
+                    {authText.enterCodeTitle}
                   </Typography>
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                    أدخل الرمز الذي يظهر الآن في تطبيق المصادقة الخاص بك.
+                    {authText.enterCodeDesc}
                   </Typography>
                   <TextField
                     fullWidth
@@ -273,7 +267,7 @@ export const TwoFASetupModal: React.FC<Props> = ({ open, onClose, onComplete }) 
                   />
                   <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2 }}>
                     <Button variant="text" onClick={() => setActiveStep(1)} sx={{ borderRadius: 10 }}>
-                      رجوع
+                      {authText.back}
                     </Button>
                     <Button 
                       variant="contained" 
@@ -281,7 +275,7 @@ export const TwoFASetupModal: React.FC<Props> = ({ open, onClose, onComplete }) 
                       disabled={loading || verificationCode.length < 6}
                       sx={{ borderRadius: 10, px: 4 }}
                     >
-                      تأكيد التفعيل
+                      {authText.confirmActivation}
                     </Button>
                   </Box>
                 </Box>
@@ -305,7 +299,7 @@ export const TwoFASetupModal: React.FC<Props> = ({ open, onClose, onComplete }) 
                       '& .MuiAlert-message': { fontWeight: 'bold' }
                     }}
                   >
-                    هام: احتفظ بهذه الأكواد في مكان آمن للغاية. لن نتمكن من عرضها لك مرة أخرى!
+                    {authText.importantKeepCodes}
                   </Alert>
                   
                   <Paper 
@@ -346,7 +340,7 @@ export const TwoFASetupModal: React.FC<Props> = ({ open, onClose, onComplete }) 
                       onClick={() => copyToClipboard(backupCodes.join('\n'))}
                       sx={{ borderRadius: 10 }}
                     >
-                      نسخ الكل
+                      {authText.copyAll}
                     </Button>
                     <Button 
                       variant="outlined" 
@@ -354,7 +348,7 @@ export const TwoFASetupModal: React.FC<Props> = ({ open, onClose, onComplete }) 
                       onClick={downloadBackupCodes}
                       sx={{ borderRadius: 10 }}
                     >
-                      تحميل كملف
+                      {authText.downloadAsFile}
                     </Button>
                   </Stack>
                 </Box>
@@ -379,7 +373,7 @@ export const TwoFASetupModal: React.FC<Props> = ({ open, onClose, onComplete }) 
               boxShadow: '0 8px 16px rgba(46, 125, 50, 0.2)'
             }}
           >
-            إكمال وإنهاء
+            {authText.completeAndFinish}
           </Button>
         ) : (
           <Button 
@@ -388,7 +382,7 @@ export const TwoFASetupModal: React.FC<Props> = ({ open, onClose, onComplete }) 
             color="inherit"
             sx={{ borderRadius: 10 }}
           >
-            إلغاء
+            {authText.cancel}
           </Button>
         )}
       </DialogActions>

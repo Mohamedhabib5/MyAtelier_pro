@@ -15,10 +15,10 @@ import {
   Menu,
   Database
 } from 'lucide-react';
-import { AppBar, Box, Button, Drawer, IconButton, List, ListItemButton, ListItemIcon, ListItemText, Stack, Toolbar, Typography, useMediaQuery, useTheme } from '@mui/material';
+import { AppBar, Box, Button, Drawer, IconButton, List, ListItemButton, ListItemIcon, ListItemText, Stack, Toolbar, Typography, useMediaQuery, useTheme, Snackbar, Alert } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import { Link as RouterLink, useLocation } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 import { useAuth } from '../features/auth/AuthProvider';
 import { useLanguage } from '../features/language/LanguageProvider';
@@ -37,6 +37,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [lockError, setLockError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleLockError = (e: Event) => {
+      const customEvent = e as CustomEvent<string>;
+      setLockError(customEvent.detail || 'تم تعديل هذه البيانات بواسطة مستخدم آخر، يرجى تحديث الصفحة.');
+    };
+    window.addEventListener('optimistic-lock-error', handleLockError);
+    return () => window.removeEventListener('optimistic-lock-error', handleLockError);
+  }, []);
   
   const { 
     sidebarColor, 
@@ -366,6 +376,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       }}>
         {children}
       </Box>
+
+      <Snackbar 
+        open={!!lockError} 
+        autoHideDuration={6000} 
+        onClose={() => setLockError(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={() => setLockError(null)} severity="error" sx={{ width: '100%', fontSize: '1.1rem', fontWeight: 'bold' }}>
+          {lockError}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

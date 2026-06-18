@@ -90,7 +90,7 @@ export function JournalEntryDialog({ open, onClose, accounts, isAr, entry }: Pro
       await queryClient.invalidateQueries({ queryKey: ['accounting', 'journals'] });
       handleClose();
     },
-    onError: (err: any) => {
+    onError: (err: Error | any) => {
       setErrorMsg(err.message || (isAr ? 'حدث خطأ أثناء حفظ القيد.' : 'An error occurred.'));
     },
   });

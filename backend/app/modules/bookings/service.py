@@ -82,6 +82,10 @@ def update_booking(db: Session, actor: User, booking_id: str, payload: BookingDo
     
     if booking.status == "cancelled":
         raise ValidationAppError(BOOKING_CANCELLED_NO_EDIT)
+        
+    if payload.entity_version is not None and payload.entity_version != booking.entity_version:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=409, detail="تم تعديل هذه البيانات بواسطة مستخدم آخر، يرجى تحديث الصفحة.")
 
     company_id = booking.company_id
     booking.customer_id = get_customer_or_404(db, company_id, payload.customer_id).id

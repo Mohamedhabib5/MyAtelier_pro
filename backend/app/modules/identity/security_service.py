@@ -11,7 +11,7 @@ from app.core.exceptions import ValidationAppError
 from app.modules.core_platform.service import record_audit
 from app.modules.identity.models import User, UserBackupCode
 from app.modules.identity.repository import IdentityRepository
-from app.modules.core_platform.security_service import encrypt_secret, decrypt_secret, SecurityNotificationService
+from app.core.security import encrypt_secret, decrypt_secret, SecurityNotificationService
 
 
 def setup_2fa(db: Session, user: User) -> dict:

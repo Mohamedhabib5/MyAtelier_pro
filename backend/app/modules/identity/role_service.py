@@ -8,7 +8,7 @@ from app.modules.core_platform.service import record_audit
 from app.modules.identity.models import Permission, Role, User
 from app.modules.identity.repository import IdentityRepository
 from app.modules.identity.schemas import CreateRoleRequest, UpdateRoleRequest
-from app.modules.core_platform.security_service import SecurityNotificationService
+from app.core.security import SecurityNotificationService
 from app.core.redis_client import redis_client
 
 
