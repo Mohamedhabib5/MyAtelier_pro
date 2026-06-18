@@ -104,7 +104,7 @@ def get_journal_entries(
     db: Session = Depends(get_db),
     _: User = Depends(require_accounting_view),
 ) -> list[JournalEntryResponse]:
-    return [JournalEntryResponse.model_validate(item) for item in list_journal_entries(db)]
+    return list_journal_entries(db)
 
 
 @router.get("/journal-entries/{entry_id}", response_model=JournalEntryResponse)
@@ -113,7 +113,7 @@ def get_journal_entry_route(
     db: Session = Depends(get_db),
     _: User = Depends(require_accounting_view),
 ) -> JournalEntryResponse:
-    return JournalEntryResponse.model_validate(get_journal_entry(db, entry_id))
+    return get_journal_entry(db, entry_id)
 
 
 @router.post("/journal-entries", response_model=JournalEntryResponse, status_code=status.HTTP_201_CREATED)
@@ -122,7 +122,7 @@ def create_journal_entry_route(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_accounting_manage),
 ) -> JournalEntryResponse:
-    return JournalEntryResponse.model_validate(create_draft_journal_entry(db, current_user, payload))
+    return create_draft_journal_entry(db, current_user, payload)
 
 
 @router.patch("/journal-entries/{entry_id}", response_model=JournalEntryResponse)
@@ -132,7 +132,7 @@ def update_journal_entry_route(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_accounting_manage),
 ) -> JournalEntryResponse:
-    return JournalEntryResponse.model_validate(update_draft_journal_entry(db, current_user, entry_id, payload))
+    return update_draft_journal_entry(db, current_user, entry_id, payload)
 
 
 @router.delete("/journal-entries/{entry_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -151,7 +151,7 @@ def post_journal_entry_route(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_accounting_manage),
 ) -> JournalEntryResponse:
-    return JournalEntryResponse.model_validate(post_journal_entry(db, current_user, entry_id))
+    return post_journal_entry(db, current_user, entry_id)
 
 
 @router.post("/journal-entries/{entry_id}/reverse", response_model=JournalEntryResponse)
@@ -161,7 +161,7 @@ def reverse_journal_entry_route(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_accounting_manage),
 ) -> JournalEntryResponse:
-    return JournalEntryResponse.model_validate(reverse_journal_entry(db, current_user, entry_id, payload))
+    return reverse_journal_entry(db, current_user, entry_id, payload)
 
 
 @router.get("/trial-balance", response_model=TrialBalanceResponse)
