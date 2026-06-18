@@ -1,0 +1,18 @@
+# MyAtelier Pro CODEOWNERS
+
+# Default fallback (Main maintainers review all PRs by default)
+* @gemini-admin @tech-lead
+
+# Core security and config (Require security team review)
+/backend/app/core/ @security-lead
+/backend/app/api/deps.py @security-lead
+/.github/workflows/ @devops-lead
+
+# Frontend Code (Frontend team review)
+/frontend/ @frontend-lead
+
+# Backend Code (Backend team review)
+/backend/ @backend-lead
+
+# Infrastructure / Deployment docs
+/docs/ @devops-lead
