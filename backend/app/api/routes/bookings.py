@@ -43,7 +43,7 @@ def list_bookings_route(
     db: Session = Depends(get_db),
     _: User = Depends(require_bookings_view),
 ) -> list[BookingSummaryResponse]:
-    return [BookingSummaryResponse.model_validate(item) for item in list_bookings(db, branch_id)]
+    return list_bookings(db, branch_id)
 
 
 @router.get('/table', response_model=BookingSummaryPageResponse)

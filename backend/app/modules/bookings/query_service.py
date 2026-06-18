@@ -9,10 +9,12 @@ from app.modules.organization.branch_context import resolve_branch_scope
 from app.modules.organization.service import get_company_settings
 
 
-def list_bookings(db: Session, branch_id: str) -> list[dict]:
+from app.modules.bookings.schemas import BookingSummaryResponse
+
+def list_bookings(db: Session, branch_id: str) -> list[BookingSummaryResponse]:
     company = get_company_settings(db)
     rows = BookingsRepository(db).list_bookings(company.id, branch_id)
-    return [serialize_booking_summary(row) for row in rows]
+    return [BookingSummaryResponse.model_validate(serialize_booking_summary(row)) for row in rows]
 
 
 def list_booking_page(
