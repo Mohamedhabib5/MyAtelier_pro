@@ -124,3 +124,25 @@ def test_journal_list_and_lookup_are_available(app_client: TestClient) -> None:
     detail = app_client.get(f"/api/accounting/journal-entries/{entry_id}")
     assert detail.status_code == 200
     assert detail.json()["id"] == entry_id
+
+
+def test_document_sequence_no_race_condition(app_client: TestClient) -> None:
+    import concurrent.futures
+    login(app_client)
+    account_ids = _chart_map(app_client)
+    payload = _draft_payload(account_ids)
+
+    def create_journal() -> str | None:
+        res = app_client.post("/api/accounting/journal-entries", json=payload)
+        if res.status_code == 201:
+            return res.json().get("entry_number")
+        return None
+
+    # Simulate concurrency
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        futures = [executor.submit(create_journal) for _ in range(10)]
+        results = [f.result() for f in concurrent.futures.as_completed(futures)]
+
+    valid_results = [r for r in results if r]
+    # Check that all generated sequence numbers are unique
+    assert len(set(valid_results)) == len(valid_results), "Duplicate document sequence generated!"

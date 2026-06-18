@@ -243,8 +243,10 @@ class BookingsRepository:
         self.db.add(booking)
         return booking
 
-    def get_document_sequence(self, company_id: str, key: str) -> DocumentSequence | None:
+    def get_document_sequence(self, company_id: str, key: str, for_update: bool = False) -> DocumentSequence | None:
         stmt = select(DocumentSequence).where(DocumentSequence.company_id == company_id, DocumentSequence.key == key)
+        if for_update:
+            stmt = stmt.with_for_update()
         return self.db.scalars(stmt).first()
 
     def add_document_sequence(self, sequence: DocumentSequence) -> DocumentSequence:
@@ -252,7 +254,7 @@ class BookingsRepository:
         return sequence
 
     def reserve_sequence_number(self, company_id: str, key: str) -> str:
-        sequence = self.get_document_sequence(company_id, key)
+        sequence = self.get_document_sequence(company_id, key, for_update=True)
         if sequence is None:
             raise ValueError(f'Missing document sequence: {key}')
         value = sequence.next_number
