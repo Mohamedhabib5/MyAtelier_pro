@@ -78,7 +78,7 @@ export function useDressColumns({
       render: (row: DressRecord) => {
         if (!row.image_path) return EMPTY_VALUE;
         const backendUrl = `${window.location.protocol}//${window.location.hostname}:8000`;
-        const imageUrl = row.image_path.startsWith('http') ? row.image_path : `${backendUrl}/attachments/${row.image_path}`;
+        const imageUrl = row.image_path.startsWith('http') ? row.image_path : `${backendUrl}/api/attachments/${row.image_path}`;
         return (
           <Box
             component='img'

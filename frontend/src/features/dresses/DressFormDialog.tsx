@@ -101,7 +101,7 @@ export function DressFormDialog({ open, editing, form, onChange, onClose, onSave
   };
 
   const backendUrl = `${window.location.protocol}//${window.location.hostname}:8000`;
-  const imageUrl = form.image_path ? (form.image_path.startsWith('http') ? form.image_path : `${backendUrl}/attachments/${form.image_path}`) : null;
+  const imageUrl = form.image_path ? (form.image_path.startsWith('http') ? form.image_path : `${backendUrl}/api/attachments/${form.image_path}`) : null;
 
   return (
     <>

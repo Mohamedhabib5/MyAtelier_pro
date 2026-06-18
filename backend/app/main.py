@@ -18,6 +18,7 @@ from app.api.routes import (
     audit,
     auth,
     auth_2fa,
+    attachments,
     bookings,
     catalog,
     custody,
@@ -204,8 +205,7 @@ def create_app(settings_obj: Settings | None = None) -> FastAPI:
         max_age=settings_obj.session_max_age_seconds,
     )
 
-    # Mount static files for attachments
-    app.mount("/attachments", StaticFiles(directory=settings_obj.attachment_storage_dir), name="attachments")
+    # Mount static files for attachments removed in favor of authenticated route
 
     @app.middleware('http')
     async def add_security_headers(request: Request, call_next):
@@ -291,6 +291,7 @@ def create_app(settings_obj: Settings | None = None) -> FastAPI:
     app.include_router(ops_nightly.router, prefix='/api')
     app.include_router(ops.router, prefix='/api')
     app.include_router(audit.router, prefix='/api')
+    app.include_router(attachments.router, prefix='/api')
     app.include_router(period_lock.router, prefix='/api')
     app.include_router(dashboard.router, prefix='/api')
     app.include_router(search.router, prefix='/api')
