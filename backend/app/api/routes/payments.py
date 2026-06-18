@@ -28,7 +28,7 @@ def list_payments_route(
     db: Session = Depends(get_db),
     _: User = Depends(require_payments_view)
 ) -> list[PaymentDocumentSummaryResponse]:
-    return [PaymentDocumentSummaryResponse.model_validate(item) for item in list_payments(db, branch_id)]
+    return list_payments(db, branch_id)
 
 
 @router.get('/table', response_model=PaymentDocumentSummaryPageResponse)

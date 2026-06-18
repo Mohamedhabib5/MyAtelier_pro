@@ -28,12 +28,12 @@ from app.modules.payments.booking_bridge import sync_booking_lines_status
 from app.modules.payments.repository import PaymentsRepository
 from app.modules.payments.rules import clean_optional_text, parse_payment_date
 from app.modules.payments.serializers import document_total, serialize_document
-from app.modules.payments.schemas import PaymentDocumentCreateRequest, PaymentDocumentUpdateRequest
+from app.modules.payments.schemas import PaymentDocumentCreateRequest, PaymentDocumentUpdateRequest, PaymentDocumentSummaryResponse
 
-def list_payments(db: Session, branch_id: str) -> list[dict]:
+def list_payments(db: Session, branch_id: str) -> list[PaymentDocumentSummaryResponse]:
     company = get_company_settings(db)
     rows = PaymentsRepository(db).list_payment_documents(company.id, branch_id)
-    return [serialize_document(row) for row in rows]
+    return [PaymentDocumentSummaryResponse.model_validate(serialize_document(row)) for row in rows]
 
 
 def list_payment_page(
