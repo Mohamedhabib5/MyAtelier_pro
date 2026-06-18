@@ -227,8 +227,20 @@ def _execute_cancellation(db: Session, actor: User, booking_id: str, payload: Bo
                 recognition_entry = post_booking_line_revenue_recognition(db, actor, line, cancel_date)
                 line.revenue_journal_entry_id = recognition_entry.id
                 line.revenue_recognized_at = datetime.now()
-            except Exception:
-                pass
+            except Exception as e:
+                from app.modules.core_platform.service import record_audit
+                record_audit(
+                    db,
+                    actor_user_id=actor.id,
+                    action="booking.revenue_recognition_failed",
+                    target_type="booking_line",
+                    target_id=line.id,
+                    summary=f"Failed to recognize revenue for line {line.id}",
+                    diff={"error": str(e)},
+                    success=False,
+                    error_code="revenue_reversal_failed",
+                )
+                raise
     
     if not payload.line_ids:
         record_audit(

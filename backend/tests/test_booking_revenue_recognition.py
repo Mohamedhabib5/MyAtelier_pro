@@ -227,3 +227,46 @@ def test_complete_booking_line_with_tax_splits_revenue_and_tax_payable(app_clien
     assert str(lines['1121001']['debit_amount']) == '1280.00'
     assert str(lines['4110']['credit_amount']) == '1960.80'
     assert str(lines['2200']['credit_amount']) == '319.20'
+
+
+def test_cancellation_fails_if_forfeit_revenue_recognition_fails(app_client: TestClient, mocker) -> None:
+    login(app_client)
+    customer_id = seed_customer(app_client)
+    service_bundle = seed_service_bundle(app_client, department_code='MAKEUP', department_name='قسم المكياج', service_name='اختبار فشل الإيراد أثناء الإلغاء', default_price=800)
+
+    booking = create_booking_document(
+        app_client,
+        customer_id,
+        [build_booking_line_payload(service_bundle, service_date='2026-10-01', line_price=2200)],
+    )
+    line_id = booking['lines'][0]['id']
+
+    # Pay some amount so there is a forfeit
+    app_client.post(
+        '/api/payments',
+        json={
+            'customer_id': customer_id,
+            'payment_date': '2026-03-19',
+            'allocations': [{'booking_id': booking['id'], 'booking_line_id': line_id, 'allocated_amount': 500}],
+        },
+    )
+
+    # Mock post_booking_line_revenue_recognition to throw exception
+    mocker.patch(
+        "app.modules.bookings.cancellation_service.post_booking_line_revenue_recognition",
+        side_effect=Exception("Simulated failure")
+    )
+
+    # Cancel the booking line
+    cancel_response = app_client.post(
+        f"/api/bookings/{booking['id']}/cancel",
+        json={
+            "cancellation_date": "2026-10-02",
+            "reason": "Test fail",
+            "refund_amount": 0,
+            "transfer_amount": 0,
+            "line_ids": [line_id]
+        }
+    )
+    # The exception should be raised and result in 500 error
+    assert cancel_response.status_code == 500
