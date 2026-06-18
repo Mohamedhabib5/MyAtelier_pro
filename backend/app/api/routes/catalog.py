@@ -38,7 +38,7 @@ def list_departments_route(
     _: User = Depends(require_catalog_view),
 ) -> list[DepartmentResponse]:
     is_active = None if status_filter == "all" else status_filter == "active"
-    return [DepartmentResponse.model_validate(item) for item in list_departments(db, is_active=is_active)]
+    return list_departments(db, is_active=is_active)
 
 
 @router.post("/departments", response_model=DepartmentResponse, status_code=status.HTTP_201_CREATED)
@@ -47,7 +47,7 @@ def create_department_route(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_catalog_manage),
 ) -> DepartmentResponse:
-    return DepartmentResponse.model_validate(create_department(db, current_user, payload))
+    return create_department(db, current_user, payload)
 
 
 @router.patch("/departments/{department_id}", response_model=DepartmentResponse)
@@ -57,7 +57,7 @@ def update_department_route(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_catalog_manage),
 ) -> DepartmentResponse:
-    return DepartmentResponse.model_validate(update_department(db, current_user, department_id, payload))
+    return update_department(db, current_user, department_id, payload)
 
 
 @router.post("/departments/{department_id}/archive", response_model=DepartmentResponse)
@@ -67,7 +67,7 @@ def archive_department_route(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_catalog_manage),
 ) -> DepartmentResponse:
-    return DepartmentResponse.model_validate(archive_department(db, current_user, department_id, payload.reason))
+    return archive_department(db, current_user, department_id, payload.reason)
 
 
 @router.post("/departments/{department_id}/restore", response_model=DepartmentResponse)
@@ -77,7 +77,7 @@ def restore_department_route(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_catalog_manage),
 ) -> DepartmentResponse:
-    return DepartmentResponse.model_validate(restore_department(db, current_user, department_id, payload.reason))
+    return restore_department(db, current_user, department_id, payload.reason)
 
 
 @router.post("/operational/dresses-department", response_model=DepartmentResponse)
@@ -86,7 +86,7 @@ def make_dress_department_route(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_catalog_manage),
 ) -> DepartmentResponse:
-    return DepartmentResponse.model_validate(set_dress_department(db, current_user, payload.department_id))
+    return set_dress_department(db, current_user, payload.department_id)
 
 
 @router.get("/services", response_model=list[ServiceResponse])
@@ -96,7 +96,7 @@ def list_services_route(
     _: User = Depends(require_catalog_view),
 ) -> list[ServiceResponse]:
     is_active = None if status_filter == "all" else status_filter == "active"
-    return [ServiceResponse.model_validate(item) for item in list_services(db, is_active=is_active)]
+    return list_services(db, is_active=is_active)
 
 
 @router.post("/services", response_model=ServiceResponse, status_code=status.HTTP_201_CREATED)
@@ -105,7 +105,7 @@ def create_service_route(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_catalog_manage),
 ) -> ServiceResponse:
-    return ServiceResponse.model_validate(create_service(db, current_user, payload))
+    return create_service(db, current_user, payload)
 
 
 @router.patch("/services/{service_id}", response_model=ServiceResponse)
@@ -115,7 +115,7 @@ def update_service_route(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_catalog_manage),
 ) -> ServiceResponse:
-    return ServiceResponse.model_validate(update_service(db, current_user, service_id, payload))
+    return update_service(db, current_user, service_id, payload)
 
 
 @router.post("/services/{service_id}/archive", response_model=ServiceResponse)
@@ -125,7 +125,7 @@ def archive_service_route(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_catalog_manage),
 ) -> ServiceResponse:
-    return ServiceResponse.model_validate(archive_service(db, current_user, service_id, payload.reason))
+    return archive_service(db, current_user, service_id, payload.reason)
 
 
 @router.post("/services/{service_id}/restore", response_model=ServiceResponse)
@@ -135,4 +135,4 @@ def restore_service_route(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_catalog_manage),
 ) -> ServiceResponse:
-    return ServiceResponse.model_validate(restore_service(db, current_user, service_id, payload.reason))
+    return restore_service(db, current_user, service_id, payload.reason)

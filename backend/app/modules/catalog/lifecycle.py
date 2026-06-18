@@ -6,24 +6,25 @@ from app.core.exceptions import NotFoundError, ValidationAppError
 from app.core.security import norm_text
 from app.modules.catalog.models import Department, ServiceCatalogItem
 from app.modules.catalog.repository import CatalogRepository
+from app.modules.catalog.schemas import DepartmentResponse, ServiceResponse
 from app.modules.core_platform.service import record_audit
 from app.modules.identity.models import User
 from app.modules.organization.service import get_company_settings
 
 
-def list_departments(db: Session, *, is_active: bool | None = None) -> list[dict]:
+def list_departments(db: Session, *, is_active: bool | None = None) -> list[DepartmentResponse]:
     company = get_company_settings(db)
     rows = CatalogRepository(db).list_departments(company.id, is_active=is_active)
     return [_serialize_department(row) for row in rows]
 
 
-def list_services(db: Session, *, is_active: bool | None = None) -> list[dict]:
+def list_services(db: Session, *, is_active: bool | None = None) -> list[ServiceResponse]:
     company = get_company_settings(db)
     rows = CatalogRepository(db).list_services(company.id, is_active=is_active)
     return [_serialize_service(row) for row in rows]
 
 
-def archive_department(db: Session, actor: User, department_id: str, reason: str | None = None) -> dict:
+def archive_department(db: Session, actor: User, department_id: str, reason: str | None = None) -> DepartmentResponse:
     repo = CatalogRepository(db)
     department = _get_department_for_active_company(db, repo, department_id)
     if not department.is_active:
@@ -46,7 +47,7 @@ def archive_department(db: Session, actor: User, department_id: str, reason: str
     return _serialize_department(department)
 
 
-def restore_department(db: Session, actor: User, department_id: str, reason: str | None = None) -> dict:
+def restore_department(db: Session, actor: User, department_id: str, reason: str | None = None) -> DepartmentResponse:
     repo = CatalogRepository(db)
     department = _get_department_for_active_company(db, repo, department_id)
     if department.is_active:
@@ -69,7 +70,7 @@ def restore_department(db: Session, actor: User, department_id: str, reason: str
     return _serialize_department(department)
 
 
-def archive_service(db: Session, actor: User, service_id: str, reason: str | None = None) -> dict:
+def archive_service(db: Session, actor: User, service_id: str, reason: str | None = None) -> ServiceResponse:
     repo = CatalogRepository(db)
     service = _get_service_for_active_company(db, repo, service_id)
     if not service.is_active:
@@ -94,7 +95,7 @@ def archive_service(db: Session, actor: User, service_id: str, reason: str | Non
     return _serialize_service(service)
 
 
-def restore_service(db: Session, actor: User, service_id: str, reason: str | None = None) -> dict:
+def restore_service(db: Session, actor: User, service_id: str, reason: str | None = None) -> ServiceResponse:
     repo = CatalogRepository(db)
     service = _get_service_for_active_company(db, repo, service_id)
     if service.is_active:
@@ -135,8 +136,8 @@ def _get_service_for_active_company(db: Session, repo: CatalogRepository, servic
     return service
 
 
-def _serialize_department(department: Department) -> dict:
-    return {
+def _serialize_department(department: Department) -> DepartmentResponse:
+    return DepartmentResponse.model_validate({
         "id": department.id,
         "company_id": department.company_id,
         "created_by_user_id": department.created_by_user_id,
@@ -147,11 +148,11 @@ def _serialize_department(department: Department) -> dict:
         "is_active": department.is_active,
         "is_dress_department": department.is_dress_department,
         "display_order": department.display_order,
-    }
+    })
 
 
-def _serialize_service(service: ServiceCatalogItem) -> dict:
-    return {
+def _serialize_service(service: ServiceCatalogItem) -> ServiceResponse:
+    return ServiceResponse.model_validate({
         "id": service.id,
         "company_id": service.company_id,
         "created_by_user_id": service.created_by_user_id,
@@ -166,7 +167,7 @@ def _serialize_service(service: ServiceCatalogItem) -> dict:
         "notes": service.notes,
         "is_active": service.is_active,
         "display_order": service.display_order,
-    }
+    })
 
 
 def _clean_optional(value: str | None) -> str | None:

@@ -13,7 +13,7 @@ from app.modules.core_platform.service import record_audit
 from app.modules.exports.delivery_service import send_export_delivery_webhook
 from app.modules.exports.models import ExportSchedule
 from app.modules.exports.repository import ExportSchedulesRepository
-from app.modules.exports.schemas import ExportScheduleCreateRequest
+from app.modules.exports.schemas import ExportScheduleCreateRequest, ExportScheduleResponse, ExportScheduleRunDueItem, ExportScheduleRunDueResponse, ExportScheduleRunResponse
 from app.modules.identity.models import User
 from app.modules.organization.branch_context import ensure_active_branch
 from app.modules.organization.service import get_company_settings
@@ -30,13 +30,13 @@ VALID_EXPORT_TYPES = {item.value for item in ExportTypeKey}
 VALID_CADENCES = {item.value for item in ExportCadenceKey}
 
 
-def list_export_schedules(db: Session) -> list[dict]:
+def list_export_schedules(db: Session) -> list[ExportScheduleResponse]:
     company = get_company_settings(db)
     rows = ExportSchedulesRepository(db).list_schedules(company.id)
     return [_serialize_schedule(row) for row in rows]
 
 
-def create_export_schedule(db: Session, actor: User, payload: ExportScheduleCreateRequest, session: dict) -> dict:
+def create_export_schedule(db: Session, actor: User, payload: ExportScheduleCreateRequest, session: dict) -> ExportScheduleResponse:
     company = get_company_settings(db)
     export_type = _clean_export_type(payload.export_type)
     cadence = _clean_cadence(payload.cadence)
@@ -66,7 +66,7 @@ def create_export_schedule(db: Session, actor: User, payload: ExportScheduleCrea
     return _load_schedule_or_404(repo, schedule.id)
 
 
-def toggle_export_schedule(db: Session, actor: User, schedule_id: str) -> dict:
+def toggle_export_schedule(db: Session, actor: User, schedule_id: str) -> ExportScheduleResponse:
     schedule = _get_company_schedule(db, schedule_id)
     schedule.is_active = not schedule.is_active
     record_audit(
@@ -82,7 +82,7 @@ def toggle_export_schedule(db: Session, actor: User, schedule_id: str) -> dict:
     return _serialize_schedule(schedule)
 
 
-def run_export_schedule(db: Session, actor: User, schedule_id: str) -> dict:
+def run_export_schedule(db: Session, actor: User, schedule_id: str) -> ExportScheduleRunResponse:
     schedule = _get_company_schedule(db, schedule_id)
     if not schedule.is_active:
         raise ValidationAppError("لا يمكن تشغيل الجداول غير النشطة")
@@ -97,7 +97,7 @@ def run_export_schedule(db: Session, actor: User, schedule_id: str) -> dict:
         diff={"run_url": run_url, "next_run_on": schedule.next_run_on.isoformat()},
     )
     db.commit()
-    return {"schedule": _serialize_schedule(schedule), "run_url": run_url}
+    return ExportScheduleRunResponse(schedule=_serialize_schedule(schedule), run_url=run_url)
 
 
 def run_due_export_schedules(
@@ -110,12 +110,12 @@ def run_due_export_schedules(
     delivery_webhook_url: str = "",
     delivery_dry_run: bool = True,
     trigger_source: str = "manual",
-) -> dict:
+) -> ExportScheduleRunDueResponse:
     company = get_company_settings(db)
     today = date.today()
     rows = ExportSchedulesRepository(db).list_schedules(company.id)
     due_rows = [row for row in rows if row.is_active and row.next_run_on <= today][:limit]
-    runs: list[dict] = []
+    runs: list[ExportScheduleRunDueItem] = []
     executed_count = 0
 
     for schedule in due_rows:
@@ -126,12 +126,12 @@ def run_due_export_schedules(
             executed = True
             executed_count += 1
         runs.append(
-            {
-                "schedule_id": schedule.id,
-                "schedule_name": schedule.name,
-                "run_url": run_url,
-                "executed": executed,
-            }
+            ExportScheduleRunDueItem(
+                schedule_id=schedule.id,
+                schedule_name=schedule.name,
+                run_url=run_url,
+                executed=executed,
+            )
         )
 
     delivery_sent = False
@@ -139,7 +139,7 @@ def run_due_export_schedules(
     if notify:
         delivery_sent, delivery_detail = send_export_delivery_webhook(
             webhook_url=delivery_webhook_url,
-            payload={"total_due": len(due_rows), "executed_count": executed_count, "runs": runs},
+            payload={"total_due": len(due_rows), "executed_count": executed_count, "runs": [r.model_dump() for r in runs]},
             dry_run=delivery_dry_run,
         )
 
@@ -163,14 +163,14 @@ def run_due_export_schedules(
     )
     db.commit()
 
-    return {
-        "total_due": len(due_rows),
-        "executed_count": executed_count,
-        "skipped_count": len(due_rows) - executed_count,
-        "delivery_sent": delivery_sent,
-        "delivery_detail": delivery_detail,
-        "runs": runs,
-    }
+    return ExportScheduleRunDueResponse(
+        total_due=len(due_rows),
+        executed_count=executed_count,
+        skipped_count=len(due_rows) - executed_count,
+        delivery_sent=delivery_sent,
+        delivery_detail=delivery_detail,
+        runs=runs,
+    )
 
 
 def _get_company_schedule(db: Session, schedule_id: str) -> ExportSchedule:
@@ -182,15 +182,15 @@ def _get_company_schedule(db: Session, schedule_id: str) -> ExportSchedule:
     return schedule
 
 
-def _load_schedule_or_404(repo: ExportSchedulesRepository, schedule_id: str) -> dict:
+def _load_schedule_or_404(repo: ExportSchedulesRepository, schedule_id: str) -> ExportScheduleResponse:
     schedule = repo.get_schedule(schedule_id)
     if schedule is None:
         raise NotFoundError("لم يتم العثور على جدول التصدير")
     return _serialize_schedule(schedule)
 
 
-def _serialize_schedule(schedule: ExportSchedule) -> dict:
-    return {
+def _serialize_schedule(schedule: ExportSchedule) -> ExportScheduleResponse:
+    return ExportScheduleResponse.model_validate({
         "id": schedule.id,
         "name": schedule.name,
         "export_type": schedule.export_type,
@@ -200,7 +200,7 @@ def _serialize_schedule(schedule: ExportSchedule) -> dict:
         "next_run_on": schedule.next_run_on.isoformat(),
         "last_run_at": schedule.last_run_at.isoformat() if schedule.last_run_at else None,
         "is_active": schedule.is_active,
-    }
+    })
 
 
 def _execute_schedule_run(schedule: ExportSchedule) -> str:
