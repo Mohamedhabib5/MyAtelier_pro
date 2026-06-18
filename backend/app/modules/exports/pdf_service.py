@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from datetime import datetime
+from app.modules.dashboard.schemas import FinanceDashboardResponse
+from app.modules.reports.schemas import ReportsOverviewResponse
 
 
 def build_simple_pdf_report(*, title: str, lines: list[str]) -> bytes:
@@ -46,30 +48,30 @@ def build_simple_pdf_report(*, title: str, lines: list[str]) -> bytes:
     return bytes(output)
 
 
-def finance_pdf_lines(payload: dict) -> list[str]:
+def finance_pdf_lines(payload: FinanceDashboardResponse) -> list[str]:
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
     return [
         f"Generated at: {now}",
-        f"Total income: {payload.get('total_income', 0)}",
-        f"Total remaining: {payload.get('total_remaining', 0)}",
-        f"Total bookings: {payload.get('total_bookings', 0)}",
-        f"Daily income items: {len(payload.get('daily_income', []))}",
-        f"Department income items: {len(payload.get('department_income', []))}",
-        f"Top services items: {len(payload.get('top_services', []))}",
+        f"Total income: {payload.total_income}",
+        f"Total remaining: {payload.total_remaining}",
+        f"Total bookings: {payload.total_bookings}",
+        f"Daily income items: {len(payload.daily_income)}",
+        f"Department income items: {len(payload.department_income)}",
+        f"Top services items: {len(payload.top_services)}",
     ]
 
 
-def reports_pdf_lines(payload: dict) -> list[str]:
+def reports_pdf_lines(payload: ReportsOverviewResponse) -> list[str]:
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
     return [
         f"Generated at: {now}",
-        f"Active customers: {payload.get('active_customers', 0)}",
-        f"Active services: {payload.get('active_services', 0)}",
-        f"Available dresses: {payload.get('available_dresses', 0)}",
-        f"Upcoming bookings: {payload.get('upcoming_bookings', 0)}",
-        f"Booking status items: {len(payload.get('booking_status_counts', []))}",
-        f"Payment type items: {len(payload.get('payment_type_totals', []))}",
-        f"Dress status items: {len(payload.get('dress_status_counts', []))}",
+        f"Active customers: {payload.active_customers}",
+        f"Active services: {payload.active_services}",
+        f"Available dresses: {payload.available_dresses}",
+        f"Upcoming bookings: {payload.upcoming_bookings}",
+        f"Booking status items: {len(payload.booking_status_counts)}",
+        f"Payment type items: {len(payload.payment_type_totals)}",
+        f"Dress status items: {len(payload.dress_status_counts)}",
     ]
 
 

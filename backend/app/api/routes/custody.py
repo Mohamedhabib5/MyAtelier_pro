@@ -27,12 +27,12 @@ def list_custody_cases_route(
     result = list_custody_cases(db, branch.id, view=view, page=page, page_size=page_size)
     if isinstance(result, dict):
         return {
-            "items": [CustodyCaseResponse.model_validate(item) for item in result["items"]],
+            "items": result["items"],
             "total": result["total"],
             "page": result["page"],
             "page_size": result["page_size"],
         }
-    return [CustodyCaseResponse.model_validate(item) for item in result]
+    return result
 
 
 @router.post("", response_model=CustodyCaseResponse, status_code=status.HTTP_201_CREATED)
@@ -42,7 +42,7 @@ def create_custody_case_route(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_custody_manage),
 ) -> CustodyCaseResponse:
-    return CustodyCaseResponse.model_validate(create_custody_case(db, current_user, request.session, payload))
+    return create_custody_case(db, current_user, request.session, payload)
 
 
 @router.get("/{case_id}", response_model=CustodyCaseResponse)
@@ -52,7 +52,7 @@ def get_custody_case_route(
     db: Session = Depends(get_db),
     _: User = Depends(require_custody_view),
 ) -> CustodyCaseResponse:
-    return CustodyCaseResponse.model_validate(get_custody_case(db, request.session, case_id))
+    return get_custody_case(db, request.session, case_id)
 
 
 @router.post("/{case_id}/actions", response_model=CustodyCaseResponse)
@@ -63,20 +63,18 @@ def apply_custody_action_route(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_custody_manage),
 ) -> CustodyCaseResponse:
-    return CustodyCaseResponse.model_validate(
-        apply_custody_action(
-            db,
-            current_user,
-            request.session,
-            case_id,
-            action=payload.action,
-            action_date=payload.action_date,
-            note=payload.note,
-            product_condition=payload.product_condition,
-            return_outcome=payload.return_outcome,
-            compensation_amount=payload.compensation_amount,
-            payment_method_id=payload.payment_method_id,
-        )
+    return apply_custody_action(
+        db,
+        current_user,
+        request.session,
+        case_id,
+        action=payload.action,
+        action_date=payload.action_date,
+        note=payload.note,
+        product_condition=payload.product_condition,
+        return_outcome=payload.return_outcome,
+        compensation_amount=payload.compensation_amount,
+        payment_method_id=payload.payment_method_id,
     )
 
 
@@ -89,18 +87,16 @@ def collect_custody_compensation_route(
     current_user: User = Depends(require_custody_manage),
     _: User = Depends(require_payments_manage),
 ) -> CustodyCaseResponse:
-    return CustodyCaseResponse.model_validate(
-        collect_custody_compensation(
-            db,
-            current_user,
-            request.session,
-            case_id,
-            compensation_type_id=payload.compensation_type_id,
-            amount=payload.amount,
-            payment_date=payload.payment_date,
-            note=payload.note,
-            payment_method_id=payload.payment_method_id,
-            override_lock=payload.override_lock,
-            override_reason=payload.override_reason,
-        )
+    return collect_custody_compensation(
+        db,
+        current_user,
+        request.session,
+        case_id,
+        compensation_type_id=payload.compensation_type_id,
+        amount=payload.amount,
+        payment_date=payload.payment_date,
+        note=payload.note,
+        payment_method_id=payload.payment_method_id,
+        override_lock=payload.override_lock,
+        override_reason=payload.override_reason,
     )

@@ -12,6 +12,7 @@ from app.modules.custody.repository import CustodyRepository
 from app.modules.dresses.models import DressResource
 from app.modules.identity.models import User
 from app.modules.payments.custody_compensation import create_custody_compensation_payment
+from app.modules.custody.schemas import CustodyCaseResponse
 
 ACTION_TO_STATUS = {
     "handover": "handed_over",
@@ -53,7 +54,7 @@ def apply_custody_action(
     return_outcome: str | None = None,
     compensation_amount: float | None = None,
     payment_method_id: str | None = None,
-) -> dict:
+) -> CustodyCaseResponse:
     from app.modules.custody.service import _get_scoped_case_or_404, _clean, _parse_required_date, _clean_optional, _serialize_case
 
     custody_case = _get_scoped_case_or_404(db, session, case_id)
@@ -121,7 +122,7 @@ def collect_custody_compensation(
     payment_method_id: str | None = None,
     override_lock: bool = False,
     override_reason: str | None = None,
-) -> dict:
+) -> CustodyCaseResponse:
     from app.modules.custody.service import _get_scoped_case_or_404, _serialize_case
     from app.modules.catalog.repository import CatalogRepository
     from app.modules.bookings.repository import BookingsRepository

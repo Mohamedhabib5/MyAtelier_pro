@@ -11,7 +11,7 @@ from app.modules.bookings.models import BookingLine
 from app.modules.core_platform.service import record_audit
 from app.modules.custody.models import CustodyCase
 from app.modules.custody.repository import CustodyRepository
-from app.modules.custody.schemas import CustodyCaseCreateRequest
+from app.modules.custody.schemas import CustodyCaseCreateRequest, CustodyCaseResponse
 from app.modules.dresses.models import DressResource
 from app.modules.identity.models import User
 from app.modules.organization.branch_context import ensure_active_branch
@@ -25,7 +25,7 @@ def list_custody_cases(
     view: str = "all",
     page: int | None = None,
     page_size: int | None = None,
-) -> dict | list[dict]:
+) -> dict | list[CustodyCaseResponse]:
     company = get_company_settings(db)
     normalized_view = _normalize_case_view(view)
     rows, total = CustodyRepository(db).list_cases_detailed(
@@ -51,12 +51,12 @@ def list_custody_cases(
     return items
 
 
-def get_custody_case(db: Session, session: dict, case_id: str) -> dict:
+def get_custody_case(db: Session, session: dict, case_id: str) -> CustodyCaseResponse:
     custody_case = _get_scoped_case_or_404(db, session, case_id)
     return _serialize_case(custody_case)
 
 
-def create_custody_case(db: Session, actor: User, session: dict, payload: CustodyCaseCreateRequest) -> dict:
+def create_custody_case(db: Session, actor: User, session: dict, payload: CustodyCaseCreateRequest) -> CustodyCaseResponse:
     company = get_company_settings(db)
     branch = ensure_active_branch(db, session)
     repo = CustodyRepository(db)
@@ -159,40 +159,40 @@ def _serialize_case(
     customer_address: str | None = None,
     booking_number: str | None = None,
     dress_code: str | None = None,
-) -> dict:
-    return {
-        "id": custody_case.id,
-        "company_id": custody_case.company_id,
-        "branch_id": custody_case.branch_id,
-        "booking_id": custody_case.booking_id,
-        "booking_line_id": custody_case.booking_line_id,
-        "customer_id": custody_case.customer_id,
-        "dress_id": custody_case.dress_id,
-        "created_by_user_id": custody_case.created_by_user_id,
-        "updated_by_user_id": custody_case.updated_by_user_id,
-        "entity_version": custody_case.entity_version,
-        "case_number": custody_case.case_number,
-        "custody_date": custody_case.custody_date.isoformat(),
-        "status": custody_case.status,
-        "case_type": custody_case.case_type,
-        "notes": custody_case.notes,
-        "product_condition": custody_case.product_condition,
-        "return_outcome": custody_case.return_outcome,
-        "security_deposit_amount": float(custody_case.security_deposit_amount) if custody_case.security_deposit_amount is not None else None,
-        "security_deposit_document_text": custody_case.security_deposit_document_text,
-        "security_deposit_payment_document_id": custody_case.security_deposit_payment_document_id,
-        "security_deposit_refund_payment_document_id": custody_case.security_deposit_refund_payment_document_id,
-        "compensation_amount": float(custody_case.compensation_amount) if custody_case.compensation_amount is not None else None,
-        "compensation_collected_on": custody_case.compensation_collected_on.isoformat() if custody_case.compensation_collected_on else None,
-        "compensation_payment_document_id": custody_case.compensation_payment_document_id,
-        "customer_name": customer_name,
-        "customer_phone": customer_phone,
-        "customer_address": customer_address,
-        "booking_number": booking_number,
-        "dress_code": dress_code,
-        "created_at": custody_case.created_at.isoformat() if custody_case.created_at else None,
-        "updated_at": custody_case.updated_at.isoformat() if custody_case.updated_at else None,
-    }
+) -> CustodyCaseResponse:
+    return CustodyCaseResponse(
+        id=custody_case.id,
+        company_id=custody_case.company_id,
+        branch_id=custody_case.branch_id,
+        booking_id=custody_case.booking_id,
+        booking_line_id=custody_case.booking_line_id,
+        customer_id=custody_case.customer_id,
+        dress_id=custody_case.dress_id,
+        created_by_user_id=custody_case.created_by_user_id,
+        updated_by_user_id=custody_case.updated_by_user_id,
+        entity_version=custody_case.entity_version,
+        case_number=custody_case.case_number,
+        custody_date=custody_case.custody_date.isoformat(),
+        status=custody_case.status,
+        case_type=custody_case.case_type,
+        notes=custody_case.notes,
+        product_condition=custody_case.product_condition,
+        return_outcome=custody_case.return_outcome,
+        security_deposit_amount=float(custody_case.security_deposit_amount) if custody_case.security_deposit_amount is not None else None,
+        security_deposit_document_text=custody_case.security_deposit_document_text,
+        security_deposit_payment_document_id=custody_case.security_deposit_payment_document_id,
+        security_deposit_refund_payment_document_id=custody_case.security_deposit_refund_payment_document_id,
+        compensation_amount=float(custody_case.compensation_amount) if custody_case.compensation_amount is not None else None,
+        compensation_collected_on=custody_case.compensation_collected_on.isoformat() if custody_case.compensation_collected_on else None,
+        compensation_payment_document_id=custody_case.compensation_payment_document_id,
+        customer_name=customer_name,
+        customer_phone=customer_phone,
+        customer_address=customer_address,
+        booking_number=booking_number,
+        dress_code=dress_code,
+        created_at=custody_case.created_at.isoformat() if custody_case.created_at else None,
+        updated_at=custody_case.updated_at.isoformat() if custody_case.updated_at else None,
+    )
 
 
 def _clean(value: str) -> str:
