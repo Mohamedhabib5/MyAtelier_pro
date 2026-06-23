@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.orm import Session
 
 from app.api.deps import require_exports_manage, require_exports_view
@@ -282,10 +282,23 @@ def delete_daily_report_config_route(
 @router.post('/daily-reports/{config_id}/test')
 def test_daily_report_config_route(
     config_id: str,
-    report_date: str | None = None,
+    report_date: str | None = Query(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_exports_manage)
 ) -> dict:
+    from app.modules.organization.service import get_company_settings
+    from app.core.exceptions import ValidationAppError
+    from datetime import datetime
+    
+    company = get_company_settings(db)
+    
+    parsed_date = None
+    if report_date:
+        try:
+            parsed_date = datetime.strptime(report_date, "%Y-%m-%d").date()
+        except ValueError:
+            raise ValidationAppError("تنسيق التاريخ غير صحيح، يجب أن يكون YYYY-MM-DD")
+            
     from app.modules.core_platform.audit import record_audit
     record_audit(
         db,
@@ -296,4 +309,4 @@ def test_daily_report_config_route(
         summary="Triggered manual test run of daily email report config",
     )
     from app.modules.exports.daily_report_service import run_test_report_for_config
-    return run_test_report_for_config(db, config_id, report_date)
+    return run_test_report_for_config(db, config_id, company.id, parsed_date)

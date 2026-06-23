@@ -106,7 +106,7 @@ export function useAuditExplorer() {
       setIntegrityResult(result);
       setShowIntegrityDialog(true);
     } catch (err: unknown) {
-      alert(`فشل التحقق: ${err.message}`);
+      alert(`فشل التحقق: ${(err as any).message}`);
     } finally {
       setVerifying(false);
     }

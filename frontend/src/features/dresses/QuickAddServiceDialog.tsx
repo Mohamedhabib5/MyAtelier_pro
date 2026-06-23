@@ -50,7 +50,7 @@ export function QuickAddServiceDialog({ open, onClose, onServiceAdded }: QuickAd
       setName('');
       onClose();
     } catch (err: unknown) {
-      setError(err.message || 'Error creating service');
+      setError((err as any).message || 'Error creating service');
     } finally {
       setSaving(false);
     }

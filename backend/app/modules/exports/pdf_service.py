@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Any
 from app.modules.dashboard.schemas import FinanceDashboardResponse
 from app.modules.reports.schemas import ReportsOverviewResponse
 
@@ -48,30 +49,34 @@ def build_simple_pdf_report(*, title: str, lines: list[str]) -> bytes:
     return bytes(output)
 
 
-def finance_pdf_lines(payload: FinanceDashboardResponse) -> list[str]:
+def finance_pdf_lines(payload: Any) -> list[str]:
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    def val(key: str) -> Any:
+        return payload.get(key) if isinstance(payload, dict) else getattr(payload, key)
     return [
         f"Generated at: {now}",
-        f"Total income: {payload.total_income}",
-        f"Total remaining: {payload.total_remaining}",
-        f"Total bookings: {payload.total_bookings}",
-        f"Daily income items: {len(payload.daily_income)}",
-        f"Department income items: {len(payload.department_income)}",
-        f"Top services items: {len(payload.top_services)}",
+        f"Total income: {val('total_income')}",
+        f"Total remaining: {val('total_remaining')}",
+        f"Total bookings: {val('total_bookings')}",
+        f"Daily income items: {len(val('daily_income'))}",
+        f"Department income items: {len(val('department_income'))}",
+        f"Top services items: {len(val('top_services'))}",
     ]
 
 
-def reports_pdf_lines(payload: ReportsOverviewResponse) -> list[str]:
+def reports_pdf_lines(payload: Any) -> list[str]:
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    def val(key: str) -> Any:
+        return payload.get(key) if isinstance(payload, dict) else getattr(payload, key)
     return [
         f"Generated at: {now}",
-        f"Active customers: {payload.active_customers}",
-        f"Active services: {payload.active_services}",
-        f"Available dresses: {payload.available_dresses}",
-        f"Upcoming bookings: {payload.upcoming_bookings}",
-        f"Booking status items: {len(payload.booking_status_counts)}",
-        f"Payment type items: {len(payload.payment_type_totals)}",
-        f"Dress status items: {len(payload.dress_status_counts)}",
+        f"Active customers: {val('active_customers')}",
+        f"Active services: {val('active_services')}",
+        f"Available dresses: {val('available_dresses')}",
+        f"Upcoming bookings: {val('upcoming_bookings')}",
+        f"Booking status items: {len(val('booking_status_counts'))}",
+        f"Payment type items: {len(val('payment_type_totals'))}",
+        f"Dress status items: {len(val('dress_status_counts'))}",
     ]
 
 

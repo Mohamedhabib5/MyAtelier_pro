@@ -15,14 +15,14 @@ import { useThemeSettings } from '../../features/theme/ThemeSettingsProvider';
 interface ColumnDef {
   field?: string;
   headerName?: string;
-  hide?: boolean;
+  hide?: boolean | null;
 }
 
 interface Props<Row> {
   rows: Row[];
   columns: ColumnDef[];
   onRowClicked?: (params: { data: Row }) => void;
-  getRowId?: (params: { data: Row }) => string;
+  getRowId?: (params: any) => string;
 }
 
 export function MobileCardView<Row>({ rows, columns, onRowClicked, getRowId }: Props<Row>) {
@@ -60,19 +60,19 @@ export function MobileCardView<Row>({ rows, columns, onRowClicked, getRowId }: P
               <Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ mb: 1.5 }}>
                 <Box>
                   <Typography variant="subtitle1" sx={{ fontWeight: 800, color: primaryColor }}>
-                    {String((row as any)[visibleColumns[0]?.field] || '')}
+                    {String(visibleColumns[0]?.field ? (row as any)[visibleColumns[0].field!] : '')}
                   </Typography>
                   <Typography variant="body2" sx={{ opacity: 0.7 }}>
-                    {String((row as any)[visibleColumns[1]?.field] || '')}
+                    {String(visibleColumns[1]?.field ? (row as any)[visibleColumns[1].field!] : '')}
                   </Typography>
                 </Box>
                 <IconButton size="small" onClick={(e) => e.stopPropagation()}>
                   <MoreVertical size={18} />
                 </IconButton>
               </Stack>
-
+ 
               <Divider sx={{ my: 1.5, opacity: 0.1 }} />
-
+ 
               <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5 }}>
                 {visibleColumns.slice(2, 6).map((col) => (
                   <Box key={col.field}>
@@ -80,12 +80,12 @@ export function MobileCardView<Row>({ rows, columns, onRowClicked, getRowId }: P
                       {col.headerName}
                     </Typography>
                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                      {String((row as any)[col.field] || '-')}
+                      {String(col.field ? (row as any)[col.field!] : '-')}
                     </Typography>
                   </Box>
                 ))}
               </Box>
-
+ 
               <Stack direction="row" justifyContent="flex-end" sx={{ mt: 1 }}>
                 <ChevronRight size={16} style={{ opacity: 0.3 }} />
               </Stack>

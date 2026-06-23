@@ -52,7 +52,7 @@ export const RoleManagement: React.FC = () => {
       setRoles(r);
       setPermissions(p);
     } catch (err: unknown) {
-      setError(err.message || text.errorLoad);
+      setError((err as any).message || text.errorLoad);
     } finally {
       setLoading(false);
     }
@@ -91,7 +91,7 @@ export const RoleManagement: React.FC = () => {
       loadData();
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: unknown) {
-      setError(err.message || text.errorSave);
+      setError((err as any).message || text.errorSave);
     } finally {
       setLoading(false);
     }
@@ -105,7 +105,7 @@ export const RoleManagement: React.FC = () => {
       loadData();
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: unknown) {
-      setError(err.message);
+      setError((err as any).message);
     }
   };
 
@@ -118,7 +118,7 @@ export const RoleManagement: React.FC = () => {
       loadData();
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: unknown) {
-      setError(err.message);
+      setError((err as any).message);
     }
   };
 

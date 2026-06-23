@@ -229,7 +229,7 @@ def test_complete_booking_line_with_tax_splits_revenue_and_tax_payable(app_clien
     assert str(lines['2200']['credit_amount']) == '319.20'
 
 
-def test_cancellation_fails_if_forfeit_revenue_recognition_fails(app_client: TestClient, mocker) -> None:
+def test_cancellation_fails_if_forfeit_revenue_recognition_fails(app_client: TestClient, monkeypatch) -> None:
     login(app_client)
     customer_id = seed_customer(app_client)
     service_bundle = seed_service_bundle(app_client, department_code='MAKEUP', department_name='قسم المكياج', service_name='اختبار فشل الإيراد أثناء الإلغاء', default_price=800)
@@ -251,22 +251,25 @@ def test_cancellation_fails_if_forfeit_revenue_recognition_fails(app_client: Tes
         },
     )
 
-    # Mock post_booking_line_revenue_recognition to throw exception
-    mocker.patch(
-        "app.modules.bookings.cancellation_service.post_booking_line_revenue_recognition",
-        side_effect=Exception("Simulated failure")
-    )
+    # Mock post_booking_line_revenue_recognition to throw exception using monkeypatch
+    import app.modules.bookings.revenue_bridge as revenue_bridge
+    def mock_post_booking_line_revenue_recognition(*args, **kwargs):
+        raise Exception("Simulated failure")
+    monkeypatch.setattr(revenue_bridge, "post_booking_line_revenue_recognition", mock_post_booking_line_revenue_recognition)
 
-    # Cancel the booking line
-    cancel_response = app_client.post(
-        f"/api/bookings/{booking['id']}/cancel",
-        json={
-            "cancellation_date": "2026-10-02",
-            "reason": "Test fail",
-            "refund_amount": 0,
-            "transfer_amount": 0,
-            "line_ids": [line_id]
-        }
-    )
-    # The exception should be raised and result in 500 error
-    assert cancel_response.status_code == 500
+    from fastapi.testclient import TestClient
+    with TestClient(app_client.app, raise_server_exceptions=False) as client:
+        login(client)
+        # Cancel the booking line
+        cancel_response = client.post(
+            f"/api/bookings/{booking['id']}/cancel",
+            json={
+                "cancellation_date": "2026-10-02",
+                "reason": "Test fail",
+                "refund_amount": 0,
+                "transfer_amount": 0,
+                "line_ids": [line_id]
+            }
+        )
+        # The exception should be raised and result in 500 error
+        assert cancel_response.status_code == 500

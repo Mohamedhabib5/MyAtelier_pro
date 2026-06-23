@@ -20,13 +20,13 @@ export default function AnalyticsPage() {
   const isAr = language === 'ar';
 
   const availableGroups = useMemo(() => [
-    { id: 'department_name', label: isAr ? 'القسم' : 'Department' },
-    { id: 'booking_status', label: isAr ? 'الحالة' : 'Status' },
-    { id: 'customer_name', label: isAr ? 'العميل' : 'Customer' },
-    { id: 'service_name', label: isAr ? 'الخدمة' : 'Service' },
-    { id: 'dress_name', label: isAr ? 'الفستان' : 'Dress' },
-    { id: 'payment_method', label: isAr ? 'طريقة الدفع' : 'Payment Method' },
-    { id: 'customer_address', label: isAr ? 'العنوان' : 'Address' },
+    { id: 'department_name' as keyof AdvancedBIRecord, label: isAr ? 'القسم' : 'Department' },
+    { id: 'booking_status' as keyof AdvancedBIRecord, label: isAr ? 'الحالة' : 'Status' },
+    { id: 'customer_name' as keyof AdvancedBIRecord, label: isAr ? 'العميل' : 'Customer' },
+    { id: 'service_name' as keyof AdvancedBIRecord, label: isAr ? 'الخدمة' : 'Service' },
+    { id: 'dress_name' as keyof AdvancedBIRecord, label: isAr ? 'الفستان' : 'Dress' },
+    { id: 'payment_method' as keyof AdvancedBIRecord, label: isAr ? 'طريقة الدفع' : 'Payment Method' },
+    { id: 'customer_address' as keyof AdvancedBIRecord, label: isAr ? 'العنوان' : 'Address' },
   ], [isAr]);
 
   const {

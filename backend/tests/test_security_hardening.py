@@ -80,4 +80,5 @@ def test_2fa_setup_response_does_not_leak_secret(app_client):
     assert response.status_code == 200
     response_json = response.json()
     assert "secret_plain" not in response_json, "secret_plain must not be exposed in 2FA setup response"
+    assert "secret_base32" in response_json, "secret_base32 must be returned for manual configuration"
     assert "provisioning_uri" in response_json

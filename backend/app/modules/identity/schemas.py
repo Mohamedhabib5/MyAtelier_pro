@@ -97,6 +97,7 @@ class Verify2FARequest(BaseModel):
 
 class TwoFASetupResponse(BaseModel):
     provisioning_uri: str
+    secret_base32: str
 
 class TwoFAActivationResponse(BaseModel):
     backup_codes: list[str]

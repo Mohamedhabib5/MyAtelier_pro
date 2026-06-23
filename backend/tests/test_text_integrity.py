@@ -13,8 +13,10 @@ def test_source_code_text_integrity():
     root_dir = Path(__file__).parent.parent.parent
     script_path = root_dir / "frontend" / "scripts" / "check-text-integrity.mjs"
     
-    if not script_path.exists():
-        return # Skip if frontend source is not accessible (e.g. inside Docker)
+    import shutil
+    import pytest
+    if not shutil.which("node"):
+        pytest.skip("Node.js is not installed or not in PATH")
 
     # Run the script using node
     result = subprocess.run(

@@ -65,7 +65,7 @@ export default function BackupPage() {
       setBackups(data);
       setError(null);
     } catch (err: unknown) {
-      setError(err.message || 'Failed to fetch backups');
+      setError((err as any).message || 'Failed to fetch backups');
     } finally {
       setLoading(false);
     }
@@ -81,7 +81,7 @@ export default function BackupPage() {
       await apiRequest<void>(`/api/ops/backups/${kind}`, { method: 'POST' });
       await fetchBackups();
     } catch (err: unknown) {
-      setError(err.message || 'Failed to create backup');
+      setError((err as any).message || 'Failed to create backup');
     } finally {
       setCreating(null);
     }
@@ -93,7 +93,7 @@ export default function BackupPage() {
       await apiRequest<void>(`/api/ops/backups/${filename}`, { method: 'DELETE' });
       await fetchBackups();
     } catch (err: unknown) {
-      setError(err.message || 'Failed to delete backup');
+      setError((err as any).message || 'Failed to delete backup');
     }
   };
 

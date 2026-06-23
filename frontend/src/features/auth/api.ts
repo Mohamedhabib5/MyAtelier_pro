@@ -59,6 +59,7 @@ export function setSessionLanguage(payload: SessionLanguagePayload): Promise<Cur
 
 export type TwoFASetupResponse = {
   provisioning_uri: string;
+  secret_base32: string;
 };
 
 export type TwoFAActivationResponse = {

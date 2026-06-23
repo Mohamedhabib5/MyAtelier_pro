@@ -39,7 +39,7 @@ export const TwoFASetupModal: React.FC<Props> = ({ open, onClose, onComplete }) 
       setSetupData(data);
       setActiveStep(1);
     } catch (err: unknown) {
-      setError(err.message || authText.startSetupFailed);
+      setError((err as any).message || authText.startSetupFailed);
     } finally {
       setLoading(false);
     }
@@ -54,7 +54,7 @@ export const TwoFASetupModal: React.FC<Props> = ({ open, onClose, onComplete }) 
       setBackupCodes(data.backup_codes);
       setActiveStep(3);
     } catch (err: unknown) {
-      setError(err.message || authText.invalidCode);
+      setError((err as any).message || authText.invalidCode);
     } finally {
       setLoading(false);
     }
@@ -212,9 +212,9 @@ export const TwoFASetupModal: React.FC<Props> = ({ open, onClose, onComplete }) 
                     borderRadius: 2
                   }}>
                     <Typography sx={{ letterSpacing: 2, fontFamily: 'monospace', fontWeight: 'bold' }}>
-                      {setupData.secret_plain}
+                      {setupData.secret_base32}
                     </Typography>
-                    <IconButton size="small" onClick={() => copyToClipboard(setupData.secret_plain)}>
+                    <IconButton size="small" onClick={() => copyToClipboard(setupData.secret_base32)}>
                       {copied ? <Check size={18} color={theme.palette.success.main} /> : <Copy size={18} />}
                     </IconButton>
                   </Box>

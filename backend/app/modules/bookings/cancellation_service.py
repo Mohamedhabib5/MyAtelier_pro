@@ -228,7 +228,6 @@ def _execute_cancellation(db: Session, actor: User, booking_id: str, payload: Bo
                 line.revenue_journal_entry_id = recognition_entry.id
                 line.revenue_recognized_at = datetime.now()
             except Exception as e:
-                from app.modules.core_platform.service import record_audit
                 record_audit(
                     db,
                     actor_user_id=actor.id,

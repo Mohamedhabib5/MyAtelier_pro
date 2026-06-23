@@ -127,6 +127,10 @@ def test_journal_list_and_lookup_are_available(app_client: TestClient) -> None:
 
 
 def test_document_sequence_no_race_condition(app_client: TestClient) -> None:
+    if app_client.app.state.engine.dialect.name == "sqlite":
+        import pytest
+        pytest.skip("SQLite does not support with_for_update locking for concurrency tests")
+        
     import concurrent.futures
     login(app_client)
     account_ids = _chart_map(app_client)
@@ -148,22 +152,27 @@ def test_document_sequence_no_race_condition(app_client: TestClient) -> None:
     assert len(set(valid_results)) == len(valid_results), "Duplicate document sequence generated!"
 
 def test_db_level_journal_balance_constraint(db_session, setup_company_and_admin) -> None:
+    if db_session.bind.dialect.name == "sqlite":
+        import pytest
+        pytest.skip("Database-level balance check trigger only works on PostgreSQL")
+        
     import uuid
     from psycopg.errors import RaiseException
     from sqlalchemy.exc import IntegrityError, InternalError, ProgrammingError
     from app.modules.accounting.models import JournalEntry, JournalEntryLine
+    from app.modules.organization.models import FiscalPeriod
 
     company = setup_company_and_admin["company"]
+    fp = db_session.query(FiscalPeriod).first()
     
     # 1. Create a balanced entry directly in DB
     je_balanced = JournalEntry(
         id=str(uuid.uuid4()),
         company_id=company.id,
+        fiscal_period_id=fp.id,
         entry_number="JV-BAL-1",
         entry_date=date.today(),
         status="draft",
-        total_debit=Decimal("100"),
-        total_credit=Decimal("100")
     )
     db_session.add(je_balanced)
     db_session.flush()
@@ -172,6 +181,7 @@ def test_db_level_journal_balance_constraint(db_session, setup_company_and_admin
         id=str(uuid.uuid4()),
         journal_entry_id=je_balanced.id,
         account_id=setup_company_and_admin["admin_user"].id, # just a dummy string for account_id for test
+        line_number=1,
         debit_amount=Decimal("100"),
         credit_amount=Decimal("0")
     )
@@ -179,6 +189,7 @@ def test_db_level_journal_balance_constraint(db_session, setup_company_and_admin
         id=str(uuid.uuid4()),
         journal_entry_id=je_balanced.id,
         account_id=setup_company_and_admin["admin_user"].id,
+        line_number=2,
         debit_amount=Decimal("0"),
         credit_amount=Decimal("100")
     )
@@ -192,11 +203,10 @@ def test_db_level_journal_balance_constraint(db_session, setup_company_and_admin
     je_unbalanced = JournalEntry(
         id=str(uuid.uuid4()),
         company_id=company.id,
+        fiscal_period_id=fp.id,
         entry_number="JV-UNBAL-2",
         entry_date=date.today(),
         status="draft",
-        total_debit=Decimal("100"),
-        total_credit=Decimal("100")
     )
     db_session.add(je_unbalanced)
     db_session.flush()
@@ -205,6 +215,7 @@ def test_db_level_journal_balance_constraint(db_session, setup_company_and_admin
         id=str(uuid.uuid4()),
         journal_entry_id=je_unbalanced.id,
         account_id=setup_company_and_admin["admin_user"].id,
+        line_number=1,
         debit_amount=Decimal("100"),
         credit_amount=Decimal("0")
     )

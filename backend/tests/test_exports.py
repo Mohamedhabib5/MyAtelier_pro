@@ -347,7 +347,9 @@ def test_daily_email_report_configs_crud(app_client: TestClient, monkeypatch) ->
         sent_reports.append((args, kwargs))
         return True
     
-    import app.modules.exports.daily_report_service as drs
+    import app.modules.exports.daily_report_runner as drr
+    import app.modules.exports.daily_report_scheduler as drs
+    monkeypatch.setattr(drr, "send_email_report", mock_send_email_report)
     monkeypatch.setattr(drs, "send_email_report", mock_send_email_report)
     
     # Test dispatch
@@ -466,8 +468,8 @@ def test_daily_report_test_endpoint_custom_date(app_client: TestClient, monkeypa
         sent_reports.append((args, kwargs))
         return True
     
-    import app.modules.exports.daily_report_service as drs
-    monkeypatch.setattr(drs, "send_email_report", mock_send_email_report)
+    import app.modules.exports.daily_report_runner as drr
+    monkeypatch.setattr(drr, "send_email_report", mock_send_email_report)
     
     # 2. Test successful dispatch with custom date
     resp = app_client.post(f'/api/exports/daily-reports/{config_id}/test?report_date=2026-06-05')
@@ -482,12 +484,12 @@ def test_daily_report_test_endpoint_custom_date(app_client: TestClient, monkeypa
     
     # 3. Test invalid date formats
     resp = app_client.post(f'/api/exports/daily-reports/{config_id}/test?report_date=invalid-date')
-    assert resp.status_code == 400
-    assert "صيغة التاريخ غير صحيحة" in resp.json()["detail"]
+    assert resp.status_code == 422
+    assert "تنسيق التاريخ غير صحيح" in resp.json()["detail"]
     
     resp = app_client.post(f'/api/exports/daily-reports/{config_id}/test?report_date=2026-13-45')
-    assert resp.status_code == 400
-    assert "صيغة التاريخ غير صحيحة" in resp.json()["detail"]
+    assert resp.status_code == 422
+    assert "تنسيق التاريخ غير صحيح" in resp.json()["detail"]
 
 
 

@@ -125,7 +125,7 @@ export function DisbursementEditorDialog({
     try {
       await onSave(payload);
     } catch (err: unknown) {
-      setLocalError(err.message || (isAr ? 'حدث خطأ أثناء الحفظ' : 'An error occurred while saving'));
+      setLocalError((err as any).message || (isAr ? 'حدث خطأ أثناء الحفظ' : 'An error occurred while saving'));
     }
   }
 

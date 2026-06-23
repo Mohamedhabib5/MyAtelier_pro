@@ -101,7 +101,7 @@ export function BookingCancellationDialog({ open, booking, detailedDocument, pay
     try {
       await onConfirm(payload);
     } catch (err: unknown) {
-      setLocalError(err.message || 'حدث خطأ أثناء الإلغاء');
+      setLocalError((err as any).message || 'حدث خطأ أثناء الإلغاء');
     }
   }
 

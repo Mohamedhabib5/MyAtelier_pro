@@ -25,6 +25,7 @@ def setup_2fa(db: Session, user: User) -> dict:
     
     return {
         "provisioning_uri": provisioning_uri,
+        "secret_base32": secret,
     }
 
 
