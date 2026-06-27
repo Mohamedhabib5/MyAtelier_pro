@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# Verification of SSH auto-push capability
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
