@@ -271,7 +271,12 @@ def create_disbursement(db: Session, actor: User, payload: DisbursementVoucherCr
         },
     )
     db.commit()
-    
+    try:
+        from app.modules.exports.notification_service import dispatch_payment_notification
+        dispatch_payment_notification(db, voucher, is_refund=True)
+    except Exception as e:
+        import logging
+        logging.getLogger("payments").error(f"Failed to dispatch disbursement notification: {str(e)}")
     return serialize_disbursement(voucher)
 
 
@@ -353,6 +358,12 @@ def update_disbursement(db: Session, actor: User, disbursement_voucher_id: str, 
         },
     )
     db.commit()
+    try:
+        from app.modules.exports.notification_service import dispatch_payment_notification
+        dispatch_payment_notification(db, voucher, is_refund=True)
+    except Exception as e:
+        import logging
+        logging.getLogger("payments").error(f"Failed to dispatch disbursement notification: {str(e)}")
     return serialize_disbursement(voucher)
 
 
@@ -417,6 +428,17 @@ def void_disbursement(db: Session, actor: User, disbursement_voucher_id: str, pa
         },
     )
     db.commit()
+    try:
+        from app.modules.exports.notification_service import dispatch_financial_critical_notification
+        dispatch_financial_critical_notification(
+            db,
+            actor_username=actor.username,
+            action="disbursement_voucher.voided",
+            details=f"Voided disbursement voucher {voucher.voucher_number}. Reason: {voucher.void_reason}"
+        )
+    except Exception as e:
+        import logging
+        logging.getLogger("payments").error(f"Failed to dispatch critical notification for void: {str(e)}")
     return serialize_disbursement(voucher)
 
 

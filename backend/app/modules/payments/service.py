@@ -128,6 +128,12 @@ def create_payment(db: Session, actor: User, payload: PaymentDocumentCreateReque
         },
     )
     db.commit()
+    try:
+        from app.modules.exports.notification_service import dispatch_payment_notification
+        dispatch_payment_notification(db, payment_document, is_refund=(payment_document.document_kind == "refund"))
+    except Exception as e:
+        import logging
+        logging.getLogger("payments").error(f"Failed to dispatch payment notification: {str(e)}")
     return load_document_or_404(repo, payment_document.id, include_allocations=True)
 
 
@@ -213,6 +219,12 @@ def update_payment(db: Session, actor: User, payment_document_id: str, payload: 
         },
     )
     db.commit()
+    try:
+        from app.modules.exports.notification_service import dispatch_payment_notification
+        dispatch_payment_notification(db, payment_document, is_refund=(payment_document.document_kind == "refund"))
+    except Exception as e:
+        import logging
+        logging.getLogger("payments").error(f"Failed to dispatch payment notification: {str(e)}")
     return load_document_or_404(PaymentsRepository(db), payment_document.id, include_allocations=True)
 
 

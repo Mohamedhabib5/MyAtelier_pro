@@ -139,10 +139,30 @@ def generate_booking_html(booking, template_type: str, is_new: bool) -> str:
 
 def generate_payment_html(payment, template_type: str, is_refund: bool) -> str:
     kind_title = "سند صرف / إرجاع" if is_refund else "سند قبض / تحصيل جديد"
-    method_name = payment.payment_method.name if payment.payment_method else "غير محدد"
+    method_name = payment.payment_method.name if getattr(payment, "payment_method", None) else "غير محدد"
+    payment_number = getattr(payment, "payment_number", getattr(payment, "voucher_number", "-"))
+    
+    if hasattr(payment, "customer") and payment.customer:
+        client_name = payment.customer.full_name
+    else:
+        client_name = getattr(payment, "payee_name", "-")
+        
+    payment_date = getattr(payment, "payment_date", getattr(payment, "voucher_date", None))
+    date_str = payment_date.strftime('%Y-%m-%d') if payment_date else '-'
+    
+    if hasattr(payment, "amount"):
+        amount_val = float(payment.amount)
+    elif hasattr(payment, "direct_amount"):
+        from app.modules.payments.serializers import document_total
+        amount_val = float(document_total(payment))
+    else:
+        amount_val = 0.0
+        
+    notes_str = payment.notes or '-'
     
     allocations_html = ""
-    if template_type == "detailed" and not is_refund:
+    allocs = getattr(payment, "allocations", [])
+    if template_type == "detailed" and allocs:
         allocations_html = """
         <div style="font-weight:700; margin-top:20px; margin-bottom:10px; color:#1e293b; border-bottom: 2px solid #edf2f7; padding-bottom:5px; text-align:right;">التوزيع على الحجوزات:</div>
         <table style="width:100%; border-collapse:collapse; font-size:13px; margin-bottom:20px; direction:rtl;">
@@ -154,11 +174,13 @@ def generate_payment_html(payment, template_type: str, is_refund: bool) -> str:
             </thead>
             <tbody>
         """
-        for alloc in payment.allocations:
+        for alloc in allocs:
+            booking_num = alloc.booking.booking_number if getattr(alloc, "booking", None) else "-"
+            allocated_amt = getattr(alloc, "allocated_amount", 0.0)
             allocations_html += f"""
                 <tr>
-                    <td style="padding:10px; border:1px solid #e2e8f0; text-align:right;">{alloc.booking.booking_number}</td>
-                    <td style="padding:10px; border:1px solid #e2e8f0; text-align:right;">{float(alloc.amount):,.2f}</td>
+                    <td style="padding:10px; border:1px solid #e2e8f0; text-align:right;">{booking_num}</td>
+                    <td style="padding:10px; border:1px solid #e2e8f0; text-align:right;">{float(allocated_amt):,.2f}</td>
                 </tr>
             """
         allocations_html += "</tbody></table>"
@@ -182,15 +204,15 @@ def generate_payment_html(payment, template_type: str, is_refund: bool) -> str:
             
             <div class="info-row">
                 <span class="info-label">رقم السند:</span>
-                <span class="info-value"><b>{payment.payment_number}</b></span>
+                <span class="info-value"><b>{payment_number}</b></span>
             </div>
             <div class="info-row">
                 <span class="info-label">العميل:</span>
-                <span class="info-value">{payment.customer.full_name}</span>
+                <span class="info-value">{client_name}</span>
             </div>
             <div class="info-row">
                 <span class="info-label">القيمة:</span>
-                <span class="info-value" style="font-size:16px; color:#15803d;"><b>{float(payment.amount):,.2f}</b></span>
+                <span class="info-value" style="font-size:16px; color:#15803d;"><b>{amount_val:,.2f}</b></span>
             </div>
             <div class="info-row">
                 <span class="info-label">طريقة الدفع:</span>
@@ -198,11 +220,11 @@ def generate_payment_html(payment, template_type: str, is_refund: bool) -> str:
             </div>
             <div class="info-row">
                 <span class="info-label">تاريخ الحركة:</span>
-                <span class="info-value">{payment.payment_date.strftime('%Y-%m-%d') if payment.payment_date else '-'}</span>
+                <span class="info-value">{date_str}</span>
             </div>
             <div class="info-row">
                 <span class="info-label">ملاحظات:</span>
-                <span class="info-value">{payment.notes or '-'}</span>
+                <span class="info-value">{notes_str}</span>
             </div>
 
             {allocations_html}
@@ -260,7 +282,8 @@ def dispatch_payment_notification(db: Session, payment, is_refund: bool):
         template = config.payment_email_template or "detailed"
         html = generate_payment_html(payment, template, is_refund)
         
-        subject = f"حركة صندوق: سند صرف {payment.payment_number}" if is_refund else f"حركة صندوق: سند قبض {payment.payment_number}"
+        payment_number = getattr(payment, "payment_number", getattr(payment, "voucher_number", ""))
+        subject = f"حركة صندوق: سند صرف {payment_number}" if is_refund else f"حركة صندوق: سند قبض {payment_number}"
         
         send_email_async(
             sender_email=config.sender_email,
@@ -271,7 +294,7 @@ def dispatch_payment_notification(db: Session, payment, is_refund: bool):
             smtp_server=config.smtp_server,
             smtp_port=config.smtp_port
         )
-        logger.info(f"Notification email triggered asynchronously for payment {payment.payment_number}")
+        logger.info(f"Notification email triggered asynchronously for payment {payment_number}")
     except Exception as e:
         logger.error(f"Failed to dispatch payment notification: {str(e)}")
 

@@ -69,4 +69,15 @@ def void_payment(db: Session, actor: User, payment_document_id: str, payload: Pa
         },
     )
     db.commit()
+    try:
+        from app.modules.exports.notification_service import dispatch_financial_critical_notification
+        dispatch_financial_critical_notification(
+            db,
+            actor_username=actor.username,
+            action="payment_document.voided",
+            details=f"Voided payment document {payment_document.payment_number}. Reason: {payment_document.void_reason}"
+        )
+    except Exception as e:
+        import logging
+        logging.getLogger("payments").error(f"Failed to dispatch critical notification for void: {str(e)}")
     return load_document_or_404(PaymentsRepository(db), payment_document.id, include_allocations=True)
