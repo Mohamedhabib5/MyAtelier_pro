@@ -14,6 +14,7 @@
 - Because the owner is not a programmer, development must happen in small, reviewable pieces.
 - Each milestone should be understandable on its own and leave behind a usable checkpoint.
 - Future work should prefer incremental slices over large all-at-once builds.
+- 📖 **دليل التشغيل لأول مرة لغير المبرمجين (بالعربية)**: [STARTUP_GUIDE_FOR_NON_PROGRAMMERS_AR.md](file:///media/mohamed/New%20Volume2/DEV%202026/MyAtelier_pro/docs/STARTUP_GUIDE_FOR_NON_PROGRAMMERS_AR.md)
 - **AI Rules**: All AI development must follow the [Comprehensive AI Rules](file:///d:/Programing%20project/MyAtelier_pro/ai_rules.md).
 
 ## Current Status
