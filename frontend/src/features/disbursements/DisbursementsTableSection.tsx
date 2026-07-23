@@ -2,7 +2,7 @@ import BlockOutlinedIcon from '@mui/icons-material/BlockOutlined';
 import DeleteForeverOutlinedIcon from '@mui/icons-material/DeleteForeverOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
-import { Button, Chip, MenuItem, Stack, TextField, Typography } from '@mui/material';
+import { Button, Chip, IconButton, MenuItem, Stack, TextField, Tooltip, Typography } from '@mui/material';
 import type { ColDef } from 'ag-grid-community';
 import { useMemo } from 'react';
 
@@ -133,6 +133,8 @@ export function DisbursementsTableSection({
         headerName: commonText.actions,
         sortable: false,
         filter: false,
+        width: 130,
+        suppressSizeToFit: true,
         pinned: isAr ? 'left' : 'right',
         cellRenderer: ({ data }: { data: DisbursementVoucherRecord | undefined }) =>
           !data ? null : data.status === 'voided' ? (
@@ -140,16 +142,22 @@ export function DisbursementsTableSection({
               {text.page.voidedState}
             </Typography>
           ) : (
-            <Stack direction='row' spacing={1}>
-              <Button startIcon={<EditOutlinedIcon />} onClick={() => onOpenEdit(data)}>
-                {text.page.edit}
-              </Button>
-              <Button color='warning' startIcon={<BlockOutlinedIcon />} onClick={() => onOpenVoid(data)}>
-                {text.page.void}
-              </Button>
-              <Button color='error' startIcon={<DeleteForeverOutlinedIcon />} onClick={() => onDelete(data)}>
-                {text.page.delete}
-              </Button>
+            <Stack direction='row' spacing={0.5} alignItems='center' justifyContent='center' sx={{ height: '100%' }}>
+              <Tooltip title={text.page.edit} arrow enterTouchDelay={0}>
+                <IconButton size='small' color='primary' sx={{ p: 0.75 }} onClick={() => onOpenEdit(data)}>
+                  <EditOutlinedIcon fontSize='small' />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title={text.page.void} arrow enterTouchDelay={0}>
+                <IconButton size='small' color='warning' sx={{ p: 0.75 }} onClick={() => onOpenVoid(data)}>
+                  <BlockOutlinedIcon fontSize='small' />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title={text.page.delete} arrow enterTouchDelay={0}>
+                <IconButton size='small' color='error' sx={{ p: 0.75 }} onClick={() => onDelete(data)}>
+                  <DeleteForeverOutlinedIcon fontSize='small' />
+                </IconButton>
+              </Tooltip>
             </Stack>
           ),
       },

@@ -1,7 +1,7 @@
 import BlockOutlinedIcon from '@mui/icons-material/BlockOutlined';
 import DeleteForeverOutlinedIcon from '@mui/icons-material/DeleteForeverOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
-import { Button, Chip, Stack } from '@mui/material';
+import { Button, Chip, IconButton, Stack, Tooltip } from '@mui/material';
 import type { ColDef } from 'ag-grid-community';
 import { useMemo } from 'react';
 
@@ -102,21 +102,29 @@ export function BookingsTableSection({
         headerName: commonText.actions,
         sortable: false,
         filter: false,
+        width: 130,
+        suppressSizeToFit: true,
         pinned: language === 'ar' ? 'left' : 'right',
         cellRenderer: ({ data }: { data: BookingSummaryRecord | undefined }) =>
           data ? (
-            <Stack direction='row' spacing={1}>
-              <Button startIcon={<EditOutlinedIcon />} onClick={() => onOpenEdit(data)}>
-                {bookingsText.page.openDocument}
-              </Button>
+            <Stack direction='row' spacing={0.5} alignItems='center' justifyContent='center' sx={{ height: '100%' }}>
+              <Tooltip title={bookingsText.page.openDocument} arrow enterTouchDelay={0}>
+                <IconButton size='small' color='primary' sx={{ p: 0.75 }} onClick={() => onOpenEdit(data)}>
+                  <EditOutlinedIcon fontSize='small' />
+                </IconButton>
+              </Tooltip>
               {data.status !== 'cancelled' && (
-                <Button color='error' startIcon={<BlockOutlinedIcon />} onClick={() => onOpenCancel(data)}>
-                  {commonText.cancel}
-                </Button>
+                <Tooltip title={commonText.cancel} arrow enterTouchDelay={0}>
+                  <IconButton size='small' color='warning' sx={{ p: 0.75 }} onClick={() => onOpenCancel(data)}>
+                    <BlockOutlinedIcon fontSize='small' />
+                  </IconButton>
+                </Tooltip>
               )}
-              <Button color='error' startIcon={<DeleteForeverOutlinedIcon />} onClick={() => onDelete(data)}>
-                {commonText.delete}
-              </Button>
+              <Tooltip title={commonText.delete} arrow enterTouchDelay={0}>
+                <IconButton size='small' color='error' sx={{ p: 0.75 }} onClick={() => onDelete(data)}>
+                  <DeleteForeverOutlinedIcon fontSize='small' />
+                </IconButton>
+              </Tooltip>
             </Stack>
           ) : null,
       },

@@ -6,13 +6,26 @@ from fastapi import Request
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.pool import QueuePool
 
 
 def build_engine(database_url: str) -> Engine:
     connect_args: dict[str, object] = {}
+    extra_kwargs: dict[str, object] = {}
+
     if database_url.startswith("sqlite"):
         connect_args["check_same_thread"] = False
-    return create_engine(database_url, future=True, connect_args=connect_args)
+    else:
+        extra_kwargs = {
+            "poolclass": QueuePool,
+            "pool_size": 3,
+            "max_overflow": 2,
+            "pool_timeout": 30,
+            "pool_pre_ping": True,
+            "pool_recycle": 1800,
+        }
+
+    return create_engine(database_url, future=True, connect_args=connect_args, **extra_kwargs)
 
 
 def build_session_factory(engine: Engine) -> sessionmaker[Session]:

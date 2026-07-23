@@ -1,5 +1,4 @@
-from __future__ import annotations
-
+from datetime import date
 from typing import Literal
 
 from fastapi import APIRouter, Depends, Query, status
@@ -7,7 +6,14 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import require_customers_manage, require_customers_view
 from app.db.session import get_db
-from app.modules.customers.schemas import CustomerArchiveRequest, CustomerCreateRequest, CustomerResponse, CustomerUpdateRequest
+from app.modules.customers.customer_statement_service import get_customer_statement
+from app.modules.customers.schemas import (
+    CustomerArchiveRequest,
+    CustomerCreateRequest,
+    CustomerResponse,
+    CustomerStatementResponse,
+    CustomerUpdateRequest,
+)
 from app.modules.customers.service import archive_customer, create_customer, list_customers, restore_customer, update_customer
 from app.modules.identity.models import User
 
@@ -22,6 +28,18 @@ def list_customers_route(
 ) -> list[CustomerResponse]:
     is_active = None if status_filter == "all" else status_filter == "active"
     return [CustomerResponse.model_validate(item) for item in list_customers(db, is_active=is_active)]
+
+
+@router.get("/{customer_id}/statement", response_model=CustomerStatementResponse)
+def get_customer_statement_route(
+    customer_id: str,
+    from_date: date | None = Query(default=None),
+    to_date: date | None = Query(default=None),
+    db: Session = Depends(get_db),
+    _: User = Depends(require_customers_view),
+) -> CustomerStatementResponse:
+    statement_data = get_customer_statement(db, customer_id, from_date=from_date, to_date=to_date)
+    return CustomerStatementResponse.model_validate(statement_data)
 
 
 @router.post("", response_model=CustomerResponse, status_code=status.HTTP_201_CREATED)
@@ -61,3 +79,4 @@ def restore_customer_route(
     current_user: User = Depends(require_customers_manage),
 ) -> CustomerResponse:
     return CustomerResponse.model_validate(restore_customer(db, current_user, customer_id, payload.reason))
+

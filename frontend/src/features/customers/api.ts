@@ -69,3 +69,80 @@ export function restoreCustomer(customerId: string, reason?: string): Promise<Cu
     body: JSON.stringify({ reason: reason ?? null }),
   });
 }
+
+export type CustomerStatementSummary = {
+  total_bookings_amount: number;
+  total_collections_amount: number;
+  total_refunds_amount: number;
+  remaining_balance: number;
+  accounting_ledger_balance: number;
+};
+
+export type CustomerBookingLineMovement = {
+  line_id: string;
+  line_number: number;
+  service_name: string;
+  department_name: string;
+  dress_code: string | null;
+  dress_name: string | null;
+  service_date: string;
+  status: string;
+  line_price: number;
+  revenue_recognized_at: string | null;
+  cancelled_at: string | null;
+  cancellation_reason: string | null;
+};
+
+export type CustomerBookingMovement = {
+  booking_id: string;
+  booking_number: string;
+  booking_date: string;
+  status: string;
+  branch_name: string;
+  total_amount: number;
+  paid_total: number;
+  remaining_amount: number;
+  cancelled_at: string | null;
+  cancellation_reason: string | null;
+  lines: CustomerBookingLineMovement[];
+};
+
+export type CustomerPaymentMovement = {
+  payment_id: string;
+  payment_number: string;
+  payment_date: string;
+  payment_method_name: string;
+  document_kind: string;
+  amount: number;
+  status: string;
+  voided_at: string | null;
+  void_reason: string | null;
+  notes: string | null;
+};
+
+export type CustomerLedgerMovement = {
+  entry_date: string;
+  entry_number: string;
+  reference: string | null;
+  description: string | null;
+  debit_amount: number;
+  credit_amount: number;
+  running_balance: number;
+};
+
+export type CustomerStatementResponse = {
+  customer: CustomerRecord;
+  summary: CustomerStatementSummary;
+  bookings: CustomerBookingMovement[];
+  payments: CustomerPaymentMovement[];
+  ledger_movements: CustomerLedgerMovement[];
+};
+
+export function getCustomerStatement(customerId: string, fromDate?: string, toDate?: string): Promise<CustomerStatementResponse> {
+  const params = new URLSearchParams();
+  if (fromDate) params.append('from_date', fromDate);
+  if (toDate) params.append('to_date', toDate);
+  const queryStr = params.toString() ? `?${params.toString()}` : '';
+  return apiRequest<CustomerStatementResponse>(`/api/customers/${customerId}/statement${queryStr}`, { method: 'GET' });
+}
+

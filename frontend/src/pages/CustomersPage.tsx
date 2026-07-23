@@ -1,6 +1,10 @@
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import PersonAddOutlinedIcon from '@mui/icons-material/PersonAddOutlined';
-import { Alert, Box, Button, Chip, Stack, TextField, Typography } from '@mui/material';
+import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
+import ArchiveOutlinedIcon from '@mui/icons-material/ArchiveOutlined';
+import UnarchiveOutlinedIcon from '@mui/icons-material/UnarchiveOutlined';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import { Alert, Box, Button, Chip, IconButton, Stack, TextField, Tooltip, Typography } from '@mui/material';
 import type { ColDef } from 'ag-grid-community';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useMemo, useState, useCallback } from 'react';
@@ -11,6 +15,7 @@ import { LifecycleReasonDialog } from '../components/LifecycleReasonDialog';
 import { SectionCard } from '../components/SectionCard';
 import { archiveCustomer, createCustomer, listCustomers, restoreCustomer, updateCustomer, type CustomerRecord } from '../features/customers/api';
 import { CustomerFormDialog, type CustomerFormState } from '../features/customers/CustomerFormDialog';
+import { CustomerStatementDialog } from '../features/customers/CustomerStatementDialog';
 import { useLanguage } from '../features/language/LanguageProvider';
 import { queryClient } from '../lib/queryClient';
 import { EMPTY_VALUE, useCommonText } from '../text/common';
@@ -31,6 +36,7 @@ export function CustomersPage() {
   const [error, setError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<CustomerRecord | null>(null);
+  const [statementCustomerId, setStatementCustomerId] = useState<string | null>(null);
   const [form, setForm] = useState<CustomerFormState>(emptyForm());
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [lifecycleTarget, setLifecycleTarget] = useState<CustomerRecord | null>(null);
@@ -193,24 +199,37 @@ export function CustomersPage() {
         headerName: customersText.table.action,
         sortable: false,
         filter: false,
+        width: 160,
+        suppressSizeToFit: true,
         pinned: language === 'ar' ? 'left' : 'right',
         cellRenderer: ({ data }: { data: CustomerRecord | undefined }) =>
           data ? (
-            <Stack direction='row' spacing={1}>
-              <Button size='small' startIcon={<EditOutlinedIcon />} onClick={() => openEditDialog(data)}>
-                {commonText.edit}
-              </Button>
-              <Button size='small' color={data.is_active ? 'warning' : 'success'} onClick={() => openLifecycleDialog(data, data.is_active)}>
-                {data.is_active ? (language === 'ar' ? 'أرشفة' : 'Archive') : language === 'ar' ? 'استعادة' : 'Restore'}
-              </Button>
-              <Button size='small' color='error' onClick={() => setDeleteTarget(data)}>
-                {language === 'ar' ? 'حذف تصحيحي' : 'Corrective delete'}
-              </Button>
+            <Stack direction='row' spacing={0.5} alignItems='center' justifyContent='center' sx={{ height: '100%' }}>
+              <Tooltip title={customersText.statement.actionBtn} arrow enterTouchDelay={0}>
+                <IconButton size='small' color='info' sx={{ p: 0.75 }} onClick={() => setStatementCustomerId(data.id)}>
+                  <ReceiptLongOutlinedIcon fontSize='small' />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title={commonText.edit} arrow enterTouchDelay={0}>
+                <IconButton size='small' color='primary' sx={{ p: 0.75 }} onClick={() => openEditDialog(data)}>
+                  <EditOutlinedIcon fontSize='small' />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title={data.is_active ? (language === 'ar' ? 'أرشفة' : 'Archive') : language === 'ar' ? 'استعادة' : 'Restore'} arrow enterTouchDelay={0}>
+                <IconButton size='small' color={data.is_active ? 'warning' : 'success'} sx={{ p: 0.75 }} onClick={() => openLifecycleDialog(data, data.is_active)}>
+                  {data.is_active ? <ArchiveOutlinedIcon fontSize='small' /> : <UnarchiveOutlinedIcon fontSize='small' />}
+                </IconButton>
+              </Tooltip>
+              <Tooltip title={language === 'ar' ? 'حذف تصحيحي' : 'Corrective delete'} arrow enterTouchDelay={0}>
+                <IconButton size='small' color='error' sx={{ p: 0.75 }} onClick={() => setDeleteTarget(data)}>
+                  <DeleteOutlineIcon fontSize='small' />
+                </IconButton>
+              </Tooltip>
             </Stack>
           ) : null,
       },
     ],
-    [commonText.edit, customersText.status.active, customersText.status.inactive, customersText.table.action, customersText.table.email, customersText.table.fullName, customersText.table.phone, customersText.table.status, language, openEditDialog, openLifecycleDialog, setDeleteTarget],
+    [commonText.edit, customersText.statement.actionBtn, customersText.status.active, customersText.status.inactive, customersText.table.action, customersText.table.email, customersText.table.fullName, customersText.table.phone, customersText.table.status, language, openEditDialog, openLifecycleDialog, setDeleteTarget],
   );
 
   return (
@@ -267,6 +286,8 @@ export function CustomersPage() {
 
       <CustomerFormDialog open={dialogOpen} editing={Boolean(editingCustomer)} form={form} onChange={setForm} onClose={closeDialog} onSave={() => void saveCustomer()} />
 
+      <CustomerStatementDialog open={Boolean(statementCustomerId)} customerId={statementCustomerId} language={language} onClose={() => setStatementCustomerId(null)} />
+
       <LifecycleReasonDialog
         open={Boolean(lifecycleTarget)}
         mode={lifecycleMode}
@@ -290,3 +311,4 @@ export function CustomersPage() {
     </Stack>
   );
 }
+

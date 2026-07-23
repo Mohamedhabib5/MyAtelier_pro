@@ -2,7 +2,7 @@ import BlockOutlinedIcon from '@mui/icons-material/BlockOutlined';
 import DeleteForeverOutlinedIcon from '@mui/icons-material/DeleteForeverOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
-import { Button, Chip, MenuItem, Stack, TextField, Typography } from '@mui/material';
+import { Button, Chip, IconButton, MenuItem, Stack, TextField, Tooltip, Typography } from '@mui/material';
 import type { ColDef } from 'ag-grid-community';
 import { useMemo } from 'react';
 
@@ -136,6 +136,8 @@ export function PaymentsTableSection({
         headerName: commonText.actions,
         sortable: false,
         filter: false,
+        width: 130,
+        suppressSizeToFit: true,
         pinned: language === 'ar' ? 'left' : 'right',
         cellRenderer: ({ data }: { data: PaymentDocumentSummaryRecord | undefined }) =>
           !data ? null : data.status === 'voided' ? (
@@ -143,16 +145,24 @@ export function PaymentsTableSection({
               {paymentsText.page.voidedState}
             </Typography>
           ) : (
-            <Stack direction='row' spacing={1}>
-              <Button startIcon={<EditOutlinedIcon />} disabled={data.document_kind !== 'collection' && data.document_kind !== 'refund'} onClick={() => onOpenEdit(data)}>
-                {paymentsText.page.edit}
-              </Button>
-              <Button color='warning' startIcon={<BlockOutlinedIcon />} onClick={() => onOpenVoid(data)}>
-                {paymentsText.page.void}
-              </Button>
-              <Button color='error' startIcon={<DeleteForeverOutlinedIcon />} onClick={() => onDelete(data)}>
-                {commonText.delete}
-              </Button>
+            <Stack direction='row' spacing={0.5} alignItems='center' justifyContent='center' sx={{ height: '100%' }}>
+              <Tooltip title={paymentsText.page.edit} arrow enterTouchDelay={0}>
+                <span>
+                  <IconButton size='small' color='primary' sx={{ p: 0.75 }} disabled={data.document_kind !== 'collection' && data.document_kind !== 'refund'} onClick={() => onOpenEdit(data)}>
+                    <EditOutlinedIcon fontSize='small' />
+                  </IconButton>
+                </span>
+              </Tooltip>
+              <Tooltip title={paymentsText.page.void} arrow enterTouchDelay={0}>
+                <IconButton size='small' color='warning' sx={{ p: 0.75 }} onClick={() => onOpenVoid(data)}>
+                  <BlockOutlinedIcon fontSize='small' />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title={commonText.delete} arrow enterTouchDelay={0}>
+                <IconButton size='small' color='error' sx={{ p: 0.75 }} onClick={() => onDelete(data)}>
+                  <DeleteForeverOutlinedIcon fontSize='small' />
+                </IconButton>
+              </Tooltip>
             </Stack>
           ),
       },

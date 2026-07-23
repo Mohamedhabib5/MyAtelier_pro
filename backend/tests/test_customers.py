@@ -127,3 +127,24 @@ def test_customer_archive_restore_and_status_filter(app_client: TestClient) -> N
     active_after_restore_ids = {row['id'] for row in active_after_restore.json()}
     assert first_customer['id'] in active_after_restore_ids
     assert second_customer['id'] in active_after_restore_ids
+
+
+def test_customer_statement_api(app_client: TestClient) -> None:
+    login(app_client)
+    create_res = app_client.post(
+        '/api/customers',
+        json={'full_name': 'Sarah Bride', 'phone': '01099998877', 'address': 'Zamalek'},
+    )
+    assert create_res.status_code == 201
+    customer = create_res.json()
+
+    statement_res = app_client.get(f"/api/customers/{customer['id']}/statement")
+    assert statement_res.status_code == 200, statement_res.text
+    data = statement_res.json()
+    assert data['customer']['id'] == customer['id']
+    assert 'summary' in data
+    assert data['summary']['remaining_balance'] == 0.0
+    assert 'bookings' in data
+    assert 'payments' in data
+    assert 'ledger_movements' in data
+
