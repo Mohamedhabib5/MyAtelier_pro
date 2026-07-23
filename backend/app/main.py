@@ -212,8 +212,8 @@ def create_app(settings_obj: Settings | None = None) -> FastAPI:
             CORSMiddleware, 
             allow_origins=allow_origins, 
             allow_credentials=True, 
-            allow_methods=['*'], 
-            allow_headers=['*'],
+            allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"], 
+            allow_headers=["Authorization", "Content-Type", "X-CSRF-Token", "X-Requested-With", "Accept"],
             expose_headers=['Content-Disposition']
         )
 
@@ -242,6 +242,7 @@ def create_app(settings_obj: Settings | None = None) -> FastAPI:
         is_download = request.url.path.startswith('/api/exports/download/')
         
         response.headers.setdefault('X-Content-Type-Options', 'nosniff')
+        response.headers.setdefault('Permissions-Policy', 'geolocation=(), microphone=(), camera=()')
         if not is_download:
             response.headers.setdefault('X-Frame-Options', 'DENY')
         else:

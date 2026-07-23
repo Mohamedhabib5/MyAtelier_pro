@@ -125,8 +125,11 @@ class Settings(BaseSettings):
         if len(self.app_secret_key.strip()) < 32:
             raise ValueError("CRITICAL: APP_SECRET_KEY must be at least 32 characters in production.")
 
-        if self.default_admin_password.strip() == "admin123":
-            raise ValueError("CRITICAL: DEFAULT_ADMIN_PASSWORD must be changed from default.")
+        if self.default_admin_password.strip().lower() in ("admin123", "admin", "123456", "password"):
+            raise ValueError("CRITICAL: DEFAULT_ADMIN_PASSWORD must be changed from default in production.")
+
+        if len(self.default_admin_password.strip()) < 10:
+            raise ValueError("CRITICAL: DEFAULT_ADMIN_PASSWORD must be at least 10 characters in production.")
 
         if self.security_bypass_for_tests:
             raise ValueError("CRITICAL: security_bypass_for_tests must be False in production.")
