@@ -14,4 +14,20 @@
 - `k8s/backup-stale-alert-cronjob.example.yaml` provides a Kubernetes CronJob baseline for stale-backup alert checks.
 - `scripts/run-due-export-schedules.ps1` runs due export schedules in unattended mode (Windows runner).
 - `scripts/run-due-export-schedules.sh` runs due export schedules in unattended mode (Linux runner).
-- Replace example domains and certificate paths before any real production deployment.
+- `scripts/setup_prod_server.sh` automated wizard to prepare production environment, directories, certificates, and backups.
+
+## Production Deployment Quickstart
+
+1. Execute the automated initialization script on the Linux server:
+   ```bash
+   bash infra/scripts/setup_prod_server.sh
+   ```
+2. Start the production containers stack:
+   ```bash
+   docker compose -f infra/docker-compose.prod.yml up -d --build
+   ```
+3. Verify container health status:
+   ```bash
+   docker compose -f infra/docker-compose.prod.yml ps
+   ```
+

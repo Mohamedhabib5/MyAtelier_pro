@@ -1,21 +1,28 @@
+# ==============================================================================
+# MyAtelier Pro - Production Docker Compose Stack
+# Optimized for: Core i3 4th Gen, 6GB RAM, SSD, 1-4 Concurrent Users
+# ==============================================================================
+
 services:
   db:
     image: postgres:16-alpine
+    container_name: myatelier_prod_db
     environment:
       POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB required}
       POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER required}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD required}
+      TZ: ${TIMEZONE:-Africa/Cairo}
     command: >
       postgres
-      -c shared_buffers=256MB
+      -c shared_buffers=128MB
       -c work_mem=8MB
-      -c maintenance_work_mem=64MB
-      -c effective_cache_size=768MB
-      -c max_connections=50
+      -c maintenance_work_mem=32MB
+      -c effective_cache_size=512MB
+      -c max_connections=30
     mem_limit: 1.0g
     memswap_limit: 1.2g
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_prod_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
@@ -32,14 +39,15 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: myatelier_redis
+    container_name: myatelier_prod_redis
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD required}
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD required}
-    mem_limit: 400m
-    memswap_limit: 500m
+      TZ: ${TIMEZONE:-Africa/Cairo}
+    mem_limit: 300m
+    memswap_limit: 400m
     volumes:
-      - redis_data:/data
+      - redis_prod_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "--pass", "${REDIS_PASSWORD}", "ping"]
       interval: 10s
@@ -56,19 +64,23 @@ services:
 
   backend:
     build:
-      context: ./backend
+      context: ../backend
+    container_name: myatelier_prod_backend
     env_file:
-      - .env
+      - ../.env
     environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+      - TZ=${TIMEZONE:-Africa/Cairo}
       - DATABASE_URL=postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
-    command: sh -c "alembic upgrade head && uvicorn app.main:create_app --factory --host 0.0.0.0 --port 8000 --workers 2 --limit-max-requests 1000 --proxy-headers --forwarded-allow-ips='nginx'"
+    command: sh -c "alembic upgrade head && uvicorn app.main:create_app --factory --host 0.0.0.0 --port 8000 --workers 2 --limit-max-requests 1000 --proxy-headers --forwarded-allow-ips='*'"
     volumes:
-      - ./storage:/app/storage
+      - ../storage:/app/storage
     read_only: true
     tmpfs:
       - /tmp
-    mem_limit: 1.8g
-    memswap_limit: 2.0g
+    mem_limit: 1.5g
+    memswap_limit: 1.8g
     depends_on:
       db:
         condition: service_healthy
@@ -85,11 +97,16 @@ services:
 
   nginx:
     build:
-      context: ./frontend
+      context: ../frontend
       dockerfile: Dockerfile
-    container_name: myatelier_nginx
+    container_name: myatelier_prod_nginx
     ports:
-      - "8080:80"
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/production.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./certs:/etc/letsencrypt:ro
+      - certbot_www:/var/www/certbot:ro
     mem_limit: 300m
     memswap_limit: 400m
     read_only: true
@@ -109,5 +126,6 @@ services:
       - no-new-privileges:true
 
 volumes:
-  postgres_data:
-  redis_data:
+  postgres_prod_data:
+  redis_prod_data:
+  certbot_www:

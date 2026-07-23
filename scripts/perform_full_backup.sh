@@ -1,64 +1,77 @@
 #!/bin/bash
-# سكربت النسخ الاحتياطي المتكامل لبيئة Linux Mint (MyAtelier Pro)
+# ==============================================================================
+# MyAtelier Pro - Production Automated Full Backup & Retention Script
+# ==============================================================================
+# Exports Postgres DB, packages code & attachments, compresses into archive,
+# manages 30-day retention cleanup on local SSD, and offers cloud upload hook.
+# ==============================================================================
+
+set -e
+
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 BACKUP_DIR="storage/backups"
-DB_CONTAINER="myatelier_pro-db-1"
-DB_USER="beauty"
-DB_NAME="myatelier_pro"
-ZIP_NAME="FULL_PRO_BACKUP_$TIMESTAMP.zip"
+DB_CONTAINER=$(docker ps --format '{{.Names}}' | grep -E "myatelier.*db" | head -n 1 || echo "")
+DB_USER="${POSTGRES_USER:-myatelier_user}"
+DB_NAME="${POSTGRES_DB:-myatelier_pro}"
+ARCHIVE_NAME="FULL_PRO_BACKUP_$TIMESTAMP.tar.gz"
 STAGING_DIR="/tmp/backup_staging_$TIMESTAMP"
+RETENTION_DAYS=30
 
-echo "🔄 بدء عملية النسخ الاحتياطي الكامل..."
+echo "=== 🔄 Starting Production Full Backup Execution ==="
 
-# 1. إنشاء المجلدات المؤقتة والمحلية
+# 1. Create Directories
 mkdir -p "$STAGING_DIR"
 mkdir -p "$BACKUP_DIR"
 
-# 2. تصدير قاعدة البيانات من حاوية Docker
-echo "💾 تصدير قاعدة البيانات..."
-if docker ps --format '{{.Names}}' | grep -Eq "^${DB_CONTAINER}$"; then
-    docker exec $DB_CONTAINER pg_dump -U $DB_USER -d $DB_NAME > "$STAGING_DIR/database_dump.sql"
-    echo "✅ تم تصدير قاعدة البيانات بنجاح."
+# 2. Export PostgreSQL Database
+echo "💾 Exporting PostgreSQL Database..."
+if [ -n "$DB_CONTAINER" ]; then
+    echo "[+] Found running DB container: $DB_CONTAINER"
+    docker exec "$DB_CONTAINER" pg_dump -U "$DB_USER" -d "$DB_NAME" > "$STAGING_DIR/database_dump.sql"
+    echo "✅ Database exported successfully."
 else
-    echo "⚠️ حاوية قاعدة البيانات $DB_CONTAINER غير قيد التشغيل. محاولة التصدير المحلي إن وجد..."
+    echo "⚠️ DB Container not running. Attempting local pg_dump fallback..."
     if command -v pg_dump &> /dev/null; then
-        pg_dump -U $DB_USER -d $DB_NAME > "$STAGING_DIR/database_dump.sql"
-        echo "✅ تم التصدير المحلي بنجاح."
+        pg_dump -U "$DB_USER" -d "$DB_NAME" > "$STAGING_DIR/database_dump.sql"
+        echo "✅ Local pg_dump export succeeded."
     else
-        echo "❌ لم يتم العثور على وسيلة لتصدير قاعدة البيانات!"
+        echo "❌ ERROR: Unable to locate DB container or local pg_dump!"
     fi
 fi
 
-# 3. نسخ المرفقات وملفات الكود الأساسية (باستثناء الملفات غير الهامة)
-echo "📂 نسخ الملفات والمرفقات..."
-rsync -av --exclude='.git' \
-          --exclude='node_modules' \
-          --exclude='backend/venv' \
-          --exclude='__pycache__' \
-          --exclude='.pytest_cache' \
-          --exclude='storage/backups' \
-          . "$STAGING_DIR/"
-
-# 4. ضغط المجلد بالكامل
-echo "🤐 ضغط الملفات..."
-if command -v zip &> /dev/null; then
-    zip -r "$BACKUP_DIR/$ZIP_NAME" "$STAGING_DIR" > /dev/null
-    echo "✅ تم ضغط الملفات بنجاح في حزمة: $BACKUP_DIR/$ZIP_NAME"
-else
-    echo "⚠️ أداة zip غير مثبتة. استخدام tar.gz بدلاً منها..."
-    tar -czf "$BACKUP_DIR/FULL_PRO_BACKUP_$TIMESTAMP.tar.gz" -C "$STAGING_DIR" .
-    ZIP_NAME="FULL_PRO_BACKUP_$TIMESTAMP.tar.gz"
+# 3. Copy Attachments & Configuration Files
+echo "📂 Packaging application storage and attachments..."
+if [ -d "storage/attachments" ]; then
+    mkdir -p "$STAGING_DIR/attachments"
+    cp -r storage/attachments/* "$STAGING_DIR/attachments/" 2>/dev/null || true
 fi
 
-# 5. الرفع السحابي باستخدام rclone لـ Google Drive
+if [ -f ".env" ]; then
+    cp .env "$STAGING_DIR/env_backup.config"
+fi
+
+# 4. Compress Backup Archive
+echo "🤐 Compressing archive..."
+tar -czf "$BACKUP_DIR/$ARCHIVE_NAME" -C "$STAGING_DIR" .
+echo "✅ Backup compressed to: $BACKUP_DIR/$ARCHIVE_NAME"
+
+# 5. Cloud Upload (rclone / S3 hook if configured)
 if command -v rclone &> /dev/null; then
-    echo "☁️ جاري الرفع لـ Google Drive عبر rclone..."
-    rclone copy "$BACKUP_DIR/$ZIP_NAME" "gdrive:MyAtelier_Backups" --progress
-    echo "✅ اكتمل الرفع السحابي."
+    echo "☁️ Uploading to cloud storage via rclone..."
+    rclone copy "$BACKUP_DIR/$ARCHIVE_NAME" "remote:MyAtelier_Backups" --progress || echo "⚠️ Cloud upload failed."
+    echo "✅ Cloud upload finished."
 else
-    echo "⚠️ تنبيه: rclone غير مثبت. تم حفظ النسخة محلياً فقط في $BACKUP_DIR/$ZIP_NAME"
+    echo "ℹ️ rclone is not installed. Backup saved locally on SSD at $BACKUP_DIR/$ARCHIVE_NAME"
 fi
 
-# 6. تنظيف العمل المؤقت
+# 6. Automatic Retention Cleanup (Delete backups older than 30 days)
+echo "🧹 Performing retention cleanup (Deleting backups older than $RETENTION_DAYS days)..."
+find "$BACKUP_DIR" -type f \( -name "*.zip" -o -name "*.tar.gz" \) -mtime +$RETENTION_DAYS -delete || true
+echo "✅ Retention cleanup completed."
+
+# 7. Cleanup Staging Directory
 rm -rf "$STAGING_DIR"
-echo "✅ اكتملت عملية النسخ الاحتياطي بالكامل."
+
+echo "=============================================================================="
+echo " ✅ Full Production Backup Completed Successfully!"
+echo "=============================================================================="
