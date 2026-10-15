@@ -32,7 +32,6 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: myatelier_redis
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD required}
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD required}
@@ -87,7 +86,6 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: myatelier_nginx
     ports:
       - "8080:80"
     mem_limit: 300m
