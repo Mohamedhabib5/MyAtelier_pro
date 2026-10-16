@@ -393,6 +393,8 @@ export function AppAgGrid<Row>({
               animateRows
               suppressDragLeaveHidesColumns
               suppressCellFocus={false}
+              enableCellTextSelection={true}
+              ensureDomOrder={true}
               getRowId={getRowId ?? ((params) => (params.data as any)?.id || (params.data as any)?.local_id || (params.data as any)?.uuid)}
               domLayout="normal"
               overlayNoRowsTemplate={`<span>${noRowsLabel}</span>`}
