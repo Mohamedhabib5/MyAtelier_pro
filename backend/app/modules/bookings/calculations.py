@@ -126,6 +126,7 @@ def serialize_booking_summary(booking: Booking) -> dict:
         'customer_id': booking.customer_id,
         'customer_name': booking.customer.full_name,
         'customer_phone': booking.customer.phone,
+        'customer_phone_2': booking.customer.phone_2,
         'customer_address': booking.customer.address,
         'booking_date': booking.booking_date.isoformat(),
         'status': booking.status,

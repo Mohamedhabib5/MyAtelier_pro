@@ -34,6 +34,9 @@ export type BookingSummaryRecord = {
   booking_number: string;
   customer_id: string;
   customer_name: string;
+  customer_phone: string | null;
+  customer_phone_2: string | null;
+  customer_address: string | null;
   booking_date: string;
   status: string;
   line_count: number;

@@ -44,7 +44,11 @@ class CustomersRepository:
                 Customer.company_id == company_id,
                 or_(
                     Customer.full_name.ilike(pattern),
-                    Customer.phone.ilike(pattern)
+                    Customer.phone.ilike(pattern),
+                    Customer.phone_2.ilike(pattern),
+                    Customer.address.ilike(pattern),
+                    Customer.groom_name.ilike(pattern),
+                    Customer.bride_name.ilike(pattern),
                 )
             )
             .order_by(Customer.full_name.asc())

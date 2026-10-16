@@ -50,6 +50,7 @@ class BookingSummaryResponse(BaseModel):
     customer_id: str
     customer_name: str
     customer_phone: str | None
+    customer_phone_2: str | None = None
     customer_address: str | None
     booking_date: str
     status: str

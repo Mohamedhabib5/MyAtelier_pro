@@ -32,14 +32,17 @@ def search_payment_targets(db: Session, session: dict, query: str, branch_id: st
 
     results: list[dict] = []
     for customer in customers:
+        phone_parts = [p for p in (customer.phone, customer.phone_2) if p]
+        phone_label = f" - {' / '.join(phone_parts)}" if phone_parts else ""
         results.append(
             {
                 'kind': 'customer',
                 'id': customer.id,
-                'label': f'{customer.full_name} - {customer.phone}',
+                'label': f'{customer.full_name}{phone_label}',
                 'customer_id': customer.id,
                 'customer_name': customer.full_name,
                 'customer_phone': customer.phone,
+                'customer_phone_2': customer.phone_2,
                 'customer_address': customer.address,
                 'booking_id': None,
                 'booking_number': None,
@@ -47,14 +50,17 @@ def search_payment_targets(db: Session, session: dict, query: str, branch_id: st
         )
 
     for booking in bookings:
+        phone_parts = [p for p in (booking.customer.phone, booking.customer.phone_2) if p]
+        phone_label = f" ({' / '.join(phone_parts)})" if phone_parts else ""
         results.append(
             {
                 'kind': 'booking',
                 'id': booking.id,
-                'label': f'{booking.booking_number} - {booking.customer.full_name}',
+                'label': f'{booking.booking_number} - {booking.customer.full_name}{phone_label}',
                 'customer_id': booking.customer_id,
                 'customer_name': booking.customer.full_name,
                 'customer_phone': booking.customer.phone,
+                'customer_phone_2': booking.customer.phone_2,
                 'customer_address': booking.customer.address,
                 'booking_id': booking.id,
                 'booking_number': booking.booking_number,
@@ -71,9 +77,9 @@ def get_customer_payment_target(db: Session, session: dict, customer_id: str, br
         customer = CustomersRepository(db).get_customer(customer_id)
         if customer is None or customer.company_id != company.id:
             raise NotFoundError('لم يتم العثور على العميل')
-        return _serialize_target('customer', customer.id, customer.full_name, customer.phone, customer.address, branch.id, branch.name, [], ignore_payment_document_id)
+        return _serialize_target('customer', customer.id, customer.full_name, customer.phone, customer.phone_2, customer.address, branch.id, branch.name, [], ignore_payment_document_id)
     customer = bookings[0].customer
-    return _serialize_target('customer', customer_id, customer.full_name, customer.phone, customer.address, branch.id, branch.name, bookings, ignore_payment_document_id)
+    return _serialize_target('customer', customer_id, customer.full_name, customer.phone, customer.phone_2, customer.address, branch.id, branch.name, bookings, ignore_payment_document_id)
 
 
 def get_booking_payment_target(db: Session, session: dict, booking_id: str, branch_id: str | None = None, ignore_payment_document_id: str | None = None) -> dict:
@@ -83,10 +89,10 @@ def get_booking_payment_target(db: Session, session: dict, booking_id: str, bran
     if booking is None or booking.company_id != company.id or booking.branch_id != branch.id:
         raise NotFoundError('لم يتم العثور على الحجز')
     customer = booking.customer
-    return _serialize_target('booking', booking.id, customer.full_name, customer.phone, customer.address, branch.id, branch.name, [booking], ignore_payment_document_id)
+    return _serialize_target('booking', booking.id, customer.full_name, customer.phone, customer.phone_2, customer.address, branch.id, branch.name, [booking], ignore_payment_document_id)
 
 
-def _serialize_target(scope_kind: str, scope_id: str, customer_name: str, customer_phone: str | None, customer_address: str | None, branch_id: str, branch_name: str, bookings: list, ignore_payment_document_id: str | None) -> dict:
+def _serialize_target(scope_kind: str, scope_id: str, customer_name: str, customer_phone: str | None, customer_phone_2: str | None, customer_address: str | None, branch_id: str, branch_name: str, bookings: list, ignore_payment_document_id: str | None) -> dict:
     booking_items = []
     total_remaining = 0.0
     customer_id = bookings[0].customer_id if bookings else scope_id
@@ -145,6 +151,7 @@ def _serialize_target(scope_kind: str, scope_id: str, customer_name: str, custom
         'customer_id': customer_id,
         'customer_name': customer_name,
         'customer_phone': customer_phone,
+        'customer_phone_2': customer_phone_2,
         'customer_address': customer_address,
         'branch_id': branch_id,
         'branch_name': branch_name,

@@ -11,7 +11,7 @@ import { SectionCard } from '../../components/SectionCard';
 import { getPaymentsExcelUrl, type PaymentExportFilters } from '../exports/api';
 import { downloadFile } from '../../lib/api';
 import { useLanguage } from '../language/LanguageProvider';
-import { joinLocalizedList, paymentDocumentStatusLabel, paymentKindLabel, useCommonText } from '../../text/common';
+import { EMPTY_VALUE, joinLocalizedList, paymentDocumentStatusLabel, paymentKindLabel, useCommonText } from '../../text/common';
 import { usePaymentsText } from '../../text/payments';
 import type { PaymentDocumentSummaryRecord } from './api';
 import { AppDateRangeFilter } from '../../components/inputs/AppDateRangeFilter';
@@ -88,6 +88,9 @@ export function PaymentsTableSection({
     () => [
       { colId: 'payment_number', field: 'payment_number', headerName: paymentsText.table.number, pinned: language === 'ar' ? 'right' : 'left', sort: sortBy === 'payment_number' ? sortDir : null },
       { colId: 'customer_name', field: 'customer_name', headerName: paymentsText.table.customer, sort: sortBy === 'customer_name' ? sortDir : null },
+      { colId: 'customer_phone', field: 'customer_phone', headerName: language === 'ar' ? 'الهاتف 1' : 'Phone 1', valueFormatter: ({ value }) => value ?? EMPTY_VALUE, minWidth: 130 },
+      { colId: 'customer_phone_2', field: 'customer_phone_2', headerName: language === 'ar' ? 'الهاتف 2' : 'Phone 2', valueFormatter: ({ value }) => value ?? EMPTY_VALUE, minWidth: 130 },
+      { colId: 'customer_address', field: 'customer_address', headerName: language === 'ar' ? 'العنوان' : 'Address', valueFormatter: ({ value }) => value ?? EMPTY_VALUE, minWidth: 150 },
       { colId: 'payment_method_name', field: 'payment_method_name', headerName: paymentsText.table.paymentMethod },
       {
         colId: 'booking_numbers',

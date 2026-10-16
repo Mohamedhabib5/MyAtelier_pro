@@ -99,7 +99,11 @@ export function PaymentTargetSearchSection({
                 >
                   <ListItemText
                     primary={result.label}
-                    secondary={result.booking_number ? `${result.customer_name} - ${result.booking_number}` : result.customer_name}
+                    secondary={
+                      result.booking_number
+                        ? `${result.customer_name} - ${result.booking_number}${result.customer_address ? ` • 📍 ${result.customer_address}` : ''}`
+                        : `${result.customer_name}${result.customer_address ? ` • 📍 ${result.customer_address}` : ''}`
+                    }
                     primaryTypographyProps={{ sx: { fontSize: 15 } }}
                     secondaryTypographyProps={{ sx: { fontSize: 13 } }}
                   />

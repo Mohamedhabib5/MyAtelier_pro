@@ -28,6 +28,9 @@ export type CustodyCaseRecord = {
   compensation_collected_on: string | null;
   compensation_payment_document_id: string | null;
   customer_name: string | null;
+  customer_phone?: string | null;
+  customer_phone_2?: string | null;
+  customer_address?: string | null;
   booking_number: string | null;
   dress_code: string | null;
   created_at?: string | null;

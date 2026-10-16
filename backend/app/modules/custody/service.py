@@ -40,11 +40,12 @@ def list_custody_cases(
             custody_case,
             customer_name=customer_name,
             customer_phone=customer_phone,
+            customer_phone_2=customer_phone_2,
             customer_address=customer_address,
             booking_number=booking_number,
             dress_code=dress_code,
         )
-        for custody_case, customer_name, customer_phone, customer_address, booking_number, dress_code in rows
+        for custody_case, customer_name, customer_phone, customer_phone_2, customer_address, booking_number, dress_code in rows
     ]
     if page is not None:
         return {"items": items, "total": total, "page": page, "page_size": page_size}
@@ -156,6 +157,7 @@ def _serialize_case(
     *,
     customer_name: str | None = None,
     customer_phone: str | None = None,
+    customer_phone_2: str | None = None,
     customer_address: str | None = None,
     booking_number: str | None = None,
     dress_code: str | None = None,
@@ -187,6 +189,7 @@ def _serialize_case(
         compensation_payment_document_id=custody_case.compensation_payment_document_id,
         customer_name=customer_name,
         customer_phone=customer_phone,
+        customer_phone_2=customer_phone_2,
         customer_address=customer_address,
         booking_number=booking_number,
         dress_code=dress_code,

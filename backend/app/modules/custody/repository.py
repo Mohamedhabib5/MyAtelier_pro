@@ -15,7 +15,7 @@ class CustodyRepository:
 
     def list_cases_detailed(self, company_id: str, branch_id: str, *, view: str = "all", page: int | None = None, page_size: int | None = None):
         stmt = (
-            select(CustodyCase, Customer.full_name, Customer.phone, Customer.address, Booking.booking_number, DressResource.code)
+            select(CustodyCase, Customer.full_name, Customer.phone, Customer.phone_2, Customer.address, Booking.booking_number, DressResource.code)
             .join(Customer, CustodyCase.customer_id == Customer.id, isouter=True)
             .join(Booking, CustodyCase.booking_id == Booking.id, isouter=True)
             .join(DressResource, CustodyCase.dress_id == DressResource.id, isouter=True)

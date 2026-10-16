@@ -69,6 +69,7 @@ class PaymentDocumentSummaryResponse(BaseModel):
     customer_id: str
     customer_name: str
     customer_phone: str | None
+    customer_phone_2: str | None = None
     customer_address: str | None
     payment_method_id: str | None
     payment_method_name: str | None
@@ -141,6 +142,7 @@ class PaymentTargetSearchResult(BaseModel):
     customer_id: str
     customer_name: str
     customer_phone: str | None
+    customer_phone_2: str | None = None
     customer_address: str | None
     booking_id: str | None = None
     booking_number: str | None = None

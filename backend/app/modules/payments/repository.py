@@ -65,6 +65,10 @@ class PaymentsRepository:
                     PaymentDocument.payment_number.ilike(pattern),
                     Customer.full_name.ilike(pattern),
                     Customer.phone.ilike(pattern),
+                    Customer.phone_2.ilike(pattern),
+                    Customer.address.ilike(pattern),
+                    Customer.groom_name.ilike(pattern),
+                    Customer.bride_name.ilike(pattern),
                     PaymentDocument.notes.ilike(pattern),
                     Booking.booking_number.ilike(pattern),
                 )

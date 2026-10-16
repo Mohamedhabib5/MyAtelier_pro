@@ -24,6 +24,9 @@ export type PaymentDocumentSummaryRecord = {
   branch_name: string;
   customer_id: string;
   customer_name: string;
+  customer_phone: string | null;
+  customer_phone_2: string | null;
+  customer_address: string | null;
   payment_method_id: string | null;
   payment_method_name: string | null;
   payment_number: string;
@@ -87,6 +90,9 @@ export type PaymentTargetSearchRecord = {
   label: string;
   customer_id: string;
   customer_name: string;
+  customer_phone?: string | null;
+  customer_phone_2?: string | null;
+  customer_address?: string | null;
   booking_id?: string | null;
   booking_number?: string | null;
 };
@@ -121,6 +127,9 @@ export type PaymentTargetDetailRecord = {
   scope_id: string;
   customer_id: string;
   customer_name: string;
+  customer_phone?: string | null;
+  customer_phone_2?: string | null;
+  customer_address?: string | null;
   branch_id: string;
   branch_name: string;
   total_remaining: number;

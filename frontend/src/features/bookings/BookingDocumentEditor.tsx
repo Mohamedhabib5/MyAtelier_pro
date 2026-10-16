@@ -304,6 +304,37 @@ export function BookingDocumentEditor({
             getOptionLabel={(option) => option.full_name}
             value={customers.find((c) => c.id === customerId) || null}
             onChange={(_, newValue) => setCustomerId(newValue?.id ?? '')}
+            filterOptions={(options, { inputValue }) => {
+              const query = inputValue.trim().toLowerCase();
+              if (!query) return options;
+              return options.filter((c) =>
+                (c.full_name && c.full_name.toLowerCase().includes(query)) ||
+                (c.phone && c.phone.includes(query)) ||
+                (c.phone_2 && c.phone_2.includes(query)) ||
+                (c.address && c.address.toLowerCase().includes(query)) ||
+                (c.groom_name && c.groom_name.toLowerCase().includes(query)) ||
+                (c.bride_name && c.bride_name.toLowerCase().includes(query))
+              );
+            }}
+            renderOption={(props, option) => (
+              <Box component="li" {...props} key={option.id}>
+                <Stack spacing={0.25} sx={{ width: '100%', py: 0.5 }}>
+                  <Typography variant="body2" fontWeight={600}>
+                    {option.full_name}
+                  </Typography>
+                  <Stack direction="row" spacing={1.5} alignItems="center">
+                    <Typography variant="caption" color="text.secondary">
+                      📞 {option.phone}{option.phone_2 ? ` / ${option.phone_2}` : ''}
+                    </Typography>
+                    {option.address && (
+                      <Typography variant="caption" color="text.secondary">
+                        📍 {option.address}
+                      </Typography>
+                    )}
+                  </Stack>
+                </Stack>
+              </Box>
+            )}
             renderInput={(params) => (
               <TextField {...params} label={bookingsText.editor.customer} placeholder={bookingsText.editor.selectCustomer} />
             )}
